@@ -7,7 +7,7 @@ import torch
 from tinyllava.data.process import register_preprocess
 from tinyllava.mm_utils import tokenizer_image_token
 from tinyllava import conversation as conversation_lib
-from tinyllavaconstants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, \
+from tinyllava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, \
     DEFAULT_IM_END_TOKEN
 
 
