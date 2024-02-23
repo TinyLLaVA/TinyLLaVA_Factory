@@ -353,6 +353,7 @@ conv_llava_plain = Conversation(
     roles=("", ""),
     messages=(
     ),
+    version='plain',
     offset=0,
     sep_style=SeparatorStyle.PLAIN,
     sep="\n",
