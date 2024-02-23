@@ -46,6 +46,7 @@ If you find our paper and code useful in your research, please consider giving a
 ```
 
 
-## &#x270A; Community efforts!
-We built our project on the [LLaVA](https://github.com/haotian-liu/LLaVA) project, and the [ShareGPT4V](https://github.com/InternLM/InternLM-XComposer/tree/main/projects/ShareGPT4V) project. Great work!
+## ❤️; Community efforts
+* Our codebase is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) project. Great work!
+* Our project uses data from the [ShareGPT4V](https://github.com/InternLM/InternLM-XComposer/tree/main/projects/ShareGPT4V) project. Great work!
 
