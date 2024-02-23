@@ -7,7 +7,7 @@
 
 ## 📣 News
 
-* **[2024.02.21]**  Creating the [TinyLLavaBench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub..
+* **[2024.02.21]**  Creating the [TinyLLavaBench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub and technique report availalbe [here](https://arxiv.org/abs/2402.14289).
 
 ### 🔥 High performance, but with fewer parameters
 
