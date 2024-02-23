@@ -13,7 +13,7 @@
 
 ## &#x231B; TODO
 - [ ] Colab examples and demo.
-- [ ] Release code for training.
+- [x] Release code for training.
 - [ ] Add descriptions for  evalaution.
 - [ ] Add descriptions for data preparation.
 - [ ] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
