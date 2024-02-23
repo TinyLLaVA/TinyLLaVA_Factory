@@ -8,6 +8,7 @@
 ## &#x1F389; News
 
 * **[2024.02.21]**  Creating the [TinyLLavaBench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub and technique report availalbe [here](https://arxiv.org/abs/2402.14289).
+* **[2024.01.11]**  Our fist model [TinyLLaVA-1.4B](https://huggingface.co/bczhou/tiny-llava-v1-hf) is out
 
 ## &#x231B; TODO
 - [ ] We will release the eval code and weights in the afternoon(2024.2.23).
@@ -16,13 +17,12 @@
 - Our best model, TinyLLaVA-3B, achieves better overall performance against existing 7B models such as LLaVA-1.5 and Qwen-VL.
 
 ## &#x1F433; Model Zoo
+### Legacy
+| https://huggingface.co/bczhou/tiny-llava-v1-hf
 
+### Pretrain Model
+- [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
 
-<details>
-<summary>Pretrain Model</summary>
-
-
-</details>
 
 ## &#x1F527; Requirements and Installation
 
