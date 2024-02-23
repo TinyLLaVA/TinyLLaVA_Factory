@@ -15,7 +15,7 @@
 - [x] We will release the eval code and weights in the afternoon(2024.2.23).
 ### &#x1F525; High performance, but with fewer parameters
 
-- Our best model, TinyLLaVA-3B, achieves better overall performance against existing 7B models such as LLaVA-1.5 and Qwen-VL.
+- Our best model, TinyLLaVA-3.1B, achieves better overall performance against existing 7B models such as LLaVA-1.5 and Qwen-VL.
 
 ## &#x1F433; Model Zoo
 ### Legacy
