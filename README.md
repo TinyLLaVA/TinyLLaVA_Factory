@@ -8,7 +8,7 @@
 ## &#x1F389; News
 * **[2024.02.23]**  Evaluation and Training code and scripts released!
 * **[2024.02.21]**  Creating the [TinyLLaVABench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub!
-* **[2024.02.21]**  Our paper: [TinyLLaVA: A Framework of Small-scale Large Multimodal Models]((https://arxiv.org/abs/2402.14289)) is out!
+* **[2024.02.21]**  Our paper: [TinyLLaVA: A Framework of Small-scale Large Multimodal Models](https://arxiv.org/abs/2402.14289) is out!
 * **[2024.01.11]**  Our fist model [TinyLLaVA-1.4B](https://huggingface.co/bczhou/tiny-llava-v1-hf) is out!
 
 ## &#x231B; TODO
