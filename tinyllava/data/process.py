@@ -44,6 +44,8 @@ def PreprocessSelect(version):
             if version in name:
                 result = PREPROCESS_REGISTRY[name]
                 break
+    if result is None:
+        result = PREPROCESS_REGISTRY['default']
     return result
 
 
