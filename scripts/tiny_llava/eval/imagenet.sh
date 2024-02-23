@@ -1,0 +1,25 @@
+torchrun --nnodes=1 \
+--standalone \
+--nproc-per-node=8 \
+tinyllava/eval/eval_clip_imagenet.py \
+--linear_probe True \
+--pretrained_path ./checkpoints/tiny-llava-sharegpt4v-unlock-vit-from-12-tune-entire-model-TinyLlama-1.1B-Chat-v1.0-clip-vit-large-patch14-336-pretrain/vision_tower \
+--train_data_path /mnt/data/sata/winci/datasets/ImageNet/train \
+--eval_data_path /mnt/data/sata/winci/datasets/ImageNet/val \
+--learning_rate 1e-2 \
+--num_train_epochs 5 \
+--per_device_train_batch_size 64 \
+--per_device_eval_batch_size 64 \
+--logging_strategy steps \
+--logging_steps 1 \
+--evaluation_strategy epoch \
+--save_strategy epoch \
+--load_best_model_at_end True \
+--save_total_limit 1 \
+--seed 42 \
+--do_train \
+--do_eval \
+--optim sgd \
+--output_dir ./checkpoints/eval_imagenet/ \
+--bf16 True \
+--logging_steps 1 \
