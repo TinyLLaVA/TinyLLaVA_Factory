@@ -13,11 +13,11 @@
 * **[2024.01.11]**  Our fist model [TinyLLaVA-1.4B](https://huggingface.co/bczhou/tiny-llava-v1-hf) is out!
 
 ## &#x231B; TODO
-- [] Colab examples and demo.
-- [] Release code for training.
-- [] Add descriptions for  evalaution.
-- [] Add descriptions for data preparation.
-- [] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
+- [ ] Colab examples and demo.
+- [ ] Release code for training.
+- [ ] Add descriptions for  evalaution.
+- [ ] Add descriptions for data preparation.
+- [ ] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
 - [x] Release TinyLLaVA-3.1B.
 - [x] Release the evaluation code and weights today(2024.2.23).
 ### &#x1F525; High performance, but with fewer parameters
