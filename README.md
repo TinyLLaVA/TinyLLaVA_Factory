@@ -6,6 +6,7 @@
 
 
 ## &#x1F389; News
+* **[2024.02.24]**  Example code on inference and model loading added!
 * **[2024.02.23]**  Evaluation and Training code and scripts released!
 * **[2024.02.21]**  Creating the [TinyLLaVABench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub!
 * **[2024.02.21]**  Our paper: [TinyLLaVA: A Framework of Small-scale Large Multimodal Models](https://arxiv.org/abs/2402.14289) is out!
@@ -14,7 +15,7 @@
 ## &#x231B; TODO
 - [ ] Colab examples and demo.
 - [x] Release code for training.
-- [ ] Add descriptions for  evalaution.
+- [ ] Add descriptions for evalaution.
 - [ ] Add descriptions for data preparation.
 - [ ] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
 - [x] Release TinyLLaVA-3.1B.
@@ -34,6 +35,26 @@
 ## &#x1F527; Requirements and Installation
 
 We recommend the requirements as follows.
+
+1. Clone this repository and navigate to LLaVA folder
+```bash
+git clone https://github.com/DLCV-BUAA/TinyLLaVABench.git
+cd TinyLLaVABench
+```
+
+2. Install Package
+```Shell
+conda create -n tinyllava python=3.10 -y
+conda activate tinyllava
+pip install --upgrade pip  # enable PEP 660 support
+pip install -e .
+```
+
+3. Install additional packages for training cases
+```Shell
+pip install -e ".[train]"
+pip install flash-attn --no-build-isolation
+```
 
 
 ## &#x1F527; Quick Start
