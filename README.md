@@ -44,7 +44,7 @@ We recommend the requirements as follows.
 ```Python
 from tinyllava.model.builder import load_pretrained_model
 from tinyllava.mm_utils import get_model_name_from_path
-from tinyllava.eval.run_llava import eval_model
+from tinyllava.eval.run_tiny_llava import eval_model
 
 model_path = "bczhou/TinyLLaVA-3.1B"
 
@@ -61,6 +61,10 @@ tokenizer, model, image_processor, context_len = load_pretrained_model(
 <summary>Run Inference</summary>
     
 ```Python
+from tinyllava.model.builder import load_pretrained_model
+from tinyllava.mm_utils import get_model_name_from_path
+from tinyllava.eval.run_tiny_llava import eval_model
+
 model_path = "bczhou/TinyLLaVA-3.1B"
 prompt = "What are the things I should be cautious about when I visit here?"
 image_file = "https://llava-vl.github.io/static/images/view.jpg"
