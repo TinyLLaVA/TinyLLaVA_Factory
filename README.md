@@ -13,7 +13,10 @@
 * **[2024.01.11]**  Our fist model [TinyLLaVA-1.4B](https://huggingface.co/bczhou/tiny-llava-v1-hf) is out!
 
 ## &#x231B; TODO
-- [ ] Colab examples and demo.
+- [ ] Add support for Ollama and llama.cpp.
+- [ ] Developers' guide / How to build demo locally.
+- [ ] Model Zoo Descriptions.
+- [x] Colab examples and inference.
 - [x] Release code for training.
 - [ ] Add descriptions for evalaution.
 - [ ] Add descriptions for data preparation.
