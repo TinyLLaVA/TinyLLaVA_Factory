@@ -54,6 +54,7 @@ tokenizer, model, image_processor, context_len = load_pretrained_model(
     model_name=get_model_name_from_path(model_path)
 )
 ```
+</details>
 
 ## &#x1F527; Run Inference
 <details>
@@ -80,6 +81,7 @@ args = type('Args', (), {
 
 eval_model(args)
 ```
+</details>
 
 ## &#x270F; Citation
 
