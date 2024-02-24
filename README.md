@@ -40,6 +40,7 @@ We recommend the requirements as follows.
 
 <details>
 <summary>Load model</summary>
+    
 ```Python
 from tinyllava.model.builder import load_pretrained_model
 from tinyllava.mm_utils import get_model_name_from_path
@@ -53,8 +54,11 @@ tokenizer, model, image_processor, context_len = load_pretrained_model(
     model_name=get_model_name_from_path(model_path)
 )
 ```
+
+## &#x1F527; Run Inference
 <details>
 <summary>Run Inference</summary>
+    
 ```Python
 model_path = "bczhou/TinyLLaVA-3.1B"
 prompt = "What are the things I should be cautious about when I visit here?"
