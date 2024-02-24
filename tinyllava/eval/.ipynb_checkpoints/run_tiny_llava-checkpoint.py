@@ -122,6 +122,7 @@ def eval_model(args):
             temperature=args.temperature,
             top_p=args.top_p,
             num_beams=args.num_beams,
+            pad_token_id=tokenizer.pad_token_id,
             max_new_tokens=args.max_new_tokens,
             use_cache=True,
             stopping_criteria=[stopping_criteria],
