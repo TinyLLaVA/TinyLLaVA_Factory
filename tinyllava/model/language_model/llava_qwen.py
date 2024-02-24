@@ -156,7 +156,7 @@ class LlavaQwen2ForCausalLM(Qwen2ForCausalLM, LlavaMetaForCausalLM):
             inputs['image_sizes'] = image_sizes
         return inputs
 
-@register_tokenizer('stablelm')
+@register_tokenizer('qwen')
 def get_tokenizer():
     from transformers import AutoTokenizer
     def post_init(tokenizer):

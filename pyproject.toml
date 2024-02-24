@@ -7,7 +7,7 @@ name = "tinyllava"
 version = "1.0.0"
 description = "A Framework of Small-scale Large Multimodal Models."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License",
