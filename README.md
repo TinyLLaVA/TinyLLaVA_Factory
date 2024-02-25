@@ -6,9 +6,9 @@
 
 
 ## &#x1F389; News
-* **[2024.02.25]**  Data descriptions out.
+* **[2024.02.25]**  Data descriptions out. Release TinyLLaVA-1.5B and TinyLLaVA-2.0B!
 * **[2024.02.24]**  Example code on inference and model loading added!
-* **[2024.02.23]**  Evaluation and Training code and scripts released!
+* **[2024.02.23]**  Evaluation code and scripts released!
 * **[2024.02.21]**  Creating the [TinyLLaVABench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub!
 * **[2024.02.21]**  Our paper: [TinyLLaVA: A Framework of Small-scale Large Multimodal Models](https://arxiv.org/abs/2402.14289) is out!
 * **[2024.01.11]**  Our fist model [TinyLLaVA-1.4B](https://huggingface.co/bczhou/tiny-llava-v1-hf) is out!
@@ -21,7 +21,7 @@
 - [x] Release code for training.
 - [ ] Add descriptions for evaluation.
 - [x] Add descriptions for data preparation.
-- [ ] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
+- [x] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
 - [x] Release TinyLLaVA-3.1B.
 - [x] Release the evaluation code and weights today(2024.2.23).
 ### &#x1F525; High performance, but with fewer parameters
@@ -34,6 +34,8 @@
 
 ### Pretrain Model
 - [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
+- [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B)
+- [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
 
 
 ## &#x1F527; Requirements and Installation
