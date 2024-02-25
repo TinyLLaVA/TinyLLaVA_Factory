@@ -125,7 +125,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         if 'phi' in model_name.lower() or '3.1b' in model_name.lower():
             tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False, padding_side="right")
             model = TinyLlavaPhiForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
-        elif 'stablelm' in model_name.lower() or '2b' in model_name.lower():
+        elif 'stablelm' in model_name.lower() or '2.0b' in model_name.lower():
             from tinyllava.model.language_model.stablelm.tokenization_arcade100k import Arcade100kTokenizer
             tokenizer = Arcade100kTokenizer.from_pretrained(model_path, use_fast=False, padding_side="right")
             model = TinyLlavaStablelmForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
