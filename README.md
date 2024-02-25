@@ -6,6 +6,7 @@
 
 
 ## &#x1F389; News
+* **[2024.02.25]**  Data descriptions out.
 * **[2024.02.24]**  Example code on inference and model loading added!
 * **[2024.02.23]**  Evaluation and Training code and scripts released!
 * **[2024.02.21]**  Creating the [TinyLLaVABench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub!
@@ -16,10 +17,10 @@
 - [ ] Add support for Ollama and llama.cpp.
 - [ ] Developers' guide / How to build demo locally.
 - [ ] Model Zoo Descriptions.
-- [x] Colab examples and inference.
+- [x] Examples and inference.
 - [x] Release code for training.
 - [ ] Add descriptions for evaluation.
-- [ ] Add descriptions for data preparation.
+- [x] Add descriptions for data preparation.
 - [ ] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
 - [x] Release TinyLLaVA-3.1B.
 - [x] Release the evaluation code and weights today(2024.2.23).
@@ -110,6 +111,81 @@ args = type('Args', (), {
 eval_model(args)
 ```
 </details>
+
+## Data Preparation
+
+In our paper, we used two different datasets: the [LLaVA dataset](https://github.com/haotian-liu/LLaVA?tab=readme-ov-file#pretrain-feature-alignment) and the [ShareGPT4V dataset](https://github.com/InternLM/InternLM-XComposer/blob/main/projects/ShareGPT4V/docs/Data.md), and compared their differences. In this section, we provide information on data preparation.
+
+### Pretraining Images
+* LLaVA: The pretraining images of LLaVA is from the 558K subset of the LAION-CC-SBU dataset.
+* ShareGPT4V: The pretraining images of ShareGPT4V is a mixture of 558K LAION-CC-SBU subset, SAM dataset, and COCO dataset.
+
+### Pretraining Annotations
+* LLaVA: The pretraining annotations of LLaVA are [here](https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain).
+* ShareGPT4V: The pretraining annotations of ShareGPT4V are [here](https://huggingface.co/datasets/Lin-Chen/ShareGPT4V/blob/main/share-captioner_coco_lcs_sam_1246k_1107.json).
+
+
+### SFT Images & Annotations
+The majority of the two SFT datasets are the same, with the exception that the 23K detailed description data in LLaVA-1.5-SFT being replaced with detailed captions randomly sampled from the 100K ShareGPT4V data
+
+### Download data
+
+1. Download relevant images
+
+- LAION-CC-SBU-558K: [images.zip](https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain/blob/main/images.zip)
+- COCO: [train2017](http://images.cocodataset.org/zips/train2017.zip)
+- WebData: [images](https://drive.google.com/drive/folders/1tCUQ-sq6vdshZVkF0ZeF3K4eztkXJgax?usp=sharing). Only for academic usage.
+- SAM: [images](https://ai.meta.com/datasets/segment-anything-downloads/). We only use 000000~000050.tar for now. If you just want to use ShareGPT4V for SFT, you can quickly download 9K images from [here](https://drive.google.com/file/d/1dKumdOKSXtV7lIXdrG7jsIK_z2vZv2gs/view?usp=drive_link).
+- GQA: [images](https://downloads.cs.stanford.edu/nlp/data/gqa/images.zip)
+- OCR-VQA: [download script](https://drive.google.com/drive/folders/1_GYPY5UkUy7HIcR0zq3ZCFgeZN7BAfm_?usp=sharing). We save all files as `.jpg`
+- TextVQA: [trainvalimages](https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip)
+- VisualGenome: [part1](https://cs.stanford.edu/people/rak248/VG_100K_2/images.zip), [part2](https://cs.stanford.edu/people/rak248/VG_100K_2/images2.zip)
+
+
+2. Download relevant annotations
+
+- LLaVA's pretraining annotations: [blip_laion_cc_sbu_558k.json](https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain)
+- LLaVA's SFT annotations: [llava_v1_5_mix665k.json](https://huggingface.co/datasets/liuhaotian/LLaVA-Instruct-150K/blob/main/llava_v1_5_mix665k.json)
+- ShareGPT4V's pretraining annotations: [share-captioner_coco_lcs_sam_1246k_1107.json](https://huggingface.co/datasets/Lin-Chen/ShareGPT4V/blob/main/share-captioner_coco_lcs_sam_1246k_1107.json)
+- ShareGPT4V's SFT annotations: [sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json](https://huggingface.co/datasets/Lin-Chen/ShareGPT4V/blob/main/sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json)
+
+
+### Organize Data
+
+Organize the image files and annotation files as follows in `path/to/your/data`:
+
+```none
+data
+├── llava
+│   ├── llava_pretrain
+│   │   ├── images
+│   │   ├── blip_laion_cc_sbu_558k.json
+├── coco
+│   ├── train2017
+├── sam
+│   ├── images
+├── gqa
+│   ├── images
+├── ocr_vqa
+│   ├── images
+├── textvqa
+│   ├── train_images
+├── vg
+│   ├── VG_100K
+│   ├── VG_100K_2
+├── share_textvqa
+│   ├── images
+├── web-celebrity
+│   ├── images
+├── web-landmark
+│   ├── images
+├── wikiart
+│   ├── images
+├── text_files
+│   ├── llava_v1_5_mix665k.json
+│   ├── share-captioner_coco_lcs_sam_1246k_1107.json
+│   ├── sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json
+```
 
 ## &#x270F; Citation
 
