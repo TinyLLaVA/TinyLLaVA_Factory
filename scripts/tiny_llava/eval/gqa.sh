@@ -6,10 +6,10 @@ IFS=',' read -ra GPULIST <<< "$gpu_list"
 CHUNKS=${#GPULIST[@]}
 
 SPLIT="llava_gqa_testdev_balanced"
-GQADIR="/root/autodl-tmp/data/eval/gqa"
+GQADIR="./playground/data/eval/gqa"
 
 MODEL_NAME="TinyLLaVA-3.1B"
-EVAL_DIR="/root/autodl-tmp/data/eval"
+EVAL_DIR="./playground/data/eval"
 MODEL_PATH="bczhou/TinyLLaVA-3.1B"
 
 for IDX in $(seq 0 $((CHUNKS-1))); do
@@ -21,7 +21,7 @@ for IDX in $(seq 0 $((CHUNKS-1))); do
         --num-chunks $CHUNKS \
         --chunk-idx $IDX \
         --temperature 0 \
-        --conv-mode v1 &
+        --conv-mode phi &
 done
 
 wait

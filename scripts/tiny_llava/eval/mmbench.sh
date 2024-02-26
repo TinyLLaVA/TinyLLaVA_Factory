@@ -4,7 +4,7 @@ SPLIT="mmbench_dev_20230712"
 
 MODEL_PATH="bczhou/TinyLLaVA-3.1B"
 MODEL_NAME="TinyLLaVA-3.1B"
-EVAL_DIR="/root/autodl-tmp/data/eval"
+EVAL_DIR="./playground/data/eval"
 
 python -m tinyllava.eval.model_vqa_mmbench \
     --model-path $MODEL_PATH \
@@ -12,7 +12,7 @@ python -m tinyllava.eval.model_vqa_mmbench \
     --answers-file $EVAL_DIR/mmbench/answers/$SPLIT/$MODEL_NAME.jsonl \
     --single-pred-prompt \
     --temperature 0 \
-    --conv-mode vicuna_v1
+    --conv-mode phi
 
 mkdir -p $EVAL_DIR/mmbench/answers_upload/$SPLIT
 

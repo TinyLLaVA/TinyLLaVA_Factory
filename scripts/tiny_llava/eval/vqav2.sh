@@ -9,7 +9,7 @@ SPLIT="llava_vqav2_mscoco_test-dev2015"
 
 MODEL_PATH="bczhou/TinyLLaVA-3.1B"
 MODEL_NAME="TinyLLaVA-3.1B"
-EVAL_DIR="/root/autodl-tmp/data/eval"
+EVAL_DIR="./playground/data/eval"
 
 for IDX in $(seq 0 $((CHUNKS-1))); do
     CUDA_VISIBLE_DEVICES=${GPULIST[$IDX]} python -m tinyllava.eval.model_vqa_loader \
@@ -20,7 +20,7 @@ for IDX in $(seq 0 $((CHUNKS-1))); do
         --num-chunks $CHUNKS \
         --chunk-idx $IDX \
         --temperature 0 \
-        --conv-mode v1 &
+        --conv-mode phi &
 done
 
 wait

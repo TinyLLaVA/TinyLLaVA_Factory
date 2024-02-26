@@ -2,7 +2,7 @@
 
 MODEL_PATH="/root/autodl-tmp/TinyLLaVA-3.1B"
 MODEL_NAME="TinyLLaVA-3.1B"
-EVAL_DIR="/root/autodl-tmp/data/eval"
+EVAL_DIR="./playground/data/eval"
 
 python -m tinyllava.eval.model_vqa_science \
     --model-path $MODEL_PATH \
@@ -11,7 +11,7 @@ python -m tinyllava.eval.model_vqa_science \
     --answers-file $EVAL_DIR/scienceqa/answers/$MODEL_NAME.jsonl \
     --single-pred-prompt \
     --temperature 0 \
-    --conv-mode v1
+    --conv-mode phi
 
 python tinyllava/eval/eval_science_qa.py \
     --base-dir $EVAL_DIR/scienceqa \

@@ -2,7 +2,7 @@
 
 MODEL_PATH="bczhou/TinyLLaVA-3.1B"
 MODEL_NAME="TinyLLaVA-3.1B"
-EVAL_DIR="/root/autodl-tmp/data/eval"
+EVAL_DIR="./playground/data/eval"
 
 python -m tinyllava.eval.model_vqa_loader \
     --model-path $MODEL_PATH \
@@ -10,7 +10,7 @@ python -m tinyllava.eval.model_vqa_loader \
     --image-folder $EVAL_DIR/pope/val2014 \
     --answers-file $EVAL_DIR/pope/answers/$MODEL_NAME.jsonl \
     --temperature 0 \
-    --conv-mode tiny_llama
+    --conv-mode phi
 
 python tinyllava/eval/eval_pope.py \
     --annotation-dir $EVAL_DIR/pope/coco \

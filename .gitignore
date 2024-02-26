@@ -52,4 +52,5 @@ __pycache__
 *.egg-info
 .vscode/*
 .idea/*
-
+playground/
+# TinyLLaVABench
