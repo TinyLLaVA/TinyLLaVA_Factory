@@ -10,6 +10,10 @@ from tinyllava import conversation as conversation_lib
 from tinyllava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, \
     DEFAULT_IM_END_TOKEN
 
+from packaging import version
+
+IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse('0.14')
+
 
 @register_preprocess('v1')
 def preprocess_v1(

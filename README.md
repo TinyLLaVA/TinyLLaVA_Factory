@@ -6,9 +6,9 @@
 
 
 ## &#x1F389; News
-* **[2024.02.25]**  Data descriptions out.
+* **[2024.02.25]**  Data descriptions out. Release TinyLLaVA-1.5B and TinyLLaVA-2.0B!
 * **[2024.02.24]**  Example code on inference and model loading added!
-* **[2024.02.23]**  Evaluation and Training code and scripts released!
+* **[2024.02.23]**  Evaluation code and scripts released!
 * **[2024.02.21]**  Creating the [TinyLLaVABench](https://github.com/DLCV-BUAA/TinyLLavaBench) repository on GitHub!
 * **[2024.02.21]**  Our paper: [TinyLLaVA: A Framework of Small-scale Large Multimodal Models](https://arxiv.org/abs/2402.14289) is out!
 * **[2024.01.11]**  Our fist model [TinyLLaVA-1.4B](https://huggingface.co/bczhou/tiny-llava-v1-hf) is out!
@@ -16,12 +16,12 @@
 ## &#x231B; TODO
 - [ ] Add support for Ollama and llama.cpp.
 - [ ] Developers' guide / How to build demo locally.
-- [ ] Model Zoo descriptions.
+- [x] Model Zoo descriptions.
 - [x] Examples and inference.
 - [x] Release code for training.
 - [ ] Add descriptions for evaluation.
 - [x] Add descriptions for data preparation.
-- [ ] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
+- [x] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
 - [x] Release TinyLLaVA-3.1B.
 - [x] Release the evaluation code and weights today(2024.2.23).
 ### &#x1F525; High performance, but with fewer parameters
@@ -32,8 +32,18 @@
 ### Legacy Model
 > https://huggingface.co/bczhou/tiny-llava-v1-hf
 
-### Pretrain Model
+### Pretrained Model
 - [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
+- [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B)
+- [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
+
+### Model Zoo
+| Name          | LLM               | Checkpoint                                     | LLaVA-Bench-Wild | MME      | MMBench | MM-Vet | SQA-image | VQA-v2 | GQA   | TextVQA |
+|---------------|-------------------|------------------------------------------------|------------------|----------|---------|--------|-----------|--------|-------|---------|
+| TinyLLaVA-3.1B | Phi-2             | [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B) | 75.8             | 1464.9   | 66.9    | 32.0   | 69.1      | 79.9   | 62.0  | 59.1    |
+| TinyLLaVA-2.0B | StableLM-2-1.6B   | [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B) | 66.4             | 1433.8     | 63.3    | 32.6   | 64.7      | 78.9   | 61.9  | 56.4    |
+| TinyLLaVA-1.5B | TinyLlama         | [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B) | 60.8             | 1276.5     | 55.2     | 25.8   | 60.3      | 76.9   | 60.3  | 51.7    |
+
 
 
 ## &#x1F527; Requirements and Installation
@@ -133,13 +143,13 @@ The majority of the two SFT datasets are the same, with the exception that the 2
 1. Download relevant images
 
 - LAION-CC-SBU-558K: [images.zip](https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain/blob/main/images.zip)
-- COCO: [train2017](http://images.cocodataset.org/zips/train2017.zip)
-- WebData: [images](https://drive.google.com/drive/folders/1tCUQ-sq6vdshZVkF0ZeF3K4eztkXJgax?usp=sharing). Only for academic usage.
-- SAM: [images](https://ai.meta.com/datasets/segment-anything-downloads/). We only use 000000~000050.tar for now. If you just want to use ShareGPT4V for SFT, you can quickly download 9K images from [here](https://drive.google.com/file/d/1dKumdOKSXtV7lIXdrG7jsIK_z2vZv2gs/view?usp=drive_link).
-- GQA: [images](https://downloads.cs.stanford.edu/nlp/data/gqa/images.zip)
-- OCR-VQA: [download script](https://drive.google.com/drive/folders/1_GYPY5UkUy7HIcR0zq3ZCFgeZN7BAfm_?usp=sharing). We save all files as `.jpg`
-- TextVQA: [trainvalimages](https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip)
-- VisualGenome: [part1](https://cs.stanford.edu/people/rak248/VG_100K_2/images.zip), [part2](https://cs.stanford.edu/people/rak248/VG_100K_2/images2.zip)
+- COCO: This dataset is from the [COCO2017 challenge](https://cocodataset.org/). Download: [train2017](http://images.cocodataset.org/zips/train2017.zip)
+- WebData: This dataset is curated by the [ShareGPT4V project](https://github.com/InternLM/InternLM-XComposer/tree/main/projects/ShareGPT4V). Download: [images](https://drive.google.com/drive/folders/1tCUQ-sq6vdshZVkF0ZeF3K4eztkXJgax?usp=sharing). Only for academic usage.
+- SAM: This dataset is collected by [Meta](https://ai.meta.com/datasets/segment-anything-downloads/). Download: [images](https://ai.meta.com/datasets/segment-anything-downloads/). We only use 000000~000050.tar for now. If you just want to use ShareGPT4V for SFT, you can quickly download 9K images from [here](https://drive.google.com/file/d/1dKumdOKSXtV7lIXdrG7jsIK_z2vZv2gs/view?usp=drive_link).
+- GQA: [GQA project page](https://cs.stanford.edu/people/dorarad/gqa/about.html). Download: [images](https://downloads.cs.stanford.edu/nlp/data/gqa/images.zip)
+- OCR-VQA: [OCR-VQA project page](https://ocr-vqa.github.io/). Download: [download script](https://drive.google.com/drive/folders/1_GYPY5UkUy7HIcR0zq3ZCFgeZN7BAfm_?usp=sharing). We save all files as `.jpg`
+- TextVQA: [TextVQA project page](https://textvqa.org/). Download: [trainvalimages](https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip)
+- VisualGenome: [VisualGenome project page](https://homes.cs.washington.edu/~ranjay/visualgenome/index.html). Download: [part1](https://cs.stanford.edu/people/rak248/VG_100K_2/images.zip), [part2](https://cs.stanford.edu/people/rak248/VG_100K_2/images2.zip)
 
 
 2. Download relevant annotations
