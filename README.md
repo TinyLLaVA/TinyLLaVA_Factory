@@ -6,6 +6,7 @@
 
 
 ## &#x1F389; News
+* **[2024.02.25]**  Update evaluation scripts and docs!
 * **[2024.02.25]**  Data descriptions out. Release TinyLLaVA-1.5B and TinyLLaVA-2.0B!
 * **[2024.02.24]**  Example code on inference and model loading added!
 * **[2024.02.23]**  Evaluation code and scripts released!
@@ -68,6 +69,15 @@ pip install -e .
 ```Shell
 pip install -e ".[train]"
 pip install flash-attn --no-build-isolation
+```
+### Upgrade to latest code base
+
+```Shell
+git pull
+pip install -e .
+
+# if you see some import errors when you upgrade, please try running the command below (without #)
+# pip install flash-attn --no-build-isolation --no-cache-dir
 ```
 
 
