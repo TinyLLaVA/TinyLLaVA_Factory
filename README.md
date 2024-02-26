@@ -19,7 +19,7 @@
 - [x] Model Zoo descriptions.
 - [x] Examples and inference.
 - [x] Release code for training.
-- [ ] Add descriptions for evaluation.
+- [x] Add descriptions for evaluation.
 - [x] Add descriptions for data preparation.
 - [x] Release TinyLLaVA-1.5B and TinyLLaVA-2.0B.
 - [x] Release TinyLLaVA-3.1B.
@@ -121,6 +121,11 @@ args = type('Args', (), {
 eval_model(args)
 ```
 </details>
+
+## Evaluation
+To ensure the reproducibility, we evaluate the models with greedy decoding.
+
+See [Evaluation.md](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/docs/Evaluation.md)
 
 ## Data Preparation
 
