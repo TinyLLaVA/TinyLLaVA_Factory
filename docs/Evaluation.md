@@ -1,6 +1,6 @@
 # Evaluation
 
-In TinyLLaVA, we evaluate models on a diverse set of 10 benchmarks. To ensure the reproducibility, we evaluate the models with greedy decoding. 
+In TinyLLaVA, we evaluate models on a diverse set of 9 benchmarks. To ensure the reproducibility, we evaluate the models with greedy decoding. 
 
 Currently, we mostly utilize the official toolkit or server for the evaluation.
 
