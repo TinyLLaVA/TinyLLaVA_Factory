@@ -102,6 +102,7 @@ tokenizer, model, image_processor, context_len = load_pretrained_model(
 </details>
 
 ## &#x1F527; Run Inference
+Here's an example of running inference with [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
 <details>
 <summary>Run Inference</summary>
     
@@ -131,6 +132,14 @@ args = type('Args', (), {
 eval_model(args)
 ```
 </details>
+
+### Important
+We use different `conv_mode` for different models. Replace the `conv_mode` in `args` according to this table:
+| model          	| conv_mode 	|
+|----------------	|-----------	|
+| TinyLLaVA-3.1B 	| phi       	|
+| TinyLLaVA-2.0B 	| phi       	|
+| TinyLLaVA-1.5B 	| v1        	|
 
 ## Evaluation
 To ensure the reproducibility, we evaluate the models with greedy decoding.
