@@ -2,6 +2,7 @@ from typing import Dict, Optional, Sequence, List
 import copy
 
 import transformers
+import tokenizers
 import torch
 
 from tinyllava.data.process import register_preprocess
