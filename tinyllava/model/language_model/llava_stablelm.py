@@ -157,7 +157,7 @@ class TinyLlavaStablelmForCausalLM(StableLMEpochForCausalLM, LlavaMetaForCausalL
             inputs['image_sizes'] = image_sizes
         return inputs
 
-
+'''
 @register_tokenizer('stablelm')
 def get_tokenizer():
     from .stablelm.tokenization_arcade100k import Arcade100kTokenizer
@@ -165,7 +165,14 @@ def get_tokenizer():
         tokenizer.unk_token = tokenizer.pad_token
         return tokenizer
     return Arcade100kTokenizer, post_init
+'''
 
+@register_tokenizer('stablelm')
+def get_tokenizer():
+    from transformers import AutoTokenizer
+    def post_init(tokenizer):
+        return tokenizer
+    return AutoTokenizer, post_init
 
 AutoConfig.register("tiny_llava_stablelm", TinyLlavaStablelmConfig)
 AutoModelForCausalLM.register(TinyLlavaStablelmConfig, TinyLlavaStablelmForCausalLM)

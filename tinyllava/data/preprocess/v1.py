@@ -101,7 +101,6 @@ def preprocess_v1(
                 print("conversation: ", conversations)
                 print(target)
                 print(input_ids)
-                time.sleep(5)
                 target[:] = IGNORE_INDEX
 
     return dict(

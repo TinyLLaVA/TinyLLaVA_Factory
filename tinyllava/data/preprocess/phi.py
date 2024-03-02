@@ -91,7 +91,6 @@ def preprocess_phi(
                 print("conversation: ", conversations)
                 print(target)
                 print(input_ids)
-                time.sleep(5)
                 target[:] = IGNORE_INDEX
 
     return dict(
