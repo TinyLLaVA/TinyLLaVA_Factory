@@ -31,14 +31,14 @@
 
 ## &#x1F433; Model Zoo
 ### Legacy Model
-> https://huggingface.co/bczhou/tiny-llava-v1-hf
+- [tiny-llava-hf](https://huggingface.co/bczhou/tiny-llava-v1-hf)
 
-### Pretrained Model
+### Pretrained Models
 - [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
 - [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B)
 - [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
 
-### Model Zoo
+### Model Details
 | Name          | LLM               | Checkpoint                                     | LLaVA-Bench-Wild | MME      | MMBench | MM-Vet | SQA-image | VQA-v2 | GQA   | TextVQA |
 |---------------|-------------------|------------------------------------------------|------------------|----------|---------|--------|-----------|--------|-------|---------|
 | TinyLLaVA-3.1B | Phi-2             | [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B) | 75.8             | 1464.9   | 66.9    | 32.0   | 69.1      | 79.9   | 62.0  | 59.1    |
