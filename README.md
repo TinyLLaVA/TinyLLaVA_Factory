@@ -6,6 +6,7 @@
 
 
 ## &#x1F389; News
+* **[2024.02.25]**  Update evaluation scripts and docs!
 * **[2024.02.25]**  Data descriptions out. Release TinyLLaVA-1.5B and TinyLLaVA-2.0B!
 * **[2024.02.24]**  Example code on inference and model loading added!
 * **[2024.02.23]**  Evaluation code and scripts released!
@@ -30,14 +31,14 @@
 
 ## &#x1F433; Model Zoo
 ### Legacy Model
-> https://huggingface.co/bczhou/tiny-llava-v1-hf
+- [tiny-llava-hf](https://huggingface.co/bczhou/tiny-llava-v1-hf)
 
-### Pretrained Model
+### Pretrained Models
 - [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
 - [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B)
 - [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
 
-### Model Zoo
+### Model Details
 | Name          | LLM               | Checkpoint                                     | LLaVA-Bench-Wild | MME      | MMBench | MM-Vet | SQA-image | VQA-v2 | GQA   | TextVQA |
 |---------------|-------------------|------------------------------------------------|------------------|----------|---------|--------|-----------|--------|-------|---------|
 | TinyLLaVA-3.1B | Phi-2             | [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B) | 75.8             | 1464.9   | 66.9    | 32.0   | 69.1      | 79.9   | 62.0  | 59.1    |
@@ -69,6 +70,15 @@ pip install -e .
 pip install -e ".[train]"
 pip install flash-attn --no-build-isolation
 ```
+### Upgrade to latest code base
+
+```Shell
+git pull
+pip install -e .
+
+# if you see some import errors when you upgrade, please try running the command below (without #)
+# pip install flash-attn --no-build-isolation --no-cache-dir
+```
 
 
 ## &#x1F527; Quick Start
@@ -92,6 +102,7 @@ tokenizer, model, image_processor, context_len = load_pretrained_model(
 </details>
 
 ## &#x1F527; Run Inference
+Here's an example of running inference with [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
 <details>
 <summary>Run Inference</summary>
     
@@ -121,6 +132,14 @@ args = type('Args', (), {
 eval_model(args)
 ```
 </details>
+
+### Important
+We use different `conv_mode` for different models. Replace the `conv_mode` in `args` according to this table:
+| model          	| conv_mode 	|
+|----------------	|-----------	|
+| TinyLLaVA-3.1B 	| phi       	|
+| TinyLLaVA-2.0B 	| phi       	|
+| TinyLLaVA-1.5B 	| v1        	|
 
 ## Evaluation
 To ensure the reproducibility, we evaluate the models with greedy decoding.

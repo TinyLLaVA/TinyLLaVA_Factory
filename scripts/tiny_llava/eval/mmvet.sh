@@ -6,7 +6,7 @@ EVAL_DIR="./playground/data/eval"
 
 python -m tinyllava.eval.model_vqa \
     --model-path $MODEL_PATH \
-    --question-file $EVAL_DIR/mm-vet/tinyllava-mm-vet.jsonl \
+    --question-file $EVAL_DIR/mm-vet/llava-mm-vet.jsonl \
     --image-folder $EVAL_DIR/mm-vet/images \
     --answers-file $EVAL_DIR/mm-vet/answers/$MODEL_NAME.jsonl \
     --temperature 0 \

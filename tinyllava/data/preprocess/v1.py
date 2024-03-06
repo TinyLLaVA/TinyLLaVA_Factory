@@ -2,6 +2,7 @@ from typing import Dict, Optional, Sequence, List
 import copy
 
 import transformers
+import tokenizers
 import torch
 
 from tinyllava.data.process import register_preprocess
@@ -100,7 +101,6 @@ def preprocess_v1(
                 print("conversation: ", conversations)
                 print(target)
                 print(input_ids)
-                time.sleep(5)
                 target[:] = IGNORE_INDEX
 
     return dict(
