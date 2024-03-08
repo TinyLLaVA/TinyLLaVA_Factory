@@ -131,6 +131,17 @@ def train():
 
         vision_tower = model.get_vision_tower()
         vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
+        
+        if training_args.gradient_checkpointing:
+            vision_tower.vision_tower.gradient_checkpointing_enable(
+                gradient_checkpointing_kwargs={"use_reentrant": False}
+            )
+            if hasattr(vision_tower.vision_tower, "enable_input_require_grads"):
+                vision_tower.vision_tower.enable_input_require_grads()
+            else:
+                def make_inputs_require_grad(module, input, output):
+                    output.requires_grad_(True)
+                vision_tower.vision_tower.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
         data_args.image_processor = vision_tower.image_processor
         data_args.is_multimodal = True
