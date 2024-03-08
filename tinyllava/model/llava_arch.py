@@ -62,6 +62,15 @@ class LlavaMetaModel:
                 self.vision_tower = [vision_tower]
             else:
                 self.vision_tower = vision_tower
+                
+        elif self.get_vision_tower().vision_tower_name != vision_tower:
+            print(f"rebuilding vision tower! vision tower initialized from: {vision_tower}")
+            vision_tower = build_vision_tower(model_args)
+            if fsdp is not None and len(fsdp) > 0:
+                self.vision_tower = [vision_tower]
+            else:
+                self.vision_tower = vision_tower
+                
         else:
             if fsdp is not None and len(fsdp) > 0:
                 vision_tower = self.vision_tower[0]
