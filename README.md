@@ -6,6 +6,7 @@
 
 
 ## &#x1F389; News
+* **[2024.03.10]**  Finetune scripts out!
 * **[2024.02.25]**  Update evaluation scripts and docs!
 * **[2024.02.25]**  Data descriptions out. Release TinyLLaVA-1.5B and TinyLLaVA-2.0B!
 * **[2024.02.24]**  Example code on inference and model loading added!
