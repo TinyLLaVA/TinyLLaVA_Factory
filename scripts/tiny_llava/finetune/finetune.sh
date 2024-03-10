@@ -6,7 +6,7 @@ IMAGE_PATH="YOUR_IMAGE_DIR"
 OUTPUT_DIR="YOUR_OUTPUT_DIR"
 
 deepspeed tinyllava/train/train.py \
-    --deepspeed ./scripts/zero3.json \
+    --deepspeed ./scripts/tiny_llava/zero3.json \
     --model_name_or_path bczhou/TinyLLaVA-3.1B \
     --version phi \
     --data_path $DATA_PATH \
@@ -33,7 +33,7 @@ deepspeed tinyllava/train/train.py \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
-    -tf32 False \
+    --tf32 False \
     --model_max_length 3072 \
     --gradient_checkpointing True \
     --dataloader_num_workers 15 \
