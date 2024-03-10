@@ -8,7 +8,7 @@ TOKENIZER_REGISTRY = {}
 def ModelSelect(model_name_or_path):
     model = None
     for name in MODEL_REGISTRY.keys():
-        if name in model_name_or_path.lower():
+        if name.lower() in model_name_or_path.lower():
             model = MODEL_REGISTRY[name]
     if model is None:
         model = MODEL_REGISTRY['llama']
@@ -20,6 +20,13 @@ def TokenizerSelect(model_name_or_path):
     for name in TOKENIZER_REGISTRY.keys():
         if name in model_name_or_path.lower():
             tokenizer_init = TOKENIZER_REGISTRY[name]
+        # FIXME: Find a more elegant way to do this
+        if name == 'phi':
+            MODEL_REGISTRY['TinyLLaVA-3.1B'] = cls
+        elif name == 'stablelm':
+            MODEL_REGISTRY['TinyLLaVA-2.0B'] = cls
+        elif name == 'llama':
+            MODEL_REGISTRY['TinyLLaVA-1.5B'] = cls
     if tokenizer_init is None:
         tokenizer_init = TOKENIZER_REGISTRY['llama']
     return tokenizer_init
