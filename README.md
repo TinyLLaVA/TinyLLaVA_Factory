@@ -6,6 +6,7 @@
 
 
 ## &#x1F389; News
+* **[2024.03.10]**  base recipe out!
 * **[2024.03.10]**  Finetune scripts out!
 * **[2024.02.25]**  Update evaluation scripts and docs!
 * **[2024.02.25]**  Data descriptions out. Release TinyLLaVA-1.5B and TinyLLaVA-2.0B!
@@ -18,6 +19,7 @@
 ## &#x231B; TODO
 - [ ] Add support for Ollama and llama.cpp.
 - [ ] Developers' guide / How to build demo locally.
+- [ ] Training and custom finetuning docs.
 - [x] Model Zoo descriptions.
 - [x] Examples and inference.
 - [x] Release code for training.
