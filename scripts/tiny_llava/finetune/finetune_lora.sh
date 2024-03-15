@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Assign the arguments to variables
-DATA_PATH="/root/autodl-tmp/data/text_files/pokemon_blip_captions.json"
-IMAGE_PATH="/root/autodl-tmp/data/"
-OUTPUT_DIR="/root/autodl-tmp/TinyLLaVA-3.1B-lora"
+DATA_PATH="/path/to/your/json/data/xxx.json"
+IMAGE_PATH="/path/to/your/image"
+OUTPUT_DIR="/path/to/your/TinyLLaVA-3.1B-lora"
 
 deepspeed tinyllava/train/train.py \
     --deepspeed ./scripts/tiny_llava/zero3.json \
