@@ -18,7 +18,7 @@ def ModelSelect(model_name_or_path):
 def TokenizerSelect(model_name_or_path):
     tokenizer_init = None
     for name in TOKENIZER_REGISTRY.keys():
-        if name in model_name_or_path.lower():
+        if name.lower() in model_name_or_path.lower():
             tokenizer_init = TOKENIZER_REGISTRY[name]
         # FIXME: Find a more elegant way to do this
         if name == 'phi':
