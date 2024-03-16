@@ -82,15 +82,15 @@ def preprocess_phi(
 
         if cur_len < tokenizer.model_max_length:
             if cur_len != total_len:
-                print(
-                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
-                    f" (ignored)"
-                )
-                print("number of rounds: ", len(rounds) - 1)
-                print("rounds: ", rounds[:-1])
-                print("conversation: ", conversations)
-                print(target)
-                print(input_ids)
+                # print(
+                #     f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
+                #     f" (ignored)"
+                # )
+                # print("number of rounds: ", len(rounds) - 1)
+                # print("rounds: ", rounds[:-1])
+                # print("conversation: ", conversations)
+                # print(target)
+                # print(input_ids)
                 target[:] = IGNORE_INDEX
 
     return dict(
