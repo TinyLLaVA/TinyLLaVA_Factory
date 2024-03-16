@@ -503,6 +503,8 @@ class SigLipVisionModel(SigLipPreTrainedModel):
         super().__init__(config)
 
         self.vision_model = SigLipVisionTransformer(config)
+        del self.vision_model.encoder.layers[-1:]
+        self.vision_model.head = nn.Identity()
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -572,14 +574,12 @@ class SigLipVisionTower(nn.Module):
 
         self.vision_tower = SigLipVisionModel.from_pretrained(self.vision_tower_name)
 
-        del self.vision_tower.vision_model.encoder.layers[-1:]
-        self.vision_tower.vision_model.head = nn.Identity()
         self.vision_tower.requires_grad_(False)
         self.vision_tower.eval()
 
         self.is_loaded = True
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def forward(self, images):
         if type(images) is list:
             image_features = []
