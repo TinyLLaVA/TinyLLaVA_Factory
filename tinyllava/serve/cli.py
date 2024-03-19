@@ -37,8 +37,17 @@ def main(args):
         conv_mode = "llava_v1"
     elif "mpt" in model_name.lower():
         conv_mode = "mpt"
+    elif 'phi' or '3.1b' in model_name.lower():
+        conv_mode = 'phi'
+    elif 'stablelm' or '2.0b' in model_name.lower():
+        conv_mode = 'phi'
+    elif 'tinyllama' or '1.5b' in model_name.lower():
+        conv_mode = 'v1'
+    elif 'qwen' in model_name.lower():
+        conv_mode = 'qwen'
     else:
         conv_mode = "llava_v0"
+
 
     if args.conv_mode is not None and conv_mode != args.conv_mode:
         print('[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}'.format(conv_mode, args.conv_mode, args.conv_mode))
@@ -99,7 +108,8 @@ def main(args):
                 max_new_tokens=args.max_new_tokens,
                 streamer=streamer,
                 use_cache=True,
-                stopping_criteria=[stopping_criteria])
+                # stopping_criteria=[stopping_criteria]
+            )
 
         outputs = tokenizer.decode(output_ids[0, input_ids.shape[1]:]).strip()
         conv.messages[-1][-1] = outputs

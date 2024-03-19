@@ -28,24 +28,24 @@ from tinyllava.model.llava_arch import LlavaMetaModel, LlavaMetaForCausalLM
 from tinyllava.model.model_factory import *
 
 
-class LlavaQwen2Config(Qwen2Config):
-    model_type = "llava_qwen"
+class TinyLlavaQwen2Config(Qwen2Config):
+    model_type = "tiny_llava_qwen"
 
 
-class LlavaQwen2Model(LlavaMetaModel, Qwen2Model):
-    config_class = LlavaQwen2Config
+class TinyLlavaQwen2Model(LlavaMetaModel, Qwen2Model):
+    config_class = TinyLlavaQwen2Config
 
     def __init__(self, config: Qwen2Config):
-        super(LlavaQwen2Model, self).__init__(config)
+        super(TinyLlavaQwen2Model, self).__init__(config)
         # self.gradient_checkpointing = False
 
 @register_model('qwen')
-class LlavaQwen2ForCausalLM(Qwen2ForCausalLM, LlavaMetaForCausalLM):
-    config_class = LlavaQwen2Config
+class TinyLlavaQwen2ForCausalLM(Qwen2ForCausalLM, LlavaMetaForCausalLM):
+    config_class = TinyLlavaQwen2Config
 
     def __init__(self, config):
         super(Qwen2ForCausalLM, self).__init__(config)
-        self.model = LlavaQwen2Model(config)
+        self.model = TinyLlavaQwen2Model(config)
         # self.pretraining_tp = config.pretraining_tp
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -165,5 +165,5 @@ def get_tokenizer():
     return AutoTokenizer, post_init
 
 
-AutoConfig.register("llava_qwen", LlavaQwen2Config)
-AutoModelForCausalLM.register(LlavaQwen2Config, LlavaQwen2ForCausalLM)
+AutoConfig.register("tiny_llava_qwen", TinyLlavaQwen2Config)
+AutoModelForCausalLM.register(TinyLlavaQwen2Config, TinyLlavaQwen2ForCausalLM)

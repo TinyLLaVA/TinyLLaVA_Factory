@@ -60,6 +60,10 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False, padding_side="right")
             model = TinyLlavaStablelmForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True,
                                                                  config=lora_cfg_pretrained, **kwargs)
+        elif 'qwen' in model_name.lower():
+            tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False, padding_side="right")
+            model = TinyLlavaQwen2ForCausalLM.from_pretrained(model_base, ow_cpu_mem_usage=True,
+                                                              config=lora_cfg_pretrained, **kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False, padding_side="right")
             model = TinyLlavaLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True,
@@ -110,8 +114,12 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
             cfg_pretrained = TinyLlavaStablelmConfig.from_pretrained(model_path)
             model = TinyLlavaStablelmForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True,
-                                                                 config=cfg_pretrained,
-                                                                 **kwargs)
+                                                                 config=cfg_pretrained, **kwargs)
+        if 'qwen' in model_name.lower():
+            tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False, padding_side="right")
+            cfg_pretrained = TinyLlavaQwen2Config.from_pretrained(model_path)
+            model = TinyLlavaQwen2ForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained,
+                                                              **kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
             cfg_pretrained = AutoConfig.from_pretrained(model_path)
@@ -129,6 +137,9 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             from tinyllava.model.language_model.stablelm.tokenization_arcade100k import Arcade100kTokenizer
             tokenizer = Arcade100kTokenizer.from_pretrained(model_path, use_fast=False, padding_side="right")
             model = TinyLlavaStablelmForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
+        elif 'qwen' in model_name.lower():
+            tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False, padding_side="right")
+            model = TinyLlavaQwen2ForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
             model = TinyLlavaLlamaForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
