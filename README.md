@@ -282,12 +282,6 @@ Training script with DeepSpeed ZeRO-2: [`pretrain.sh`](https://github.com/DLCV-B
 
 **Replace paths to your paths**
 
-Training script with DeepSpeed ZeRO-2: [`pretrain.sh`](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/scripts/tiny_llava/pretrain.sh).
-
-### Finetune
-
-**Replace paths to your paths**
-
 Training script with DeepSpeed ZeRO-3: [`finetune.sh`](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/scripts/tiny_llava/finetune.sh).
 
 ## Custom-Finetune
