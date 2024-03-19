@@ -18,8 +18,8 @@
 
 ## &#x231B; TODO
 - [ ] Add support for Ollama and llama.cpp.
-- [ ] Developers' guide / How to build demo locally.
-- [ ] Training and custom finetuning docs.
+- [x] Developers' guide / How to build demo locally.
+- [x] Training and custom finetuning docs.
 - [x] Model Zoo descriptions.
 - [x] Examples and inference.
 - [x] Release code for training.
@@ -32,22 +32,17 @@
 
 - Our best model, TinyLLaVA-3.1B, achieves better overall performance against existing 7B models such as LLaVA-1.5 and Qwen-VL.
 
-## &#x1F433; Model Zoo
-### Legacy Model
-- [tiny-llava-hf](https://huggingface.co/bczhou/tiny-llava-v1-hf)
-
-### Pretrained Models
-- [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
-- [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B)
-- [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
-
-### Model Details
-| Name          | LLM               | Checkpoint                                     | LLaVA-Bench-Wild | MME      | MMBench | MM-Vet | SQA-image | VQA-v2 | GQA   | TextVQA |
-|---------------|-------------------|------------------------------------------------|------------------|----------|---------|--------|-----------|--------|-------|---------|
-| TinyLLaVA-3.1B | Phi-2             | [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B) | 75.8             | 1464.9   | 66.9    | 32.0   | 69.1      | 79.9   | 62.0  | 59.1    |
-| TinyLLaVA-2.0B | StableLM-2-1.6B   | [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B) | 66.4             | 1433.8     | 63.3    | 32.6   | 64.7      | 78.9   | 61.9  | 56.4    |
-| TinyLLaVA-1.5B | TinyLlama         | [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B) | 60.8             | 1276.5     | 55.2     | 25.8   | 60.3      | 76.9   | 60.3  | 51.7    |
-
+## Contents
+## Contents
+- [Install](#x1f527-requirements-and-installation)
+- [Model Zoo](#x1f433-model-zoo)
+- [Demo](#Demo)
+- [Quick Start](#x1f527-quick-start)
+- [Run Inference](#x1f527-run-inference)
+- [Evaluation](#evaluation)
+- [Data](#data-preparation)
+- [Train](#train)
+- [Custom Finetune](#custom-finetune)
 
 
 ## &#x1F527; Requirements and Installation
@@ -73,7 +68,7 @@ pip install -e .
 pip install -e ".[train]"
 pip install flash-attn --no-build-isolation
 ```
-### Upgrade to latest code base
+### Upgrade to the latest code base
 
 ```Shell
 git pull
@@ -81,6 +76,41 @@ pip install -e .
 
 # if you see some import errors when you upgrade, please try running the command below (without #)
 # pip install flash-attn --no-build-isolation --no-cache-dir
+```
+
+## &#x1F433; Model Zoo
+### Legacy Model
+- [tiny-llava-hf](https://huggingface.co/bczhou/tiny-llava-v1-hf)
+
+### Pretrained Models
+- [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B)
+- [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B)
+- [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
+
+### Model Details
+| Name          | LLM               | Checkpoint                                     | LLaVA-Bench-Wild | MME      | MMBench | MM-Vet | SQA-image | VQA-v2 | GQA   | TextVQA |
+|---------------|-------------------|------------------------------------------------|------------------|----------|---------|--------|-----------|--------|-------|---------|
+| TinyLLaVA-3.1B | Phi-2             | [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B) | 75.8             | 1464.9   | 66.9    | 32.0   | 69.1      | 79.9   | 62.0  | 59.1    |
+| TinyLLaVA-2.0B | StableLM-2-1.6B   | [TinyLLaVA-2.0B](https://huggingface.co/bczhou/TinyLLaVA-2.0B) | 66.4             | 1433.8     | 63.3    | 32.6   | 64.7      | 78.9   | 61.9  | 56.4    |
+| TinyLLaVA-1.5B | TinyLlama         | [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B) | 60.8             | 1276.5     | 55.2     | 25.8   | 60.3      | 76.9   | 60.3  | 51.7    |
+
+
+## Demo
+
+### Gradio Web Demo
+
+Launch a local web demo by running:
+```shell
+python tinyllava/serve/app.py --model-path bczhou/TinyLLaVA-3.1B --model-name TinyLLaVA-3.1B
+```
+
+### CLI Inference
+
+We also support running inference with CLI. To use our model, run:
+```shell
+python -m tinyllava.serve.cli \
+    --model-path bczhou/TinyLLaVA-3.1B \
+    --image-file "./tinyllava/serve/examples/extreme_ironing.jpg" 
 ```
 
 
@@ -223,6 +253,38 @@ data
 │   ├── share-captioner_coco_lcs_sam_1246k_1107.json
 │   ├── sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json
 ```
+
+## Train
+
+**This section we describe the base recipe.**
+### Hyperparameters
+Both hyperparameters used in pretraining and finetuning are provided below.
+
+1. Pretraining
+
+| Hyperparameter | Global Batch Size | Learning rate | Epochs | Max length | Weight decay |
+|----------------| ---: | ---: | ---: |-----------:| ---: |
+| TinyLLaVA-3.1B | 256 | 1e-3 | 1 |       3072 | 0 |
+
+2. Finetuning
+
+| Hyperparameter | Global Batch Size | Learning rate | Epochs | Max length | Weight decay |
+|----------------| ---: | ---: | ---: |-----------:| ---: |
+| TinyLLaVA-3.1B | 128 | 2e-5 | 1 |       3072 | 0 |
+
+### Pretrain
+
+**Replace paths to your paths**
+Training script with DeepSpeed ZeRO-2: [`pretrain.sh`](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/scripts/tiny_llava/pretrain.sh).
+
+### Finetune
+**Replace paths to your paths**
+Training script with DeepSpeed ZeRO-3: [`finetune.sh`](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/scripts/tiny_llava/finetune.sh).
+
+## Custom-Finetune
+
+Check out our custom finetune using LoRA [here](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/dev/docs/CUTOM_FINETUNE.md).
+
 
 ## &#x270F; Citation
 

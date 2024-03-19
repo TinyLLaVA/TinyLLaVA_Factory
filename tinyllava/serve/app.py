@@ -208,7 +208,17 @@ def http_bot(state, temperature, top_p, max_new_tokens):
 
     if len(state.messages) == state.offset + 2:
         # First round of conversation
-        if "llava" in model_name.lower():
+        if "tinyllava" in model_name.lower():
+            if "3.1b" in model_name.lower() or "phi" in model_name.lower():
+                template_name = "phi"
+            elif "2.0b" in model_name.lower() or "stablelm" in model_name.lower():
+                template_name = "phi"
+            elif "qwen" in model_name.lower():
+                template_name = "qwen"
+            else:
+                template_name = "v1"
+
+        elif "llava" in model_name.lower():
             if "llama-2" in model_name.lower():
                 template_name = "llava_llama_2"
             elif "v1" in model_name.lower():
@@ -251,21 +261,12 @@ def http_bot(state, temperature, top_p, max_new_tokens):
     all_image_hash = [hashlib.md5(image.tobytes()).hexdigest() for image in all_images]
 
     # Make requests
-    pload = {
-        "model": model_name,
-        "prompt": prompt,
-        "temperature": float(temperature),
-        "top_p": float(top_p),
-        "max_new_tokens": min(int(max_new_tokens), 1536),
-        "stop": (
+    pload = {"model": model_name, "prompt": prompt, "temperature": float(temperature), "top_p": float(top_p),
+             "max_new_tokens": min(int(max_new_tokens), 1536), "stop": (
             state.sep
             if state.sep_style in [SeparatorStyle.SINGLE, SeparatorStyle.MPT]
             else state.sep2
-        ),
-        "images": f"List of {len(state.get_images())} images: {all_image_hash}",
-    }
-
-    pload["images"] = state.get_images()
+        ), "images": state.get_images()}
 
     state.messages[-1][-1] = "▌"
     yield (state, state.to_gradio_chatbot())
@@ -414,7 +415,9 @@ def parse_args():
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--share", default=None)
     parser.add_argument("--model-path", type=str, default=DEFAULT_MODEL_PATH)
-    parser.add_argument("--model-name", type=str, default="share4v-7b")
+    parser.add_argument("--model-name", type=str, default=DEFAULT_MODEL_NAME)
+    parser.add_argument("--load-8bit", action="store_true")
+    parser.add_argument("--load-4bit", action="store_true")
     args = parser.parse_args()
     return args
 
@@ -429,9 +432,11 @@ if __name__ == "__main__":
     args = parse_args()
     model_name = args.model_name
     tokenizer, model, image_processor, context_len = load_pretrained_model(
-        model_path=DEFAULT_MODEL_PATH,
+        model_path=args.model_path,
         model_base=None,
-        model_name=get_model_name_from_path(DEFAULT_MODEL_PATH),
+        model_name=args.model_name,
+        load_4bit=args.load_4bit,
+        load_8bit=args.load_8bit
     )
 
     demo = build_demo()
