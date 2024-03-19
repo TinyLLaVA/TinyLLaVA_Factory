@@ -33,7 +33,6 @@
 - Our best model, TinyLLaVA-3.1B, achieves better overall performance against existing 7B models such as LLaVA-1.5 and Qwen-VL.
 
 ## Contents
-## Contents
 - [Install](#x1f527-requirements-and-installation)
 - [Model Zoo](#x1f433-model-zoo)
 - [Demo](#Demo)
