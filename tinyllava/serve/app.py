@@ -263,12 +263,12 @@ def http_bot(state, temperature, top_p, max_new_tokens):
     all_image_hash = [hashlib.md5(image.tobytes()).hexdigest() for image in all_images]
 
     # Make requests
-    pload = {"model": model_name, "prompt": prompt, "temperature": float(temperature), "top_p": float(top_p),
-             "max_new_tokens": min(int(max_new_tokens), 1536), "stop": (
-            state.sep
-            if state.sep_style in [SeparatorStyle.SINGLE, SeparatorStyle.MPT]
-            else state.sep2
-        ), "images": state.get_images()}
+    # pload = {"model": model_name, "prompt": prompt, "temperature": float(temperature), "top_p": float(top_p),
+    #          "max_new_tokens": min(int(max_new_tokens), 1536), "stop": (
+    #         state.sep
+    #         if state.sep_style in [SeparatorStyle.SINGLE, SeparatorStyle.MPT]
+    #         else state.sep2
+    #     ), "images": state.get_images()}
 
     pload = {
         "model": model_name,
@@ -280,11 +280,7 @@ def http_bot(state, temperature, top_p, max_new_tokens):
             state.sep
             if state.sep_style in [SeparatorStyle.SINGLE, SeparatorStyle.MPT]
             else state.sep2
-        ),
-        "images": f"List of {len(state.get_images())} images: {all_image_hash}",
-    }
-
-    pload["images"] = state.get_images()
+        ), "images": state.get_images()}
 
     state.messages[-1][-1] = "▌"
     yield (state, state.to_gradio_chatbot())

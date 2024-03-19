@@ -33,6 +33,10 @@
 - Our best model, TinyLLaVA-3.1B, achieves better overall performance against existing 7B models such as LLaVA-1.5 and Qwen-VL.
 
 ## Contents
+<<<<<<< HEAD
+=======
+## Contents
+>>>>>>> 8e6a6b9 (update README)
 - [Install](#x1f527-requirements-and-installation)
 - [Model Zoo](#x1f433-model-zoo)
 - [Demo](#Demo)
@@ -274,6 +278,7 @@ Both hyperparameters used in pretraining and finetuning are provided below.
 ### Pretrain
 
 **Replace paths to your paths**
+<<<<<<< HEAD
 
 Training script with DeepSpeed ZeRO-2: [`pretrain.sh`](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/scripts/tiny_llava/pretrain.sh).
 
@@ -281,6 +286,12 @@ Training script with DeepSpeed ZeRO-2: [`pretrain.sh`](https://github.com/DLCV-B
 
 **Replace paths to your paths**
 
+=======
+Training script with DeepSpeed ZeRO-2: [`pretrain.sh`](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/scripts/tiny_llava/pretrain.sh).
+
+### Finetune
+**Replace paths to your paths**
+>>>>>>> 8e6a6b9 (update README)
 Training script with DeepSpeed ZeRO-3: [`finetune.sh`](https://github.com/DLCV-BUAA/TinyLLaVABench/blob/main/scripts/tiny_llava/finetune.sh).
 
 ## Custom-Finetune
