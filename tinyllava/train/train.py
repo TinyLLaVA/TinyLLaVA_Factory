@@ -87,6 +87,8 @@ def train():
         if hasattr(model, "enable_input_require_grads"):
             model.enable_input_require_grads()
         else:
+            def make_inputs_require_grad(module, input, output):
+                output.requires_grad_(True)
             model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
     if training_args.lora_enable:
         model = lora_setting(model, training_args)
