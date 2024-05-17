@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluation &mdash; TinyLLaVA_Factory&#39;s Documentation v1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=e160b93e"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Data module" href="Data.html" />
+    <link rel="prev" title="Train" href="Train.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            TinyLLaVA_Factory's Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">GET STARTED</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Prepare%20Datasets.html">Prepare Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Train.html">Train</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Evaluation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#vqav2">VQAv2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gqa">GQA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scienceqa">ScienceQA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#textvqa">TextVQA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pope">POPE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mme">MME</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mm-vet">MM-Vet</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CONTENTS</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Data.html">Data module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Model.html">Model module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Training.html">Training module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TinyLLaVA_Factory's Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Evaluation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/Evaluation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="evaluation">
+<h1>Evaluation<a class="headerlink" href="#evaluation" title="Link to this heading"></a></h1>
+<p>We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU.</p>
+<p>For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view">eval.zip</a>. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to <code class="docutils literal notranslate"><span class="pre">./playground/data/eval</span></code>.</p>
+<p>For MMMU, …</p>
+<section id="vqav2">
+<h2>VQAv2<a class="headerlink" href="#vqav2" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Dataset:</strong> Download <a class="reference external" href="http://images.cocodataset.org/zips/test2015.zip">test2015</a> and put it under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/vqav2</span></code>.</p></li>
+</ol>
+<ol class="arabic simple" start="2">
+<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p><strong>Inference:</strong> VQAv2 supports multi-gpus inference with the following command.</p></li>
+</ol>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span>,1,2,3,4,5,6,7<span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/vqav2.sh
+</pre></div>
+</div>
+</div></blockquote>
+<ol class="arabic simple" start="4">
+<li><p>Submit the results(<code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/vqav2/answers_upload</span></code>) to the <a class="reference external" href="https://eval.ai/web/challenges/challenge-page/830/my-submission">vqav2_evaluation_server</a>.</p></li>
+</ol>
+</section>
+<section id="gqa">
+<h2>GQA<a class="headerlink" href="#gqa" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Dataset:</strong> Download the <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/download.html">data</a> and <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/evaluate.html">evaluation_scripts</a> following the official instructions and put under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/gqa/data</span></code>.</p></li>
+</ol>
+<ol class="arabic simple" start="2">
+<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p><strong>Inference:</strong> GQA supports multi-gpus inference with the following command.</p></li>
+</ol>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/gqa.sh
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="scienceqa">
+<h2>ScienceQA<a class="headerlink" href="#scienceqa" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Dataset:</strong> Under <code class="docutils literal notranslate"><span class="pre">./playground/data/eval/scienceqa</span></code>, download <code class="docutils literal notranslate"><span class="pre">images</span></code>, <code class="docutils literal notranslate"><span class="pre">pid_splits.json</span></code>, <code class="docutils literal notranslate"><span class="pre">problems.json</span></code> from the <code class="docutils literal notranslate"><span class="pre">data/scienceqa</span></code> folder of the ScienceQA <a class="reference external" href="https://github.com/lupantech/ScienceQA">repo</a>.</p></li>
+</ol>
+<ol class="arabic simple" start="2">
+<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p><strong>Inference:</strong> ScienceQA does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
+</ol>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/sqa.sh
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="textvqa">
+<h2>TextVQA<a class="headerlink" href="#textvqa" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Dataset:</strong> Download <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_val.json">TextVQA_0.5.1_val.json</a> and <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip">images</a> and extract to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/textvqa</span></code>.</p></li>
+</ol>
+<ol class="arabic simple" start="2">
+<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p><strong>Inference:</strong> TextVQA does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
+</ol>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/textvqa.sh
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="pope">
+<h2>POPE<a class="headerlink" href="#pope" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Dataset:</strong> Download COCO <a class="reference external" href="http://images.cocodataset.org/zips/val2014.zip">val2014</a> and the <a class="reference external" href="https://github.com/AoiDragon/POPE/tree/e3e39262c85a6a83f26cf5094022a782cb0df58d/output/coco">coco</a> folder that contains 3 json files, put them under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/pope</span></code>.</p></li>
+</ol>
+<ol class="arabic simple" start="2">
+<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p><strong>Inference:</strong> POPE does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
+</ol>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/pope.sh
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="mme">
+<h2>MME<a class="headerlink" href="#mme" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Dataset:</strong> Download the data following the official instructions <a class="reference external" href="https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models/tree/Evaluation">here</a>.</p></li>
+</ol>
+<ol class="arabic simple" start="2">
+<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Downloaded images to <code class="docutils literal notranslate"><span class="pre">MME_Benchmark_release_version</span></code>.</p></li>
+<li><p>put the official <code class="docutils literal notranslate"><span class="pre">eval_tool</span></code> and <code class="docutils literal notranslate"><span class="pre">MME_Benchmark_release_version</span></code> under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/MME</span></code>.</p></li>
+<li><p><strong>Inference:</strong> MME does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
+</ol>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mme.sh
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="mm-vet">
+<h2>MM-Vet<a class="headerlink" href="#mm-vet" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Datasets:</strong> Extract <a class="reference external" href="https://objects.githubusercontent.com/github-production-release-asset-2e65be/674424428/70d2c2c1-1833-461b-875e-ee3a6f903f72?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=releaseassetproduction%2F20240516%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240516T093527Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=26f8c01f47ef0754116687c16b650af513e93fa660be9ce47b45e95c5bd59f1d&amp;X-Amz-SignedHeaders=host&amp;actor_id=99701420&amp;key_id=0&amp;repo_id=674424428&amp;response-content-disposition=attachment%3B%20filename%3Dmm-vet.zip&amp;response-content-type=application%2Foctet-stream">mm-vet.zip</a> to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/mmvet</span></code>.</p></li>
+</ol>
+<ol class="arabic simple" start="2">
+<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p><strong>Inference:</strong> MM-Vet does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
+</ol>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mmvet.sh
+</pre></div>
+</div>
+</div></blockquote>
+<ol class="arabic simple" start="4">
+<li><p>Submit the results(<code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/mmvet/results</span></code>) to the <a class="reference external" href="https://huggingface.co/spaces/whyu/MM-Vet_Evaluator">mmvet_evaluation_server</a>.</p></li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Train.html" class="btn btn-neutral float-left" title="Train" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Data.html" class="btn btn-neutral float-right" title="Data module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, TinyLLaVA_Factory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

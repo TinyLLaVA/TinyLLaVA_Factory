@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prepare Datasets &mdash; TinyLLaVA_Factory&#39;s Documentation v1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=e160b93e"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Train" href="Train.html" />
+    <link rel="prev" title="Installation" href="Installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            TinyLLaVA_Factory's Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">GET STARTED</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Prepare Datasets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1">LLaVA dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">ShareGPT4V dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#organize-data">Organize Data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Train.html">Train</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Evaluation.html">Evaluation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CONTENTS</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Data.html">Data module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Model.html">Model module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Training.html">Training module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TinyLLaVA_Factory's Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Prepare Datasets</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/Prepare Datasets.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="prepare-datasets">
+<h1>Prepare Datasets<a class="headerlink" href="#prepare-datasets" title="Link to this heading"></a></h1>
+<p>As reported in our <a class="reference external" href="https://github.com/haotian-liu/LLaVA?tab=readme-ov-file#pretrain-feature-alignment">paper</a>, we use two different datasets: the <a class="reference external" href="https://github.com/haotian-liu/LLaVA?tab=readme-ov-file#pretrain-feature-alignment">LLaVA_dataset</a> and the <a class="reference external" href="https://github.com/InternLM/InternLM-XComposer/blob/main/projects/ShareGPT4V/docs/Data.md">ShareGPT4V_dataset</a>. In this section, we will detail data preparation for training. For evaluation dataset, please see instructions in the Evaluation section</p>
+<section id="id1">
+<h2>LLaVA dataset<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<ul>
+<li><p><strong>Pretraining Images</strong>: The pretraining images of LLaVA is from the 558K subset of the LAION-CC-SBU dataset. Download as follows.</p>
+<ul class="simple">
+<li><p>LAION-CC-SBU-558K: <a class="reference external" href="https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain/blob/main/images.zip">images.zip</a>.</p></li>
+</ul>
+</li>
+<li><p><strong>Pretraining Annotations</strong>: The pretraining annotations of LLaVA. Download as follows.</p>
+<ul class="simple">
+<li><p>pretraining annotations: <a class="reference external" href="https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain">blip_laion_cc_sbu_558k.json</a>.</p></li>
+</ul>
+</li>
+<li><p><strong>SFT Images</strong>: The SFT images of LLaVA. Download as follows.</p>
+<ul class="simple">
+<li><p>LAION-CC-SBU-558K: Already download as “LAION-CC-SBU-558K” in Pretraining Images.</p></li>
+<li><p>COCO: This dataset is from the <a class="reference external" href="https://cocodataset.org/">COCO2017_challenge</a>. Download: <a class="reference external" href="http://images.cocodataset.org/zips/train2017.zip">train2017</a>.</p></li>
+</ul>
+<ul class="simple">
+<li><p>GQA: <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/about.html">GQA_project_page</a>. Download: <a class="reference external" href="https://downloads.cs.stanford.edu/nlp/data/gqa/images.zip">gqa_images</a>.</p></li>
+</ul>
+<ul class="simple">
+<li><p>OCR-VQA: <a class="reference external" href="https://ocr-vqa.github.io/">OCR-VQA_project_page</a>. Download: <a class="reference external" href="https://drive.google.com/drive/folders/1_GYPY5UkUy7HIcR0zq3ZCFgeZN7BAfm_">download_script</a>. We save all files as <code class="docutils literal notranslate"><span class="pre">.jpg</span></code>.</p></li>
+</ul>
+<ul class="simple">
+<li><p>TextVQA: <a class="reference external" href="https://textvqa.org/">TextVQA_project_page</a>. Download: <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip">trainval_images</a>.</p></li>
+</ul>
+<ul class="simple">
+<li><p>VisualGenome: <a class="reference external" href="https://homes.cs.washington.edu/~ranjay/visualgenome/index.html">VisualGenome_project_page</a>. Download: <a class="reference external" href="https://cs.stanford.edu/people/rak248/VG_100K_2/images.zip">part1</a>, <a class="reference external" href="https://cs.stanford.edu/people/rak248/VG_100K_2/images2.zip">part2</a>.</p></li>
+</ul>
+</li>
+<li><p><strong>SFT Annotations</strong>: The SFT annotations of LLaVA. Download as follows.</p>
+<ul class="simple">
+<li><p>SFT annotations: <a class="reference external" href="https://huggingface.co/datasets/liuhaotian/LLaVA-Instruct-150K/blob/main/llava_v1_5_mix665k.json">llava_v1_5_mix665k.json</a>.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="id2">
+<h2>ShareGPT4V dataset<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<ul>
+<li><p><strong>Pretraining and SFT Images</strong>: The images of ShareGPT4V. Download as follows.</p>
+<ul class="simple">
+<li><p>LAION-CC-SBU-558K: Already download as “LAION-CC-SBU-558K” in LLaVA’s Pretraining Images.</p></li>
+<li><p>COCO: Already download as “COCO” in LLaVA’s SFT Images.</p></li>
+<li><p>WebData: This dataset is curated by the <a class="reference external" href="https://github.com/InternLM/InternLM-XComposer/tree/main/projects/ShareGPT4V">ShareGPT4V_project</a>. Download: <a class="reference external" href="https://drive.google.com/drive/folders/1tCUQ-sq6vdshZVkF0ZeF3K4eztkXJgax">images</a>. Only for academic usage.</p></li>
+</ul>
+<ul class="simple">
+<li><p>SAM: This dataset is collected by Meta. Download: <a class="reference external" href="https://ai.meta.com/datasets/segment-anything-downloads/">sam_images</a>. We only use 000000~000050.tar for now. If you just want to use ShareGPT4V for SFT, you can quickly download <a class="reference external" href="https://drive.google.com/file/d/1dKumdOKSXtV7lIXdrG7jsIK_z2vZv2gs/view?usp=drive_link">9K_images</a>.</p></li>
+</ul>
+<ul class="simple">
+<li><p>GQA: Already download as “GQA” in LLaVA’s SFT Images.</p></li>
+<li><p>OCR-VQA: Already download as “OCR-VQA” in LLaVA’s SFT Images.</p></li>
+<li><p>TextVQA: Already download as “TextVQA” in LLaVA’s SFT Images.</p></li>
+<li><p>VisualGenome: Already download as “VisualGenome” in LLaVA’s SFT Images.</p></li>
+</ul>
+</li>
+<li><p><strong>Pretraining Annotations</strong>: The pretraining annotations of ShareGPT4V. Download as follows.</p>
+<ul class="simple">
+<li><p>pretraining annotations: <a class="reference external" href="https://huggingface.co/datasets/Lin-Chen/ShareGPT4V/blob/main/share-captioner_coco_lcs_sam_1246k_1107.json">share-captioner_coco_lcs_sam_1246k_1107.json</a>.</p></li>
+</ul>
+</li>
+<li><p><strong>SFT Annotations</strong>: The SFT annotations of ShareGPT4V. Download as follows.</p>
+<ul class="simple">
+<li><p>SFT annotations: <a class="reference external" href="https://huggingface.co/datasets/Lin-Chen/ShareGPT4V/blob/main/sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json">sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json</a>.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="organize-data">
+<h2>Organize Data<a class="headerlink" href="#organize-data" title="Link to this heading"></a></h2>
+<p>Organize the image files and annotation files as follows in <code class="docutils literal notranslate"><span class="pre">path/to/your/data</span></code> :</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>data
+├──<span class="w"> </span>llava
+│<span class="w">   </span>├──<span class="w"> </span>llava_pretrain
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>images
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>blip_laion_cc_sbu_558k.json
+├──<span class="w"> </span>coco
+│<span class="w">   </span>├──<span class="w"> </span>train2017
+├──<span class="w"> </span>sam
+│<span class="w">   </span>├──<span class="w"> </span>images
+├──<span class="w"> </span>gqa
+│<span class="w">   </span>├──<span class="w"> </span>images
+├──<span class="w"> </span>ocr_vqa
+│<span class="w">   </span>├──<span class="w"> </span>images
+├──<span class="w"> </span>textvqa
+│<span class="w">   </span>├──<span class="w"> </span>train_images
+├──<span class="w"> </span>vg
+│<span class="w">   </span>├──<span class="w"> </span>VG_100K
+│<span class="w">   </span>├──<span class="w"> </span>VG_100K_2
+├──<span class="w"> </span>share_textvqa
+│<span class="w">   </span>├──<span class="w"> </span>images
+├──<span class="w"> </span>web-celebrity
+│<span class="w">   </span>├──<span class="w"> </span>images
+├──<span class="w"> </span>web-landmark
+│<span class="w">   </span>├──<span class="w"> </span>images
+├──<span class="w"> </span>wikiart
+│<span class="w">   </span>├──<span class="w"> </span>images
+├──<span class="w"> </span>text_files
+│<span class="w">   </span>├──<span class="w"> </span>llava_v1_5_mix665k.json
+│<span class="w">   </span>├──<span class="w"> </span>share-captioner_coco_lcs_sam_1246k_1107.json
+│<span class="w">   </span>├──<span class="w"> </span>sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Train.html" class="btn btn-neutral float-right" title="Train" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, TinyLLaVA_Factory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
