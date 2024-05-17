@@ -7,7 +7,9 @@ For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you **MUST first download** eva
 
 .. _eval.zip: https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view
 
-For MMMU, ...
+For MMMU, you **MUST first download** MMMU.zip_. It contains custom annotations and scripts. Please extract it to ``path/to/your/data/eval/MMMU``.
+
+.. _MMMU.zip: https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing
 
 
 VQAv2
@@ -133,4 +135,24 @@ MM-Vet
 
 .. _mmvet_evaluation_server: https://huggingface.co/spaces/whyu/MM-Vet_Evaluator
 
+MMMU
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+1. **Datasets**: Extract MMMU.zip_ to ``path/to/your/data/eval/MMMU``.
+
+.. _MMMU.zip: https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing
+
+2. Download images as following.
+
+   .. code-block:: bash
+
+      cd path/to/your/data/eval/MMMU
+      mkdir all_images
+      python eval/download_images.py
+
+3. **Inference**: MMMU does not support multi-gpus inference, please use the following command for single-gpu inference.
+
+   .. code-block:: bash
+
+      cd llava_factory
+      CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/mmmu.py

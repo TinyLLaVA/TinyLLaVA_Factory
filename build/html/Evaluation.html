@@ -57,6 +57,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#pope">POPE</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#mme">MME</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#mm-vet">MM-Vet</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mmmu">MMMU</a></li>
 </ul>
 </li>
 </ul>
@@ -95,7 +96,7 @@
 <h1>Evaluation<a class="headerlink" href="#evaluation" title="Link to this heading"></a></h1>
 <p>We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU.</p>
 <p>For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view">eval.zip</a>. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to <code class="docutils literal notranslate"><span class="pre">./playground/data/eval</span></code>.</p>
-<p>For MMMU, …</p>
+<p>For MMMU, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a>. It contains custom annotations and scripts. Please extract it to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/MMMU</span></code>.</p>
 <section id="vqav2">
 <h2>VQAv2<a class="headerlink" href="#vqav2" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
@@ -214,6 +215,27 @@
 </div></blockquote>
 <ol class="arabic simple" start="4">
 <li><p>Submit the results(<code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/mmvet/results</span></code>) to the <a class="reference external" href="https://huggingface.co/spaces/whyu/MM-Vet_Evaluator">mmvet_evaluation_server</a>.</p></li>
+</ol>
+</section>
+<section id="mmmu">
+<h2>MMMU<a class="headerlink" href="#mmmu" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Datasets</strong>: Extract <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a> to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/MMMU</span></code>.</p></li>
+</ol>
+<ol class="arabic" start="2">
+<li><p>Download images as following.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>path/to/your/data/eval/MMMU
+mkdir<span class="w"> </span>all_images
+python<span class="w"> </span>eval/download_images.py
+</pre></div>
+</div>
+</li>
+<li><p><strong>Inference</strong>: MMMU does not support multi-gpus inference, please use the following command for single-gpu inference.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mmmu.py
+</pre></div>
+</div>
+</li>
 </ol>
 </section>
 </section>
