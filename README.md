@@ -264,9 +264,9 @@ system = "A chat between a curious user and an artificial intelligence assistant
 class GemmaTemplate(Template):
     format_image_token: "Formatter" = StringFormatter(slot="<image>\n{{content}}")
     format_user: "Formatter" = StringFormatter(slot="USER" + ": " + "{{content}}" + " ")
-    format_assistant: "Formatter" = StringFormatter(slot="ASSISTANT" + ": " + "{{content}}" + "<eos>") # to be modified
+    format_assistant: "Formatter" = StringFormatter(slot="ASSISTANT" + ": " + "{{content}}" + "<eos>") # to be modified according to the tokenizer you choose
     system: "Formatter" = EmptyFormatter(slot=system+" ")
-    separator: "Formatter" = EmptyFormatter(slot=[' ASSISTANT: ', '<eos>']) # to be modified
+    separator: "Formatter" = EmptyFormatter(slot=[' ASSISTANT: ', '<eos>']) # to be modified according to the tokenizer you choose
 
     def _make_masks(self, labels, tokenizer, sep, eos_token_length, rounds):
         # your code here
