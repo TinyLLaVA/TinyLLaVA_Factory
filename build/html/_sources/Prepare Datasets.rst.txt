@@ -101,15 +101,14 @@ ShareGPT4V dataset
 Organize Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Organize the image files and annotation files as follows in ``path/to/your/data`` :
+Organize the image files and annotation files as follows in ``path/to/your/dataset`` :
 
 .. code-block:: bash
 
-   data
+   dataset
    ├── llava
    │   ├── llava_pretrain
    │   │   ├── images
-   │   │   ├── blip_laion_cc_sbu_558k.json
    ├── coco
    │   ├── train2017
    ├── sam
@@ -132,6 +131,7 @@ Organize the image files and annotation files as follows in ``path/to/your/data`
    ├── wikiart
    │   ├── images
    ├── text_files
+   │   ├── blip_laion_cc_sbu_558k.json
    │   ├── llava_v1_5_mix665k.json
    │   ├── share-captioner_coco_lcs_sam_1246k_1107.json
    │   ├── sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json

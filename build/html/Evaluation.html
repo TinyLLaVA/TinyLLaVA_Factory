@@ -95,12 +95,12 @@
   <section id="evaluation">
 <h1>Evaluation<a class="headerlink" href="#evaluation" title="Link to this heading"></a></h1>
 <p>We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU.</p>
-<p>For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view">eval.zip</a>. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to <code class="docutils literal notranslate"><span class="pre">./playground/data/eval</span></code>.</p>
-<p>For MMMU, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a>. It contains custom annotations and scripts. Please extract it to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/MMMU</span></code>.</p>
+<p>For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view">eval.zip</a>. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to <code class="docutils literal notranslate"><span class="pre">./playground/dataset/eval</span></code>.</p>
+<p>For MMMU, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a>. It contains custom annotations and scripts. Please extract it to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/MMMU</span></code>.</p>
 <section id="vqav2">
 <h2>VQAv2<a class="headerlink" href="#vqav2" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p><strong>Dataset:</strong> Download <a class="reference external" href="http://images.cocodataset.org/zips/test2015.zip">test2015</a> and put it under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/vqav2</span></code>.</p></li>
+<li><p><strong>Dataset:</strong> Download <a class="reference external" href="http://images.cocodataset.org/zips/test2015.zip">test2015</a> and put it under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/vqav2</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
 <li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
@@ -113,13 +113,13 @@
 </div>
 </div></blockquote>
 <ol class="arabic simple" start="4">
-<li><p>Submit the results(<code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/vqav2/answers_upload</span></code>) to the <a class="reference external" href="https://eval.ai/web/challenges/challenge-page/830/my-submission">vqav2_evaluation_server</a>.</p></li>
+<li><p>Submit the results(<code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/vqav2/answers_upload</span></code>) to the <a class="reference external" href="https://eval.ai/web/challenges/challenge-page/830/my-submission">vqav2_evaluation_server</a>.</p></li>
 </ol>
 </section>
 <section id="gqa">
 <h2>GQA<a class="headerlink" href="#gqa" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p><strong>Dataset:</strong> Download the <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/download.html">data</a> and <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/evaluate.html">evaluation_scripts</a> following the official instructions and put under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/gqa/data</span></code>.</p></li>
+<li><p><strong>Dataset:</strong> Download the <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/download.html">data</a> and <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/evaluate.html">evaluation_scripts</a> following the official instructions and put under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/gqa/data</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
 <li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
@@ -135,7 +135,7 @@
 <section id="scienceqa">
 <h2>ScienceQA<a class="headerlink" href="#scienceqa" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p><strong>Dataset:</strong> Under <code class="docutils literal notranslate"><span class="pre">./playground/data/eval/scienceqa</span></code>, download <code class="docutils literal notranslate"><span class="pre">images</span></code>, <code class="docutils literal notranslate"><span class="pre">pid_splits.json</span></code>, <code class="docutils literal notranslate"><span class="pre">problems.json</span></code> from the <code class="docutils literal notranslate"><span class="pre">data/scienceqa</span></code> folder of the ScienceQA <a class="reference external" href="https://github.com/lupantech/ScienceQA">repo</a>.</p></li>
+<li><p><strong>Dataset:</strong> Under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/scienceqa</span></code>, download <code class="docutils literal notranslate"><span class="pre">images</span></code>, <code class="docutils literal notranslate"><span class="pre">pid_splits.json</span></code>, <code class="docutils literal notranslate"><span class="pre">problems.json</span></code> from the <code class="docutils literal notranslate"><span class="pre">scienceqa</span></code> folder of the ScienceQA <a class="reference external" href="https://github.com/lupantech/ScienceQA">repo</a>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
 <li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
@@ -151,7 +151,7 @@
 <section id="textvqa">
 <h2>TextVQA<a class="headerlink" href="#textvqa" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p><strong>Dataset:</strong> Download <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_val.json">TextVQA_0.5.1_val.json</a> and <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip">images</a> and extract to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/textvqa</span></code>.</p></li>
+<li><p><strong>Dataset:</strong> Download <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_val.json">TextVQA_0.5.1_val.json</a> and <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip">images</a> and extract to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/textvqa</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
 <li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
@@ -167,7 +167,7 @@
 <section id="pope">
 <h2>POPE<a class="headerlink" href="#pope" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p><strong>Dataset:</strong> Download COCO <a class="reference external" href="http://images.cocodataset.org/zips/val2014.zip">val2014</a> and the <a class="reference external" href="https://github.com/AoiDragon/POPE/tree/e3e39262c85a6a83f26cf5094022a782cb0df58d/output/coco">coco</a> folder that contains 3 json files, put them under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/pope</span></code>.</p></li>
+<li><p><strong>Dataset:</strong> Download COCO <a class="reference external" href="http://images.cocodataset.org/zips/val2014.zip">val2014</a> and the <a class="reference external" href="https://github.com/AoiDragon/POPE/tree/e3e39262c85a6a83f26cf5094022a782cb0df58d/output/coco">coco</a> folder that contains 3 json files, put them under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/pope</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
 <li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
@@ -188,7 +188,7 @@
 <ol class="arabic simple" start="2">
 <li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
 <li><p>Downloaded images to <code class="docutils literal notranslate"><span class="pre">MME_Benchmark_release_version</span></code>.</p></li>
-<li><p>put the official <code class="docutils literal notranslate"><span class="pre">eval_tool</span></code> and <code class="docutils literal notranslate"><span class="pre">MME_Benchmark_release_version</span></code> under <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/MME</span></code>.</p></li>
+<li><p>put the official <code class="docutils literal notranslate"><span class="pre">eval_tool</span></code> and <code class="docutils literal notranslate"><span class="pre">MME_Benchmark_release_version</span></code> under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/MME</span></code>.</p></li>
 <li><p><strong>Inference:</strong> MME does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
 </ol>
 <blockquote>
@@ -201,7 +201,7 @@
 <section id="mm-vet">
 <h2>MM-Vet<a class="headerlink" href="#mm-vet" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p><strong>Datasets:</strong> Extract <a class="reference external" href="https://objects.githubusercontent.com/github-production-release-asset-2e65be/674424428/70d2c2c1-1833-461b-875e-ee3a6f903f72?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=releaseassetproduction%2F20240516%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240516T093527Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=26f8c01f47ef0754116687c16b650af513e93fa660be9ce47b45e95c5bd59f1d&amp;X-Amz-SignedHeaders=host&amp;actor_id=99701420&amp;key_id=0&amp;repo_id=674424428&amp;response-content-disposition=attachment%3B%20filename%3Dmm-vet.zip&amp;response-content-type=application%2Foctet-stream">mm-vet.zip</a> to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/mmvet</span></code>.</p></li>
+<li><p><strong>Datasets:</strong> Extract <a class="reference external" href="https://objects.githubusercontent.com/github-production-release-asset-2e65be/674424428/70d2c2c1-1833-461b-875e-ee3a6f903f72?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=releaseassetproduction%2F20240516%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240516T093527Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=26f8c01f47ef0754116687c16b650af513e93fa660be9ce47b45e95c5bd59f1d&amp;X-Amz-SignedHeaders=host&amp;actor_id=99701420&amp;key_id=0&amp;repo_id=674424428&amp;response-content-disposition=attachment%3B%20filename%3Dmm-vet.zip&amp;response-content-type=application%2Foctet-stream">mm-vet.zip</a> to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/mmvet</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
 <li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
@@ -214,17 +214,17 @@
 </div>
 </div></blockquote>
 <ol class="arabic simple" start="4">
-<li><p>Submit the results(<code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/mmvet/results</span></code>) to the <a class="reference external" href="https://huggingface.co/spaces/whyu/MM-Vet_Evaluator">mmvet_evaluation_server</a>.</p></li>
+<li><p>Submit the results(<code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/mmvet/results</span></code>) to the <a class="reference external" href="https://huggingface.co/spaces/whyu/MM-Vet_Evaluator">mmvet_evaluation_server</a>.</p></li>
 </ol>
 </section>
 <section id="mmmu">
 <h2>MMMU<a class="headerlink" href="#mmmu" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
-<li><p><strong>Datasets</strong>: Extract <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a> to <code class="docutils literal notranslate"><span class="pre">path/to/your/data/eval/MMMU</span></code>.</p></li>
+<li><p><strong>Datasets</strong>: Extract <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a> to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/MMMU</span></code>.</p></li>
 </ol>
 <ol class="arabic" start="2">
 <li><p>Download images as following.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>path/to/your/data/eval/MMMU
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>path/to/your/dataset/eval/MMMU
 mkdir<span class="w"> </span>all_images
 python<span class="w"> </span>eval/download_images.py
 </pre></div>

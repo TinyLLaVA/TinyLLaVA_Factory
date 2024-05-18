@@ -3,11 +3,11 @@ Evaluation
 
 We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU. 
 
-For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you **MUST first download** eval.zip_. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to ``./playground/data/eval``.
+For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you **MUST first download** eval.zip_. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to ``./playground/dataset/eval``.
 
 .. _eval.zip: https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view
 
-For MMMU, you **MUST first download** MMMU.zip_. It contains custom annotations and scripts. Please extract it to ``path/to/your/data/eval/MMMU``.
+For MMMU, you **MUST first download** MMMU.zip_. It contains custom annotations and scripts. Please extract it to ``path/to/your/dataset/eval/MMMU``.
 
 .. _MMMU.zip: https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing
 
@@ -15,7 +15,7 @@ For MMMU, you **MUST first download** MMMU.zip_. It contains custom annotations 
 VQAv2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1.	**Dataset:** Download test2015_ and put it under ``path/to/your/data/eval/vqav2``.
+1.	**Dataset:** Download test2015_ and put it under ``path/to/your/dataset/eval/vqav2``.
 
 .. _test2015: http://images.cocodataset.org/zips/test2015.zip
 
@@ -29,14 +29,14 @@ VQAv2
       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 bash scripts/tiny_llava/eval/vqav2.sh
 
 
-4.	Submit the results(``path/to/your/data/eval/vqav2/answers_upload``) to the vqav2_evaluation_server_.
+4.	Submit the results(``path/to/your/dataset/eval/vqav2/answers_upload``) to the vqav2_evaluation_server_.
 
 .. _vqav2_evaluation_server: https://eval.ai/web/challenges/challenge-page/830/my-submission
 
 GQA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1.	**Dataset:** Download the data_ and evaluation_scripts_ following the official instructions and put under ``path/to/your/data/eval/gqa/data``.
+1.	**Dataset:** Download the data_ and evaluation_scripts_ following the official instructions and put under ``path/to/your/dataset/eval/gqa/data``.
 
 .. _data: https://cs.stanford.edu/people/dorarad/gqa/download.html
 .. _evaluation_scripts: https://cs.stanford.edu/people/dorarad/gqa/evaluate.html
@@ -52,7 +52,7 @@ GQA
 
 ScienceQA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1.	**Dataset:** Under ``./playground/data/eval/scienceqa``, download ``images``, ``pid_splits.json``, ``problems.json`` from the ``data/scienceqa`` folder of the ScienceQA repo_.
+1.	**Dataset:** Under ``path/to/your/dataset/eval/scienceqa``, download ``images``, ``pid_splits.json``, ``problems.json`` from the ``scienceqa`` folder of the ScienceQA repo_.
 
 .. _repo: https://github.com/lupantech/ScienceQA
 
@@ -67,7 +67,7 @@ ScienceQA
 
 TextVQA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1.	**Dataset:** Download TextVQA_0.5.1_val.json_ and images_ and extract to ``path/to/your/data/eval/textvqa``.
+1.	**Dataset:** Download TextVQA_0.5.1_val.json_ and images_ and extract to ``path/to/your/dataset/eval/textvqa``.
 
 .. _TextVQA_0.5.1_val.json: https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_val.json
 .. _images: https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip
@@ -83,7 +83,7 @@ TextVQA
 
 POPE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1.	**Dataset:** Download COCO val2014_ and the coco_ folder that contains 3 json files, put them under ``path/to/your/data/eval/pope``.
+1.	**Dataset:** Download COCO val2014_ and the coco_ folder that contains 3 json files, put them under ``path/to/your/dataset/eval/pope``.
 
 .. _val2014: http://images.cocodataset.org/zips/val2014.zip
 .. _coco: https://github.com/AoiDragon/POPE/tree/e3e39262c85a6a83f26cf5094022a782cb0df58d/output/coco
@@ -107,7 +107,7 @@ MME
 
 3.	Downloaded images to ``MME_Benchmark_release_version``.
 
-4.	put the official ``eval_tool`` and ``MME_Benchmark_release_version`` under ``path/to/your/data/eval/MME``.
+4.	put the official ``eval_tool`` and ``MME_Benchmark_release_version`` under ``path/to/your/dataset/eval/MME``.
 
 5.	**Inference:** MME does not support multi-gpus inference, please use the following command for single-gpu inference.
 
@@ -118,7 +118,7 @@ MME
 
 MM-Vet
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1.	**Datasets:** Extract mm-vet.zip_ to ``path/to/your/data/eval/mmvet``.
+1.	**Datasets:** Extract mm-vet.zip_ to ``path/to/your/dataset/eval/mmvet``.
 
 .. _mm-vet.zip: https://objects.githubusercontent.com/github-production-release-asset-2e65be/674424428/70d2c2c1-1833-461b-875e-ee3a6f903f72?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240516%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240516T093527Z&X-Amz-Expires=300&X-Amz-Signature=26f8c01f47ef0754116687c16b650af513e93fa660be9ce47b45e95c5bd59f1d&X-Amz-SignedHeaders=host&actor_id=99701420&key_id=0&repo_id=674424428&response-content-disposition=attachment%3B%20filename%3Dmm-vet.zip&response-content-type=application%2Foctet-stream
 
@@ -131,14 +131,14 @@ MM-Vet
       cd llava_factory
       CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/mmvet.sh
     
-4.	Submit the results(``path/to/your/data/eval/mmvet/results``) to the mmvet_evaluation_server_.
+4.	Submit the results(``path/to/your/dataset/eval/mmvet/results``) to the mmvet_evaluation_server_.
 
 .. _mmvet_evaluation_server: https://huggingface.co/spaces/whyu/MM-Vet_Evaluator
 
 MMMU
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. **Datasets**: Extract MMMU.zip_ to ``path/to/your/data/eval/MMMU``.
+1. **Datasets**: Extract MMMU.zip_ to ``path/to/your/dataset/eval/MMMU``.
 
 .. _MMMU.zip: https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing
 
@@ -146,7 +146,7 @@ MMMU
 
    .. code-block:: bash
 
-      cd path/to/your/data/eval/MMMU
+      cd path/to/your/dataset/eval/MMMU
       mkdir all_images
       python eval/download_images.py
 
