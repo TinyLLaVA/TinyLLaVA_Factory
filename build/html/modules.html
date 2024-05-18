@@ -84,9 +84,72 @@
 <h1>src<a class="headerlink" href="#src" title="Link to this heading"></a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="Data.html">Data module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Model.html">Model module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Training.html">Training module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Data.html">Data module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Data.html#Data.Template"><code class="docutils literal notranslate"><span class="pre">Template</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Data.html#Data.TextPreprocess"><code class="docutils literal notranslate"><span class="pre">TextPreprocess</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Data.html#Data.TextPreprocess.init"><code class="docutils literal notranslate"><span class="pre">TextPreprocess.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Data.html#Data.TextPreprocess.call"><code class="docutils literal notranslate"><span class="pre">TextPreprocess.call()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Data.html#Data.ImagePreprocess"><code class="docutils literal notranslate"><span class="pre">ImagePreprocess</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Data.html#Data.ImagePreprocess.init"><code class="docutils literal notranslate"><span class="pre">ImagePreprocess.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Data.html#Data.ImagePreprocess.call"><code class="docutils literal notranslate"><span class="pre">ImagePreprocess.call()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Data.html#Data.LazySupervisedDataset"><code class="docutils literal notranslate"><span class="pre">LazySupervisedDataset</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Data.html#Data.LazySupervisedDataset.init"><code class="docutils literal notranslate"><span class="pre">LazySupervisedDataset.init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Data.html#Data.DataCollatorForSupervisedDataset"><code class="docutils literal notranslate"><span class="pre">DataCollatorForSupervisedDataset</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Data.html#Data.DataCollatorForSupervisedDataset.call"><code class="docutils literal notranslate"><span class="pre">DataCollatorForSupervisedDataset.call()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Data.html#Data.make_supervised_data_module"><code class="docutils literal notranslate"><span class="pre">make_supervised_data_module()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Model.html">Model module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.register_connector"><code class="docutils literal notranslate"><span class="pre">register_connector()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.register_llm"><code class="docutils literal notranslate"><span class="pre">register_llm()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.register_vision_tower"><code class="docutils literal notranslate"><span class="pre">register_vision_tower()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.VisionTowerFactory"><code class="docutils literal notranslate"><span class="pre">VisionTowerFactory()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.LLMFactory"><code class="docutils literal notranslate"><span class="pre">LLMFactory()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.ConnectorFactory"><code class="docutils literal notranslate"><span class="pre">ConnectorFactory()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.VisionTower"><code class="docutils literal notranslate"><span class="pre">VisionTower</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.VisionTower.init"><code class="docutils literal notranslate"><span class="pre">VisionTower.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.VisionTower.load_model"><code class="docutils literal notranslate"><span class="pre">VisionTower.load_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.VisionTower.forward"><code class="docutils literal notranslate"><span class="pre">VisionTower.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.Connector"><code class="docutils literal notranslate"><span class="pre">Connector</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.Connector.init"><code class="docutils literal notranslate"><span class="pre">Connector.init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.TinyLlavaPreTrainedModel"><code class="docutils literal notranslate"><span class="pre">TinyLlavaPreTrainedModel</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Model.html#Model.TinyLlavaForConditionalGeneration"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.TinyLlavaForConditionalGeneration.init"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.TinyLlavaForConditionalGeneration.forward"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.TinyLlavaForConditionalGeneration.generate"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.generate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.TinyLlavaForConditionalGeneration.encode_images"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.encode_images()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.TinyLlavaForConditionalGeneration.prepare_inputs_for_generation"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.prepare_inputs_for_generation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Model.html#Model.TinyLlavaForConditionalGeneration.prepare_inputs_labels_for_multimodal"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.prepare_inputs_labels_for_multimodal()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Training.html">Training module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Training.html#Training.BaseTrainingRecipe"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Training.html#Training.BaseTrainingRecipe.call"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe.call()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Training.html#Training.BaseTrainingRecipe.load"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe.load()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Training.html#Training.BaseTrainingRecipe.save"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe.save()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Training.html#Training.split_to_even_chunks"><code class="docutils literal notranslate"><span class="pre">split_to_even_chunks()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Training.html#Training.get_length_grouped_indices"><code class="docutils literal notranslate"><span class="pre">get_length_grouped_indices()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Training.html#Training.get_modality_length_grouped_indices"><code class="docutils literal notranslate"><span class="pre">get_modality_length_grouped_indices()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Training.html#Training.LengthGroupedSampler"><code class="docutils literal notranslate"><span class="pre">LengthGroupedSampler</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="Training.html#Training.LLaVATrainer"><code class="docutils literal notranslate"><span class="pre">LLaVATrainer</span></code></a></li>
+</ul>
+</li>
 </ul>
 </div>
 </section>

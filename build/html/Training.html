@@ -54,7 +54,20 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Data.html">Data module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Model.html">Model module</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Training module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Training module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Training.BaseTrainingRecipe"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Training.BaseTrainingRecipe.call"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe.call()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Training.BaseTrainingRecipe.load"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe.load()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Training.BaseTrainingRecipe.save"><code class="docutils literal notranslate"><span class="pre">BaseTrainingRecipe.save()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Training.split_to_even_chunks"><code class="docutils literal notranslate"><span class="pre">split_to_even_chunks()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Training.get_length_grouped_indices"><code class="docutils literal notranslate"><span class="pre">get_length_grouped_indices()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Training.get_modality_length_grouped_indices"><code class="docutils literal notranslate"><span class="pre">get_modality_length_grouped_indices()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Training.LengthGroupedSampler"><code class="docutils literal notranslate"><span class="pre">LengthGroupedSampler</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Training.LLaVATrainer"><code class="docutils literal notranslate"><span class="pre">LLaVATrainer</span></code></a></li>
+</ul>
+</li>
 </ul>
 
         </div>
@@ -83,6 +96,142 @@
              
   <section id="module-Training">
 <span id="training-module"></span><h1>Training module<a class="headerlink" href="#module-Training" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="Training.BaseTrainingRecipe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Training.</span></span><span class="sig-name descname"><span class="pre">BaseTrainingRecipe</span></span><a class="headerlink" href="#Training.BaseTrainingRecipe" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Load and save model, set some parameters in the model.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Training.BaseTrainingRecipe.call">
+<span class="sig-name descname"><span class="pre">call</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Training.BaseTrainingRecipe.call" title="Link to this definition"></a></dt>
+<dd><p>Set the parameters required for training.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model</strong> – the models include llm, Connector, VisionTower</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Training.BaseTrainingRecipe.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Training.BaseTrainingRecipe.load" title="Link to this definition"></a></dt>
+<dd><p>Load llm, visiontower, connector and pretrained model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – the models include llm, Connector, VisionTower</p></li>
+<li><p><strong>model_args</strong> (<em>dict</em>) – model arguments</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Training.BaseTrainingRecipe.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trainer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Training.BaseTrainingRecipe.save" title="Link to this definition"></a></dt>
+<dd><p>Save llm, visiontower, connector, tokenizer, trainer and entire model config.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – the models include llm, Connector, VisionTower</p></li>
+<li><p><strong>trainer</strong> – trainer for the model</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Training.split_to_even_chunks">
+<span class="sig-prename descclassname"><span class="pre">Training.</span></span><span class="sig-name descname"><span class="pre">split_to_even_chunks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lengths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_chunks</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Training.split_to_even_chunks" title="Link to this definition"></a></dt>
+<dd><p>Split a list of indices into chunks of roughly equal lengths.</p>
+<p><strong>Returns</strong>: a list containing several chunks of roughly equal lengths</p>
+<p><strong>Return type</strong>: list</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>indices</strong> (<em>list</em>) – a list contains index</p></li>
+<li><p><strong>lengths</strong> (<em>list</em>) – a list of lengths corresponding to indices</p></li>
+<li><p><strong>num_chunks</strong> (<em>int</em>) – the num of chunks to be split</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Training.get_length_grouped_indices">
+<span class="sig-prename descclassname"><span class="pre">Training.</span></span><span class="sig-name descname"><span class="pre">get_length_grouped_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lengths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">world_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generator</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Training.get_length_grouped_indices" title="Link to this definition"></a></dt>
+<dd><p>Generate batches of index lists according to lengths.</p>
+<p><strong>Returns</strong>: a list containing batches of indices</p>
+<p><strong>Return type</strong>: list</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lengths</strong> (<em>list</em>) – a list of lengths corresponding to indices</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – the size of each batch</p></li>
+<li><p><strong>world_size</strong> (<em>int</em>)</p></li>
+<li><p><strong>generator</strong> – generator for generating random numbers</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Training.get_modality_length_grouped_indices">
+<span class="sig-prename descclassname"><span class="pre">Training.</span></span><span class="sig-name descname"><span class="pre">get_modality_length_grouped_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lengths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">world_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generator</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Training.get_modality_length_grouped_indices" title="Link to this definition"></a></dt>
+<dd><p>Call get_length_grouped_indices to generate large batches of index lists containing both multimodal and language samples according to lengths.</p>
+<p><strong>Returns</strong>: a list containing large batches of indices</p>
+<p><strong>Return type</strong>: list</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lengths</strong> (<em>list</em>) – a list of lengths corresponding to indices</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – the size of each batch</p></li>
+<li><p><strong>world_size</strong> (<em>int</em>)</p></li>
+<li><p><strong>generator</strong> – generator for generating random numbers</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Training.LengthGroupedSampler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Training.</span></span><span class="sig-name descname"><span class="pre">LengthGroupedSampler</span></span><a class="headerlink" href="#Training.LengthGroupedSampler" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Sampler that samples indices in a way that groups together features of the dataset of roughly the same length while keeping a bit of randomness.</p>
+<p><strong>Returns</strong>: an iterator for iterating over the sampled indices</p>
+<p><strong>Return type</strong>: iterator</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>batch_size</strong> (<em>int</em>) – the size of each batch</p></li>
+<li><p><strong>world_size</strong> (<em>int</em>)</p></li>
+<li><p><strong>lengths</strong> (<em>list</em>) – a list of lengths corresponding to indices</p></li>
+<li><p><strong>generator</strong> – generator for generating random numbers</p></li>
+<li><p><strong>group_by_modality</strong> (<em>bool</em>) – bool for determining whether to group by modality</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Training.LLaVATrainer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Training.</span></span><span class="sig-name descname"><span class="pre">LLaVATrainer</span></span><a class="headerlink" href="#Training.LLaVATrainer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Call LengthGroupedSampler to sample train dataset, and setup the optimizer.</p>
+<p><strong>Returns</strong>: trainer</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong></p></li>
+<li><p><strong>tokenizer</strong> (<em>transformers.PreTrainedTokenizer</em>) – tokenize data</p></li>
+<li><p><strong>training_arguments</strong> (<em>dict</em>) – training arguments</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 

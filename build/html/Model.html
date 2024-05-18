@@ -54,7 +54,35 @@
 <p class="caption" role="heading"><span class="caption-text">CONTENTS</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Data.html">Data module</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Model module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Model.register_connector"><code class="docutils literal notranslate"><span class="pre">register_connector()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.register_llm"><code class="docutils literal notranslate"><span class="pre">register_llm()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.register_vision_tower"><code class="docutils literal notranslate"><span class="pre">register_vision_tower()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.VisionTowerFactory"><code class="docutils literal notranslate"><span class="pre">VisionTowerFactory()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.LLMFactory"><code class="docutils literal notranslate"><span class="pre">LLMFactory()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.ConnectorFactory"><code class="docutils literal notranslate"><span class="pre">ConnectorFactory()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.VisionTower"><code class="docutils literal notranslate"><span class="pre">VisionTower</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Model.VisionTower.init"><code class="docutils literal notranslate"><span class="pre">VisionTower.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Model.VisionTower.load_model"><code class="docutils literal notranslate"><span class="pre">VisionTower.load_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Model.VisionTower.forward"><code class="docutils literal notranslate"><span class="pre">VisionTower.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.Connector"><code class="docutils literal notranslate"><span class="pre">Connector</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Model.Connector.init"><code class="docutils literal notranslate"><span class="pre">Connector.init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.TinyLlavaPreTrainedModel"><code class="docutils literal notranslate"><span class="pre">TinyLlavaPreTrainedModel</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Model.TinyLlavaForConditionalGeneration"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Model.TinyLlavaForConditionalGeneration.init"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Model.TinyLlavaForConditionalGeneration.forward"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Model.TinyLlavaForConditionalGeneration.generate"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.generate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Model.TinyLlavaForConditionalGeneration.encode_images"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.encode_images()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Model.TinyLlavaForConditionalGeneration.prepare_inputs_for_generation"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.prepare_inputs_for_generation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Model.TinyLlavaForConditionalGeneration.prepare_inputs_labels_for_multimodal"><code class="docutils literal notranslate"><span class="pre">TinyLlavaForConditionalGeneration.prepare_inputs_labels_for_multimodal()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="Training.html">Training module</a></li>
 </ul>
 
@@ -84,6 +112,263 @@
              
   <section id="module-Model">
 <span id="model-module"></span><h1>Model module<a class="headerlink" href="#module-Model" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="Model.register_connector">
+<span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">register_connector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.register_connector" title="Link to this definition"></a></dt>
+<dd><p>Register the connector model to ConnectorFactory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – name of connector</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Model.register_llm">
+<span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">register_llm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.register_llm" title="Link to this definition"></a></dt>
+<dd><p>Register the llm model to LLMFactory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – name of llm</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Model.register_vision_tower">
+<span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">register_vision_tower</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.register_vision_tower" title="Link to this definition"></a></dt>
+<dd><p>Register the VisionTower model to VisionTowerFactory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – name of VisionTower</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Model.VisionTowerFactory">
+<span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">VisionTowerFactory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vision_tower_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.VisionTowerFactory" title="Link to this definition"></a></dt>
+<dd><p>Get VisionTower model according to vision_tower_name.</p>
+<p><strong>Returns</strong>: model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>vision_tower_name</strong> (<em>str</em>) – name of VisionTower</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Model.LLMFactory">
+<span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">LLMFactory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_name_or_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.LLMFactory" title="Link to this definition"></a></dt>
+<dd><p>Get llm model according to model_name_or_path.</p>
+<p><strong>Returns</strong>: model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model_name_or_path</strong> (<em>str</em>) – name or path of llm</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Model.ConnectorFactory">
+<span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">ConnectorFactory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">connector_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.ConnectorFactory" title="Link to this definition"></a></dt>
+<dd><p>Get connector model according to connector_name</p>
+<p><strong>Returns</strong>: model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>connector_name</strong> (<em>str</em>) – name of connector</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Model.VisionTower">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">VisionTower</span></span><a class="headerlink" href="#Model.VisionTower" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Load the VisionTower model by vision_tower_name, extract the image feature.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.VisionTower.init">
+<span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cfg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.VisionTower.init" title="Link to this definition"></a></dt>
+<dd><p>Initialize VisionTower model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cfg</strong> (<em>dict</em>) – config</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.VisionTower.load_model">
+<span class="sig-name descname"><span class="pre">load_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vision_tower_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.VisionTower.load_model" title="Link to this definition"></a></dt>
+<dd><p>Load VisionTower model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>vision_tower_name</strong> (<em>str</em>) – name of model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.VisionTower.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.VisionTower.forward" title="Link to this definition"></a></dt>
+<dd><p>Extract the image feature.</p>
+<p><strong>Returns</strong>: image features</p>
+<p><strong>Return type</strong>: tensor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>tensor</em>) – input image</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Model.Connector">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">Connector</span></span><a class="headerlink" href="#Model.Connector" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Load the Connector model and weights.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.Connector.init">
+<span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.Connector.init" title="Link to this definition"></a></dt>
+<dd><p>Initialize connector model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>dict</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Model.TinyLlavaPreTrainedModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">TinyLlavaPreTrainedModel</span></span><a class="headerlink" href="#Model.TinyLlavaPreTrainedModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Create pretrained TinyLLava model using TinyLlavaConfig configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>TinyLlavaConfig</strong> (<em>dict</em>) – the configuration of TinyLLava model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Model.TinyLlavaForConditionalGeneration">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Model.</span></span><span class="sig-name descname"><span class="pre">TinyLlavaForConditionalGeneration</span></span><a class="headerlink" href="#Model.TinyLlavaForConditionalGeneration" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Inherit from TinyLlavaPreTrainedModel class, create pretrained TinyLLava model.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.TinyLlavaForConditionalGeneration.init">
+<span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">TinyLlavaConfig</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.TinyLlavaForConditionalGeneration.init" title="Link to this definition"></a></dt>
+<dd><p>Initialize tokenizer, llm, Connector, VisionTower.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>TinyLlavaConfig</strong> (<em>dict</em>) – the configuration of TinyLLava model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.TinyLlavaForConditionalGeneration.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attention_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">past_key_values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs_embeds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cache</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_attentions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_hidden_states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_sizes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_dict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.TinyLlavaForConditionalGeneration.forward" title="Link to this definition"></a></dt>
+<dd><p>Call language_model.forward to get the probability of the next token in the vocabulary.</p>
+<p><strong>Returns</strong>: the probability of the next token in the vocabulary</p>
+<p><strong>Return type</strong>: Tuple or CausalLMOutputWithPast</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_ids</strong> (<em>tensor</em>) – tensor containing input token id</p></li>
+<li><p><strong>attention_mask</strong> (<em>tensor</em>) – tensor containing attention mask</p></li>
+<li><p><strong>position_ids</strong> (<em>tensor</em>) – tensor containing position id</p></li>
+<li><p><strong>past_key_values</strong> (<em>list</em><em>(</em><em>tensor</em><em>)</em>) – list of key-value pairs from the previous time step</p></li>
+<li><p><strong>inputs_embeds</strong> (<em>tensor</em>) – tensor containing input embeddings</p></li>
+<li><p><strong>labels</strong> (<em>tensor</em>) – tensor containing labels</p></li>
+<li><p><strong>use_cache</strong> (<em>bool</em>) – bool for determining whether to use cache</p></li>
+<li><p><strong>output_attentions</strong> (<em>bool</em>) – bool for determining whether to output attention</p></li>
+<li><p><strong>output_hidden_states</strong> (<em>bool</em>) – bool for determining whether to hidden states</p></li>
+<li><p><strong>images</strong> (<em>tensor</em>) – input image</p></li>
+<li><p><strong>image_sizes</strong> (<em>list</em>) – the size of input image</p></li>
+<li><p><strong>return_dict</strong> (<em>bool</em>) – bool for determining whether to return in the form of dict</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.TinyLlavaForConditionalGeneration.generate">
+<span class="sig-name descname"><span class="pre">generate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_sizes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.TinyLlavaForConditionalGeneration.generate" title="Link to this definition"></a></dt>
+<dd><p>Call language_model.generate to generate answer</p>
+<p><strong>Returns</strong>: answer</p>
+<p><strong>Return type</strong>: Tuple or CausalLMOutputWithPast</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inputs</strong> (<em>tensor</em>) – input token id</p></li>
+<li><p><strong>images</strong> (<em>tensor</em>) – input image</p></li>
+<li><p><strong>image_sizes</strong> (<em>tensor</em>) – the size of input image</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.TinyLlavaForConditionalGeneration.encode_images">
+<span class="sig-name descname"><span class="pre">encode_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.TinyLlavaForConditionalGeneration.encode_images" title="Link to this definition"></a></dt>
+<dd><p>Extract the image feature.</p>
+<p><strong>Returns</strong>: image features</p>
+<p><strong>Return type</strong>: tensor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>images</strong> (<em>tensor</em>) – input image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.TinyLlavaForConditionalGeneration.prepare_inputs_for_generation">
+<span class="sig-name descname"><span class="pre">prepare_inputs_for_generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">past_key_values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs_embeds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.TinyLlavaForConditionalGeneration.prepare_inputs_for_generation" title="Link to this definition"></a></dt>
+<dd><p>Prepare input token id and input image for generation.</p>
+<p><strong>Returns</strong>: a dict containing input token id and input image</p>
+<p><strong>Return type</strong>: dict</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>images</strong> (<em>tensor</em>) – input image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Model.TinyLlavaForConditionalGeneration.prepare_inputs_labels_for_multimodal">
+<span class="sig-name descname"><span class="pre">prepare_inputs_labels_for_multimodal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attention_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">past_key_values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_sizes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Model.TinyLlavaForConditionalGeneration.prepare_inputs_labels_for_multimodal" title="Link to this definition"></a></dt>
+<dd><p>Prepare inputs containing text and image data for multimodal processing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>position_ids</strong> (<em>tensor</em>) – the position id after processing</p></li>
+<li><p><strong>attention_mask</strong> (<em>tensor</em>) – the attention mask after processing</p></li>
+<li><p><strong>past_key_values</strong> (<em>list(tensor)</em>) – list of key-value pairs same as input</p></li>
+<li><p><strong>new_input_embeds</strong> (<em>tensor</em>) – the input embeddings after processing</p></li>
+<li><p><strong>new_labels</strong> (<em>tensor</em>) – the label after processing</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>input_ids</strong> (<em>tensor</em>) – tensor containing input token id</p></li>
+<li><p><strong>position_ids</strong> (<em>tensor</em>) – tensor containing position id</p></li>
+<li><p><strong>attention_mask</strong> (<em>tensor</em>) – tensor containing attention mask</p></li>
+<li><p><strong>past_key_values</strong> (<em>list</em><em>(</em><em>tensor</em><em>)</em>) – list of key-value pairs from the previous time step</p></li>
+<li><p><strong>labels</strong> (<em>tensor</em>) – tensor containing labels</p></li>
+<li><p><strong>images</strong> (<em>tensor</em>) – input image</p></li>
+<li><p><strong>image_sizes</strong> (<em>list</em>) – the size of input image</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
 

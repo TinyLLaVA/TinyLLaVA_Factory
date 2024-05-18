@@ -53,7 +53,29 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">CONTENTS</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Data module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Data.Template"><code class="docutils literal notranslate"><span class="pre">Template</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Data.TextPreprocess"><code class="docutils literal notranslate"><span class="pre">TextPreprocess</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Data.TextPreprocess.init"><code class="docutils literal notranslate"><span class="pre">TextPreprocess.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Data.TextPreprocess.call"><code class="docutils literal notranslate"><span class="pre">TextPreprocess.call()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Data.ImagePreprocess"><code class="docutils literal notranslate"><span class="pre">ImagePreprocess</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Data.ImagePreprocess.init"><code class="docutils literal notranslate"><span class="pre">ImagePreprocess.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Data.ImagePreprocess.call"><code class="docutils literal notranslate"><span class="pre">ImagePreprocess.call()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Data.LazySupervisedDataset"><code class="docutils literal notranslate"><span class="pre">LazySupervisedDataset</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Data.LazySupervisedDataset.init"><code class="docutils literal notranslate"><span class="pre">LazySupervisedDataset.init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Data.DataCollatorForSupervisedDataset"><code class="docutils literal notranslate"><span class="pre">DataCollatorForSupervisedDataset</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Data.DataCollatorForSupervisedDataset.call"><code class="docutils literal notranslate"><span class="pre">DataCollatorForSupervisedDataset.call()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Data.make_supervised_data_module"><code class="docutils literal notranslate"><span class="pre">make_supervised_data_module()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="Model.html">Model module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Training.html">Training module</a></li>
 </ul>
@@ -84,6 +106,152 @@
              
   <section id="module-Data">
 <span id="data-module"></span><h1>Data module<a class="headerlink" href="#module-Data" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="Data.Template">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Data.</span></span><span class="sig-name descname"><span class="pre">Template</span></span><a class="headerlink" href="#Data.Template" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Get the messages, and call this function to load them in the format required by the model.</p>
+<p><strong>Returns</strong>: tokenized prompt or label</p>
+<p><strong>Return type</strong>: dict</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>messages</strong> (<em>dict</em>) – the conversations between question and answer</p></li>
+<li><p><strong>tokenizer</strong> (<em>transformers.PreTrainedTokenizer</em>) – tokenize prompt</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – train or eval</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Data.TextPreprocess">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Data.</span></span><span class="sig-name descname"><span class="pre">TextPreprocess</span></span><a class="headerlink" href="#Data.TextPreprocess" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Call Template to load and process text data.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Data.TextPreprocess.init">
+<span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokenizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Data.TextPreprocess.init" title="Link to this definition"></a></dt>
+<dd><p>Initialize tokenizer and template.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tokenizer</strong> (<em>transformers.PreTrainedTokenizer</em>) – Tokenize prompt</p></li>
+<li><p><strong>version</strong> – The version of the template</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Data.TextPreprocess.call">
+<span class="sig-name descname"><span class="pre">call</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">messages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'train'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Data.TextPreprocess.call" title="Link to this definition"></a></dt>
+<dd><p>Call template.encode to process text data.</p>
+<p><strong>Returns</strong> : tokenized prompt or label</p>
+<p><strong>Return type</strong> : dict</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>messages</strong> (<em>dict</em>) – the conversations between human and gpt</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – train or eval</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Data.ImagePreprocess">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Data.</span></span><span class="sig-name descname"><span class="pre">ImagePreprocess</span></span><a class="headerlink" href="#Data.ImagePreprocess" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>To preprocess images and adjust them to different aspect ratios and resolutions.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Data.ImagePreprocess.init">
+<span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_processor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Data.ImagePreprocess.init" title="Link to this definition"></a></dt>
+<dd><p>Initialize image processor, image aspect ratios and image resolutions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_processor</strong> – the processor to process image</p></li>
+<li><p><strong>data_args</strong> (<em>dcit</em>) – data arguments</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Data.ImagePreprocess.call">
+<span class="sig-name descname"><span class="pre">call</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Data.ImagePreprocess.call" title="Link to this definition"></a></dt>
+<dd><p>Preprocess images according to data arguments.</p>
+<p><strong>Returns</strong> : a tensor containing the processed image patches</p>
+<p><strong>Return type</strong> : tensor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>image</strong> (<em>PIL.Image</em>) – the input image to be processed</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Data.LazySupervisedDataset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Data.</span></span><span class="sig-name descname"><span class="pre">LazySupervisedDataset</span></span><a class="headerlink" href="#Data.LazySupervisedDataset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Dataset for supervised fine-tuning.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Data.LazySupervisedDataset.init">
+<span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Data.LazySupervisedDataset.init" title="Link to this definition"></a></dt>
+<dd><p>Initialize tokenizer and the preprocessor of text and image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_path</strong> (<em>str</em>) – path to data</p></li>
+<li><p><strong>tokenizer</strong> (<em>transformers.PreTrainedTokenizer</em>) – tokenize data</p></li>
+<li><p><strong>data_args</strong> (<em>dict</em>) – data arguments</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="Data.DataCollatorForSupervisedDataset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Data.</span></span><span class="sig-name descname"><span class="pre">DataCollatorForSupervisedDataset</span></span><a class="headerlink" href="#Data.DataCollatorForSupervisedDataset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Data.DataCollatorForSupervisedDataset.call">
+<span class="sig-name descname"><span class="pre">call</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instances</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Data.DataCollatorForSupervisedDataset.call" title="Link to this definition"></a></dt>
+<dd><p>Collate examples for supervised fine-tuning.</p>
+<p><strong>Returns</strong>: a batch containing input_ids, label, attention_mask</p>
+<p><strong>Return type</strong>: dict</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>instances</strong> (<em>list</em><em>(</em><em>dict</em><em>)</em>) – a list of instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Data.make_supervised_data_module">
+<span class="sig-prename descclassname"><span class="pre">Data.</span></span><span class="sig-name descname"><span class="pre">make_supervised_data_module</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tokenizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Data.make_supervised_data_module" title="Link to this definition"></a></dt>
+<dd><p>Make dataset and collator for supervised fine-tuning.</p>
+<p><strong>Returns</strong>: a dict containing train_dataset and data_collator</p>
+<p><strong>Return type</strong>: dict</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tokenizer</strong> (<em>transformers.PreTrainedTokenizer</em>) – tokenize data</p></li>
+<li><p><strong>data_args</strong> (<em>dict</em>) – data arguments</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
