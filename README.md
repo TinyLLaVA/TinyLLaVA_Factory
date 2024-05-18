@@ -317,7 +317,7 @@ class MoFVisionTower(VisionTower):
         # your code here
 ```
 
-Then, modify your training scripts with the corresponding `CT_VERSION`.
+Then, modify your training scripts with the corresponding `VT_VERSION`.
 
 ### Connector
 
