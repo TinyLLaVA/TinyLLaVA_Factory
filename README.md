@@ -259,7 +259,7 @@ import tokenizers
     
 system = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
 
-@register_template('gemma')
+@register_template('gemma') # Enable the TemplateFactory to obtain the added LLM by this string ('gemma').
 @dataclass
 class GemmaTemplate(Template):
     format_image_token: "Formatter" = StringFormatter(slot="<image>\n{{content}}")
@@ -340,6 +340,9 @@ class LinearConnector(Connector):
 ```
 
 Then, modify your training scripts with the corresponding `CN_VERSION`.
+
+## Acknowledgement
+We give special thanks to Lei Zhao, Luche Wang, Kaijun Luo, and Junchen Wang for building the [Demo](http://8843843nmph5.vicp.fun/#/).
 
 ## &#x270F; Citation
 
