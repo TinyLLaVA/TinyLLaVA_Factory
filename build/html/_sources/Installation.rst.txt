@@ -7,9 +7,9 @@ We recommend the requirements as follows:
 
     .. code-block:: bash
 
-       git clone https://github.com/DLCV-BUAA/TinyLLaVABench.git
+       git clone https://github.com/TinyLLaVA/TinyLLaVA_Factory
 
-       cd TinyLLaVABench
+       cd TinyLLaVA_Factory
 
 
 2.	Install Package
