@@ -231,7 +231,7 @@ print('runing time:', genertaion_time)
 ```
 </details>
 
-## Customize Your Own Multimodel Models
+## Customize Your Own Large Multimodel Models
 
 ### LLM
 
