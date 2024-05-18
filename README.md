@@ -64,7 +64,7 @@ pip install -e .
 
 #### 1. Data Preparation
 
-Please refer to the [Data Preparation](https://tinyllava-factorys-documentation.readthedocs.io/en/latest/Prepare%20Datasets.html) section in our Documenation.
+Please refer to the [Data Preparation](https://tinyllava-factory.readthedocs.io/en/latest/Prepare%20Datasets.html) section in our [Documenation](https://tinyllava-factory.readthedocs.io/en/latest/).
 
 #### 2. Train
 
@@ -100,7 +100,7 @@ Global Batch Size = num of GPUs * `per_device_train_batch_size` * `gradient_accu
 
 #### 3. Evaluation
 
-Please refer to the [Evaluation](https://tinyllava-factorys-documentation.readthedocs.io/en/latest/Evaluation.html) section in our Documenation.
+Please refer to the [Evaluation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html) section in our [Documenation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html).
 
 ## Model Zoo
 
