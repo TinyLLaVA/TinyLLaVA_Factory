@@ -7,11 +7,10 @@ import json
 from tqdm import tqdm
 import shortuuid
 
-from tinyllava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from tinyllava.conversation import conv_templates, SeparatorStyle
-from tinyllava.model.builder import load_pretrained_model
-from tinyllava.utils import disable_torch_init
-from tinyllava.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path, KeywordsStoppingCriteria
+from tinyllava.utils import *
+from tinyllava.data import *
+from tinyllava.model import *
+
 from torch.utils.data import Dataset, DataLoader
 
 from PIL import Image
@@ -31,31 +30,26 @@ def get_chunk(lst, n, k):
 
 # Custom dataset class
 class CustomDataset(Dataset):
-    def __init__(self, questions, image_folder, tokenizer, image_processor, model_config):
+    def __init__(self, questions, image_folder, text_processor, image_processor):
         self.questions = questions
         self.image_folder = image_folder
-        self.tokenizer = tokenizer
+        self.text_processor = text_processor
         self.image_processor = image_processor
-        self.model_config = model_config
 
     def __getitem__(self, index):
         line = self.questions[index]
         image_file = line["image"]
         qs = line["text"]
-        if self.model_config.mm_use_im_start_end:
-            qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + qs
-        else:
-            qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
 
-        conv = conv_templates[args.conv_mode].copy()
-        conv.append_message(conv.roles[0], qs)
-        conv.append_message(conv.roles[1], None)
-        prompt = conv.get_prompt()
+        image = Image.open(os.path.join(args.image_folder, image_file)).convert('RGB')
+        image_tensor = self.image_processor(image)
+        
+        qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
+        msg = Message()
+        msg.add_message(qs)
         #print(prompt)
-        image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
-        image_tensor = process_images([image], self.image_processor, self.model_config)[0]
-
-        input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt')
+        result = self.text_processor(msg.messages, mode='eval')
+        input_ids = result['input_ids']
 
         return input_ids, image_tensor, image.size
 
@@ -71,9 +65,9 @@ def collate_fn(batch):
 
 
 # DataLoader
-def create_data_loader(questions, image_folder, tokenizer, image_processor, model_config, batch_size=1, num_workers=4):
+def create_data_loader(questions, image_folder, text_processor, image_processor, batch_size=1, num_workers=4):
     assert batch_size == 1, "batch_size must be 1"
-    dataset = CustomDataset(questions, image_folder, tokenizer, image_processor, model_config)
+    dataset = CustomDataset(questions, image_folder, text_processor, image_processor)
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, collate_fn=collate_fn)
     return data_loader
 
@@ -82,8 +76,11 @@ def eval_model(args):
     # Model
     disable_torch_init()
     model_path = os.path.expanduser(args.model_path)
-    model_name = get_model_name_from_path(model_path)
-    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name)
+    model, tokenizer, image_processor, context_len = load_pretrained_model(model_path)
+    
+    text_processor = TextPreprocess(tokenizer, args.conv_mode)
+    data_args = model.config
+    image_processor = ImagePreprocess(image_processor, data_args)
 
     questions = [json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")]
     questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
@@ -91,12 +88,10 @@ def eval_model(args):
     os.makedirs(os.path.dirname(answers_file), exist_ok=True)
     ans_file = open(answers_file, "w")
 
-    if 'plain' in model_name and 'finetune' not in model_name.lower() and 'mmtag' not in args.conv_mode:
-        args.conv_mode = args.conv_mode + '_mmtag'
-        print(f'It seems that this is a plain model, but it is not using a mmtag prompt, auto switching to {args.conv_mode}.')
 
-    data_loader = create_data_loader(questions, args.image_folder, tokenizer, image_processor, model.config)
+    data_loader = create_data_loader(questions, args.image_folder, text_processor, image_processor)
     # print("Tokenizer's eos token: ", tokenizer.eos_token)
+    model.to(device='cuda')
     for (input_ids, image_tensor, image_sizes), line in tqdm(zip(data_loader, questions), total=len(questions)):
         idx = line["question_id"]
         cur_prompt = line["text"]
@@ -114,6 +109,7 @@ def eval_model(args):
                 num_beams=args.num_beams,
                 max_new_tokens=args.max_new_tokens,
                 # stopping_criteria=[stopping_criteria],
+                image_sizes=image_sizes,
                 use_cache=True)
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
@@ -125,7 +121,7 @@ def eval_model(args):
                                    "prompt": cur_prompt,
                                    "text": outputs,
                                    "answer_id": ans_id,
-                                   "model_id": model_name,
+                                   "model_id": args.model_base,
                                    "metadata": {}}) + "\n")
         # ans_file.flush()
     ans_file.close()
@@ -137,13 +133,14 @@ if __name__ == "__main__":
     parser.add_argument("--image-folder", type=str, default="")
     parser.add_argument("--question-file", type=str, default="tables/question.jsonl")
     parser.add_argument("--answers-file", type=str, default="answer.jsonl")
-    parser.add_argument("--conv-mode", type=str, default="llava_v1")
+    parser.add_argument("--conv-mode", type=str, default="llama")
     parser.add_argument("--num-chunks", type=int, default=1)
     parser.add_argument("--chunk-idx", type=int, default=0)
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--top_p", type=float, default=None)
     parser.add_argument("--num_beams", type=int, default=1)
     parser.add_argument("--max_new_tokens", type=int, default=128)
+    parser.add_argument("--image_aspect_ratio", type=str, default="pad")
     args = parser.parse_args()
 
     eval_model(args)
