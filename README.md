@@ -259,7 +259,7 @@ import tokenizers
     
 system = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
 
-@register_template('gemma') # Enable the TemplateFactory to obtain the added LLM by this string ('gemma').
+@register_template('gemma') # Enable the TemplateFactory to obtain the added template by this string ('gemma').
 @dataclass
 class GemmaTemplate(Template):
     format_image_token: "Formatter" = StringFormatter(slot="<image>\n{{content}}")
