@@ -82,7 +82,7 @@ bash scripts/train/train_phi.sh
 Important hyperparameters used in pretraining and finetuning are provided below.
 
 | Training Stage | Global Batch Size | Learning rate | conv_version |
-| -------------- | ----------------- | ------------- | ------------ |
+| -------------- | :---------------: | :-----------: | :----------: |
 | Pretraining    | 256               | 1e-3          | pretrain     |
 | Finetuning     | 128               | 2e-5          | phi          |
 
@@ -114,7 +114,7 @@ which are trained using TinyLLaVA Factory.
 #### Model Performance
 
 | VT (HF Path)                      | LLM (HF Path)                      | Recipe    | VQA-v2 | GQA  | SQA-image | TextVQA | MM-Vet | POPE | MME    | MMMU-val |
-| --------------------------------- | ---------------------------------- | --------- | ------ | ---- | --------- | ------- | ------ | ---- | ------ | -------- |
+| --------------------------------- | ---------------------------------- | --------- | :----: | :--: | :-------: | :-----: | :----: | :--: | :----: | :------: |
 | openai/clip-vit-large-patch14-336 | apple/OpenELM-450M-Instruct        | base      | 69.5   | 52.1 | 50.6      | 40.4    | 20.0   | 83.6 | 1052.9 | 23.9     |
 | google/siglip-so400m-patch14-384  | apple/OpenELM-450M-Instruct        | base      | 71.7   | 53.9 | 54.1      | 44.0    | 20.0   | 85.4 | 1118.8 | 24.0     |
 | openai/clip-vit-large-patch14-336 | TinyLlama/TinyLlama-1.1B-Chat-v1.0 | base      | 73.7   | 58.0 | 59.9      | 46.3    | 23.2   | 85.5 | 1284.6 | 27.9     |
