@@ -84,6 +84,51 @@
              
   <section id="train">
 <h1>Train<a class="headerlink" href="#train" title="Link to this heading"></a></h1>
+<p>Here’s an example for training a LMM using Phi-2.</p>
+<ul class="simple">
+<li><p>Replace data paths with yours in <code class="docutils literal notranslate"><span class="pre">scripts/train/train_phi.sh</span></code></p></li>
+<li><p>Replace <code class="docutils literal notranslate"><span class="pre">output_dir</span></code> with yours in <code class="docutils literal notranslate"><span class="pre">scripts/train/pretrain.sh</span></code></p></li>
+<li><p>Replace <code class="docutils literal notranslate"><span class="pre">pretrained_model_path</span></code> and <code class="docutils literal notranslate"><span class="pre">output_dir</span></code> with yours in <code class="docutils literal notranslate"><span class="pre">scripts/train/finetune.sh</span></code></p></li>
+<li><p>Adjust your GPU ids (localhost) and <code class="docutils literal notranslate"><span class="pre">per_device_train_batch_size</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/train/pretrain.sh</span></code> and <code class="docutils literal notranslate"><span class="pre">scripts/train/finetune.sh</span></code></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bash<span class="w"> </span>scripts/train/train_phi.sh
+</pre></div>
+</div>
+<p>Important hyperparameters used in pretraining and finetuning are provided below.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Training Stage</p></th>
+<th class="head"><p>Global Batch Size</p></th>
+<th class="head"><p>Learning rate</p></th>
+<th class="head"><p>conv_version</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Pretraining</p></td>
+<td><p>256</p></td>
+<td><p>1e-3</p></td>
+<td><p>pretrain</p></td>
+</tr>
+<tr class="row-odd"><td><p>Finetuning</p></td>
+<td><p>128</p></td>
+<td><p>2e-5</p></td>
+<td><p>phi</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tips:</strong></p>
+<ul>
+<li><p>Global Batch Size = num of GPUs * <code class="docutils literal notranslate"><span class="pre">per_device_train_batch_size</span></code> * <code class="docutils literal notranslate"><span class="pre">gradient_accumulation_steps</span></code>, we recommand you always keep global batch size and learning rate as above except for lora tuning your model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conv_version</span></code> is a hyperparameter used for choosing different chat templates for different LLMs. In the pretraining stage, <code class="docutils literal notranslate"><span class="pre">conv_version</span></code> is the same for all LLMs, using <code class="docutils literal notranslate"><span class="pre">pretrain</span></code>. In the finetuning stage, we use</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">phi</span></code> for Phi-2, StableLM, Qwen-1.5</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">llama</span></code> for TinyLlama, OpenELM</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gemma</span></code> for Gemma</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
 </section>
 
 
