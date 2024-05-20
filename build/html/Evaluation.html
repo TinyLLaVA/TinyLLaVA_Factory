@@ -95,7 +95,8 @@
   <section id="evaluation">
 <h1>Evaluation<a class="headerlink" href="#evaluation" title="Link to this heading"></a></h1>
 <p>We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU.</p>
-<p>For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view">eval.zip</a>. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to <code class="docutils literal notranslate"><span class="pre">./playground/dataset/eval</span></code>.</p>
+<p>For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view">eval.zip</a>. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval</span></code>.
+Or you can just follow the <a class="reference external" href="https://github.com/haotian-liu/LLaVA/blob/main/docs/Evaluation.md">evaluation</a> instructions of LLaVA v1.5.</p>
 <p>For MMMU, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a>. It contains custom annotations and scripts. Please extract it to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/MMMU</span></code>.</p>
 <section id="vqav2">
 <h2>VQAv2<a class="headerlink" href="#vqav2" title="Link to this heading"></a></h2>
@@ -103,11 +104,11 @@
 <li><p><strong>Dataset:</strong> Download <a class="reference external" href="http://images.cocodataset.org/zips/test2015.zip">test2015</a> and put it under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/vqav2</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
-<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/vqav2.sh</span></code>.</p></li>
 <li><p><strong>Inference:</strong> VQAv2 supports multi-gpus inference with the following command.</p></li>
 </ol>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span>,1,2,3,4,5,6,7<span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/vqav2.sh
 </pre></div>
 </div>
@@ -122,11 +123,11 @@
 <li><p><strong>Dataset:</strong> Download the <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/download.html">data</a> and <a class="reference external" href="https://cs.stanford.edu/people/dorarad/gqa/evaluate.html">evaluation_scripts</a> following the official instructions and put under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/gqa/data</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
-<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/gqa.sh</span></code>.</p></li>
 <li><p><strong>Inference:</strong> GQA supports multi-gpus inference with the following command.</p></li>
 </ol>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/gqa.sh
 </pre></div>
 </div>
@@ -138,11 +139,11 @@
 <li><p><strong>Dataset:</strong> Under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/scienceqa</span></code>, download <code class="docutils literal notranslate"><span class="pre">images</span></code>, <code class="docutils literal notranslate"><span class="pre">pid_splits.json</span></code>, <code class="docutils literal notranslate"><span class="pre">problems.json</span></code> from the <code class="docutils literal notranslate"><span class="pre">scienceqa</span></code> folder of the ScienceQA <a class="reference external" href="https://github.com/lupantech/ScienceQA">repo</a>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
-<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/sqa.sh</span></code>.</p></li>
 <li><p><strong>Inference:</strong> ScienceQA does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
 </ol>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/sqa.sh
 </pre></div>
 </div>
@@ -154,11 +155,11 @@
 <li><p><strong>Dataset:</strong> Download <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_val.json">TextVQA_0.5.1_val.json</a> and <a class="reference external" href="https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip">images</a> and extract to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/textvqa</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
-<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/textvqa.sh</span></code>.</p></li>
 <li><p><strong>Inference:</strong> TextVQA does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
 </ol>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/textvqa.sh
 </pre></div>
 </div>
@@ -170,11 +171,11 @@
 <li><p><strong>Dataset:</strong> Download COCO <a class="reference external" href="http://images.cocodataset.org/zips/val2014.zip">val2014</a> and the <a class="reference external" href="https://github.com/AoiDragon/POPE/tree/e3e39262c85a6a83f26cf5094022a782cb0df58d/output/coco">coco</a> folder that contains 3 json files, put them under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/pope</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
-<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/pope.sh</span></code>.</p></li>
 <li><p><strong>Inference:</strong> POPE does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
 </ol>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/pope.sh
 </pre></div>
 </div>
@@ -186,13 +187,13 @@
 <li><p><strong>Dataset:</strong> Download the data following the official instructions <a class="reference external" href="https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models/tree/Evaluation">here</a>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
-<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/mme.sh</span></code>.</p></li>
 <li><p>Downloaded images to <code class="docutils literal notranslate"><span class="pre">MME_Benchmark_release_version</span></code>.</p></li>
 <li><p>put the official <code class="docutils literal notranslate"><span class="pre">eval_tool</span></code> and <code class="docutils literal notranslate"><span class="pre">MME_Benchmark_release_version</span></code> under <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/MME</span></code>.</p></li>
 <li><p><strong>Inference:</strong> MME does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
 </ol>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mme.sh
 </pre></div>
 </div>
@@ -204,11 +205,11 @@
 <li><p><strong>Datasets:</strong> Extract <a class="reference external" href="https://objects.githubusercontent.com/github-production-release-asset-2e65be/674424428/70d2c2c1-1833-461b-875e-ee3a6f903f72?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=releaseassetproduction%2F20240516%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240516T093527Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=26f8c01f47ef0754116687c16b650af513e93fa660be9ce47b45e95c5bd59f1d&amp;X-Amz-SignedHeaders=host&amp;actor_id=99701420&amp;key_id=0&amp;repo_id=674424428&amp;response-content-disposition=attachment%3B%20filename%3Dmm-vet.zip&amp;response-content-type=application%2Foctet-stream">mm-vet.zip</a> to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/mmvet</span></code>.</p></li>
 </ol>
 <ol class="arabic simple" start="2">
-<li><p>Please change all data paths in .sh file(in <code class="docutils literal notranslate"><span class="pre">path/to/your/llava_factory/scripts/train</span></code>).</p></li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/mmvet.sh</span></code>.</p></li>
 <li><p><strong>Inference:</strong> MM-Vet does not support multi-gpus inference, please use the following command for single-gpu inference.</p></li>
 </ol>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mmvet.sh
 </pre></div>
 </div>
@@ -230,8 +231,9 @@ python<span class="w"> </span>eval/download_images.py
 </pre></div>
 </div>
 </li>
+<li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/vqav2.sh</span></code>.</p></li>
 <li><p><strong>Inference</strong>: MMMU does not support multi-gpus inference, please use the following command for single-gpu inference.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>llava_factory
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
 <span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mmmu.py
 </pre></div>
 </div>
