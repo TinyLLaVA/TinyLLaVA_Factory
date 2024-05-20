@@ -96,7 +96,7 @@
 <h1>Evaluation<a class="headerlink" href="#evaluation" title="Link to this heading"></a></h1>
 <p>We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU.</p>
 <p>For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view">eval.zip</a>. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval</span></code>.
-Or you can just follow the [<a class="reference external" href="https://github.com/haotian-liu/LLaVA/blob/main/docs/Evaluation.md">evaluation</a>] instructions of LLaVA v1.5.</p>
+Or you can just follow the <a class="reference external" href="https://github.com/haotian-liu/LLaVA/blob/main/docs/Evaluation.md">evaluation</a> instructions of LLaVA v1.5.</p>
 <p>For MMMU, you <strong>MUST first download</strong> <a class="reference external" href="https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing">MMMU.zip</a>. It contains custom annotations and scripts. Please extract it to <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset/eval/MMMU</span></code>.</p>
 <section id="vqav2">
 <h2>VQAv2<a class="headerlink" href="#vqav2" title="Link to this heading"></a></h2>
@@ -128,7 +128,7 @@ Or you can just follow the [<a class="reference external" href="https://github.c
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/gqa.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span>,1,2,3,4,5,6,7<span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/gqa.sh
 </pre></div>
 </div>
 </div></blockquote>

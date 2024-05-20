@@ -4,7 +4,7 @@ Evaluation
 We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU. 
 
 For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you **MUST first download** eval.zip_. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to ``path/to/your/dataset/eval``.
-Or you can just follow the [evaluation_] instructions of LLaVA v1.5.
+Or you can just follow the evaluation_ instructions of LLaVA v1.5.
 
 .. _eval.zip: https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view
 
@@ -51,7 +51,7 @@ GQA
     .. code-block:: bash
 
        cd TinyLLaVA_Factory
-       CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/gqa.sh
+       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 bash scripts/tiny_llava/eval/gqa.sh
 
 ScienceQA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
