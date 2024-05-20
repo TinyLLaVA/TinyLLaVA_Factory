@@ -109,7 +109,7 @@ Or you can just follow the <a class="reference external" href="https://github.co
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span>,1,2,3,4,5,6,7<span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/vqav2.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span>,1,2,3,4,5,6,7<span class="w"> </span>bash<span class="w"> </span>scripts/eval/vqav2.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -128,7 +128,7 @@ Or you can just follow the <a class="reference external" href="https://github.co
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span>,1,2,3,4,5,6,7<span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/gqa.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span>,1,2,3,4,5,6,7<span class="w"> </span>bash<span class="w"> </span>scripts/eval/gqa.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -144,7 +144,7 @@ Or you can just follow the <a class="reference external" href="https://github.co
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/sqa.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/eval/sqa.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -160,7 +160,7 @@ Or you can just follow the <a class="reference external" href="https://github.co
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/textvqa.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/eval/textvqa.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -176,7 +176,7 @@ Or you can just follow the <a class="reference external" href="https://github.co
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/pope.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/eval/pope.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -194,7 +194,7 @@ Or you can just follow the <a class="reference external" href="https://github.co
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mme.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/eval/mme.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -210,7 +210,7 @@ Or you can just follow the <a class="reference external" href="https://github.co
 </ol>
 <blockquote>
 <div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mmvet.sh
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/eval/mmvet.sh
 </pre></div>
 </div>
 </div></blockquote>
@@ -234,7 +234,7 @@ python<span class="w"> </span>eval/download_images.py
 <li><p>Please change <code class="docutils literal notranslate"><span class="pre">MODEL_PATH</span></code>, <code class="docutils literal notranslate"><span class="pre">MODEL_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">EVAL_DIR</span></code>, and <code class="docutils literal notranslate"><span class="pre">conv-mode</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/eval/mmmu.sh</span></code>.</p></li>
 <li><p><strong>Inference</strong>: MMMU does not support multi-gpus inference, please use the following command for single-gpu inference.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>TinyLLaVA_Factory
-<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/tiny_llava/eval/mmmu.py
+<span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span><span class="m">0</span><span class="w"> </span>bash<span class="w"> </span>scripts/eval/mmmu.py
 </pre></div>
 </div>
 </li>

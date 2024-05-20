@@ -29,7 +29,7 @@ VQAv2
    .. code-block:: bash
 
       cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 bash scripts/tiny_llava/eval/vqav2.sh
+      CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 bash scripts/eval/vqav2.sh
 
 
 4.	Submit the results(``path/to/your/dataset/eval/vqav2/answers_upload``) to the vqav2_evaluation_server_.
@@ -51,7 +51,7 @@ GQA
     .. code-block:: bash
 
        cd TinyLLaVA_Factory
-       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 bash scripts/tiny_llava/eval/gqa.sh
+       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 bash scripts/eval/gqa.sh
 
 ScienceQA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,7 +66,7 @@ ScienceQA
    .. code-block:: bash
 
       cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/sqa.sh
+      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/sqa.sh
 
 TextVQA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,7 +82,7 @@ TextVQA
    .. code-block:: bash
 
       cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/textvqa.sh
+      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/textvqa.sh
 
 POPE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,7 +98,7 @@ POPE
    .. code-block:: bash
 
       cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/pope.sh
+      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/pope.sh
 
 MME
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -117,7 +117,7 @@ MME
    .. code-block:: bash
 
       cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/mme.sh
+      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/mme.sh
 
 MM-Vet
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -132,7 +132,7 @@ MM-Vet
    .. code-block:: bash
 
       cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/mmvet.sh
+      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/mmvet.sh
     
 4.	Submit the results(``path/to/your/dataset/eval/mmvet/results``) to the mmvet_evaluation_server_.
 
@@ -160,4 +160,4 @@ MMMU
    .. code-block:: bash
 
       cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0 bash scripts/tiny_llava/eval/mmmu.py
+      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/mmmu.py
