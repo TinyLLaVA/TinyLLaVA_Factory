@@ -4,7 +4,7 @@ Evaluation
 We currently provide evaluations on 8 benchmarks, including VQAv2, GQA, ScienceQA, ScienceQA, POPE, MME, MM-Vet and MMMU. 
 
 For VQAv2, GQA, ScienceQA, POPE, MME and MM-Vet, you **MUST first download** eval.zip_. It contains custom annotations, scripts, and the prediction files with LLaVA v1.5. Please extract it to ``path/to/your/dataset/eval``.
-Or you can just follow the evaluation_ instructions of LLaVA v1.5.
+Or you can just follow the [evaluation_] instructions of LLaVA v1.5.
 
 .. _eval.zip: https://drive.google.com/file/d/1atZSBBrAX54yYpxtVVW33zFvcnaHeFPy/view
 
@@ -153,7 +153,7 @@ MMMU
       mkdir all_images
       python eval/download_images.py
 
-3. Please change ``MODEL_PATH``, ``MODEL_NAME``, ``EVAL_DIR``, and ``conv-mode`` in ``scripts/eval/vqav2.sh``.
+3. Please change ``MODEL_PATH``, ``MODEL_NAME``, ``EVAL_DIR``, and ``conv-mode`` in ``scripts/eval/mmmu.sh``.
 
 4. **Inference**: MMMU does not support multi-gpus inference, please use the following command for single-gpu inference.
 
