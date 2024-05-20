@@ -188,12 +188,13 @@ from tinyllava.eval.run_tiny_llava import eval_model
 model_path = "/absolute/path/to/your/model/"
 prompt = "What are the things I should be cautious about when I visit here?"
 image_file = "https://llava-vl.github.io/static/images/view.jpg"
+conv_mode = "phi" # or llama, gemma, etc
 
 args = type('Args', (), {
     "model_path": model_path,
     "model_base": None,
     "query": prompt,
-    "conv_mode": "phi",
+    "conv_mode": conv_mode,
     "image_file": image_file,
     "sep": ",",
     "temperature": 0,
