@@ -83,9 +83,9 @@ with open(pokemon_data_path, 'w') as f:
 After acquiring the dataset following the above data format, you can finetune our trained model TinyLLaVA-Phi-2-SigLIP-3.1B checkpoint by using lora.
 
 - Replace data paths and `output_dir` with yours in `scripts/train/custom_finetune.sh`
-- Adjust your GPU ids (localhost) and `per_device_train_batch_size` in `scripts/train/pretrain.sh` and `scripts/train/finetune.sh`
+- Adjust your GPU ids (localhost) and `per_device_train_batch_size` in `scripts/train/custom_finetune.sh`.
 
 ```bash
-bash scripts/train/train_phi.sh
+bash scripts/train/custom_finetune.sh
 ```
 
