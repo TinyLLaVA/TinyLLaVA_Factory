@@ -29,7 +29,8 @@
 - [Get Started](#get-started)
 - [Model Zoo](#model-zoo)
 - [Launch Demo Locally](#launch-demo-locally)
-- [Customization](#customize-your-own-multimodel-models)
+- [Custom Finetune](#Custom-Finetune)
+- [Customize Your Own Large Multimodel Models](#customize-your-own-multimodel-models)
 
 
 ## Installation and Requirements
@@ -233,6 +234,9 @@ print('model output:', output_text)
 print('runing time:', genertaion_time)
 ```
 </details>
+
+## Custom Finetune
+If you want to finetune our trained model with your custom datasets, please refer to [here](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/main/CUSTOM_FINETUNE.md).
 
 ## Customize Your Own Large Multimodel Models
 
