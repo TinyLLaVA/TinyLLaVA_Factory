@@ -236,7 +236,7 @@ print('runing time:', genertaion_time)
 </details>
 
 ## Custom Finetune
-If you want to finetune our trained model with your custom datasets, please refer to [here](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/main/CUSTOM_FINETUNE.md).
+If you want to finetune TinyLLaVA with your custom datasets, please refer to [here](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/main/CUSTOM_FINETUNE.md).
 
 ## Customize Your Own Large Multimodel Models
 
