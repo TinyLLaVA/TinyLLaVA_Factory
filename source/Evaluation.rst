@@ -159,5 +159,5 @@ MMMU
 
    .. code-block:: bash
 
-      cd TinyLLaVA_Factory
-      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/mmmu.py
+      cd TinyLLaVA_Factorysh
+      CUDA_VISIBLE_DEVICES=0 bash scripts/eval/mmmu.sh
