@@ -145,7 +145,7 @@ MMMU
 
 .. _MMMU.zip: https://drive.google.com/file/d/1TJszQ23X-7TeMYDA7hVKpoHy9yo-lsc5/view?usp=sharing
 
-2. Download images as following.
+2. Please change ``sample["img_path"]`` to your path in ``eval/download_images.py``，and download images as following.
 
    .. code-block:: bash
 
