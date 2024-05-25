@@ -20,8 +20,10 @@
   - LLM currently supports **OpenELM**, **TinyLlama**, **StableLM**, **Qwen**, **Gemma**, and **Phi**. 
 
   - Vision tower currently supports **CLIP,** **SigLIP**, **Dino**, and **combination of CLIP and Dino**.
-
+    
   - Connector currently supports **MLP**, **Qformer**, and **Resampler**.
+    
+  - Training Recipe currently supports **Frozen/Fully/Partially tuning** and **LoRA/QLoRA tuning**.
 
 ## Contents
 
