@@ -67,7 +67,7 @@ ShareGPT4V dataset
 
   • COCO: Already download as "COCO" in LLaVA's SFT Images.
   
-  • WebData: This dataset is curated by the ShareGPT4V_project_. Download: images_. Only for academic usage.
+  • WebData & Share_TextVQA: This dataset is curated by the ShareGPT4V_project_. Download: images_. Only for academic usage.
 
   .. _ShareGPT4V_project: https://github.com/InternLM/InternLM-XComposer/tree/main/projects/ShareGPT4V
   .. _images: https://drive.google.com/drive/folders/1tCUQ-sq6vdshZVkF0ZeF3K4eztkXJgax
