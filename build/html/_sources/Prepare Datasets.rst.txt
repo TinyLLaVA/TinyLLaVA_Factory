@@ -3,7 +3,7 @@ Prepare Datasets
 
 As reported in our paper_, we use two different datasets: the LLaVA_dataset_ and the ShareGPT4V_dataset_. In this section, we will detail data preparation for training. For evaluation dataset, please see instructions in the Evaluation section
 
-.. _paper: https://github.com/haotian-liu/LLaVA?tab=readme-ov-file#pretrain-feature-alignment
+.. _paper: https://arxiv.org/abs/2405.11788
 .. _LLaVA_dataset: https://github.com/haotian-liu/LLaVA?tab=readme-ov-file#pretrain-feature-alignment
 .. _ShareGPT4V_dataset: https://github.com/InternLM/InternLM-XComposer/blob/main/projects/ShareGPT4V/docs/Data.md
 
