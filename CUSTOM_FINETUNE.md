@@ -89,3 +89,8 @@ After acquiring the dataset following the above data format, you can finetune ou
 bash scripts/train/custom_finetune.sh
 ```
 
+## Evaluation with Custom Finetuned Model
+All of the models trained by TinyLLaVA Factory have the same evaluation procedure, no matter it is trained through custom finetune or through normal training. Please see the [Evaluation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html) section in our Doc.
+
+
+
