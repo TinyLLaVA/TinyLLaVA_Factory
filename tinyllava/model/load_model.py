@@ -1,10 +1,20 @@
 import os
 import torch
+from collections import OrderedDict
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, BitsAndBytesConfig
 
 from .modeling_tinyllava import TinyLlavaForConditionalGeneration
 from .configuration_tinyllava import TinyLlavaConfig
  
+def load_base_ckp_for_lora(ckp_path):
+    ckp = torch.load(ckp_path, map_location=torch.device('cpu'))
+    new_ckp = OrderedDict()
+    for k, v in ckp.items():
+        new_k = k.replace('.base_layer', '')
+        new_ckp[new_k] = v
+    return new_ckp
+    
+
 def load_pretrained_model(model_name_or_path, load_type='hf', load_8bit=False, load_4bit=False, device_map="auto",
                           device="cuda", **kwargs):
     kwargs = {"device_map": device_map, **kwargs}
@@ -30,13 +40,16 @@ def load_pretrained_model(model_name_or_path, load_type='hf', load_8bit=False, l
         if os.path.exists(os.path.join(model_name_or_path, 'adapter_config.json')):
             model_config = TinyLlavaConfig.from_pretrained(model_name_or_path)
             model = TinyLlavaForConditionalGeneration(model_config)
-            model.language_model = model.language_model.from_pretrained(model_config.llm_model_name_or_path,attn_implementation='flash_attention_2',torch_dtype=model_config.text_config.torch_dtype)
-            model.vision_tower.load_model(os.path.join(model_name_or_path, 'vision_tower'))
-            connector_kwargs = {}
-            connector_kwargs['pretrained_connector_path'] = os.path.join(model_name_or_path, 'connector')
-            model.connector.load_model(**connector_kwargs)
+            language_model_ckp_path = os.path.join(model_name_or_path, 'language_model/pytorch_model.bin')
+            language_model_ckp = load_base_ckp_for_lora(language_model_ckp_path)
+            model.language_model.load_state_dict(language_model_ckp)
+            vision_tower_ckp_path = os.path.join(model_name_or_path, 'vision_tower/pytorch_model.bin')
+            vision_tower_ckp = load_base_ckp_for_lora(vision_tower_ckp_path)
+            model.vision_tower._vision_tower.load_state_dict(vision_tower_ckp)
+            connector_ckp_path = os.path.join(model_name_or_path, 'connector/pytorch_model.bin')
+            connector_ckp = load_base_ckp_for_lora(connector_ckp_path)
+            model.connector.load_state_dict(connector_ckp)
             model.to(torch.float16)
-            print('Loading LLaVA from base model...')
             from peft import PeftModel
             print('Loading LoRA weights...')
             model = PeftModel.from_pretrained(model, model_name_or_path)
