@@ -123,7 +123,7 @@ MM-Vet
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1.	**Datasets:** Extract mm-vet.zip_ to ``path/to/your/dataset/eval/mmvet``.
 
-.. _mm-vet.zip: https://objects.githubusercontent.com/github-production-release-asset-2e65be/674424428/70d2c2c1-1833-461b-875e-ee3a6f903f72?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240516%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240516T093527Z&X-Amz-Expires=300&X-Amz-Signature=26f8c01f47ef0754116687c16b650af513e93fa660be9ce47b45e95c5bd59f1d&X-Amz-SignedHeaders=host&actor_id=99701420&key_id=0&repo_id=674424428&response-content-disposition=attachment%3B%20filename%3Dmm-vet.zip&response-content-type=application%2Foctet-stream
+.. _mm-vet.zip: https://objects.githubusercontent.com/github-production-release-asset-2e65be/674424428/70d2c2c1-1833-461b-875e-ee3a6f903f72?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240526%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240526T145832Z&X-Amz-Expires=300&X-Amz-Signature=8e219b3e022c076fb1f735450d10963322bd909745fa19401178d88e7bb32afc&X-Amz-SignedHeaders=host&actor_id=99701420&key_id=0&repo_id=674424428&response-content-disposition=attachment%3B%20filename%3Dmm-vet.zip&response-content-type=application%2Foctet-stream
 
 2. Please change ``MODEL_PATH``, ``MODEL_NAME``, ``EVAL_DIR``, and ``conv-mode`` in ``scripts/eval/mmvet.sh``.
 
