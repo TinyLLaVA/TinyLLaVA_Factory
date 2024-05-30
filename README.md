@@ -283,7 +283,7 @@ class GemmaTemplate(Template):
 ```
 **Tips:**
 
-Please ensure that the `labels` (returned by the `_make_masks` function) follows this format: answers and the eos token id are not masked, the image token is masked with `-200`, and the other tokens are masked with `-100`.
+Please ensure that the `labels` (returned by the `_make_masks` function) follows this format: answers and the eos token id are not masked, and the other tokens are masked with `-100`.
 
 Secondly, create `tinyllava/model/llm/gemma.py`.
 
@@ -352,6 +352,9 @@ Then, modify your training scripts with the corresponding `CN_VERSION`.
 
 ## Acknowledgement
 We give special thanks to Lei Zhao, Luche Wang, Kaijun Luo, and Junchen Wang for building the [Demo](http://8843843nmph5.vicp.fun/#/).
+
+## Contact
+If you have any questions, feel free to either initiate an **Issue** or contact us by WeChat (WeChatID: **TinyLLaVA**).
 
 ## &#x270F; Citation
 
