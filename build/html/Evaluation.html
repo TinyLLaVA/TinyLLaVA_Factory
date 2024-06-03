@@ -58,6 +58,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#mme">MME</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#mm-vet">MM-Vet</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#mmmu">MMMU</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#organize-data">Organize Data</a></li>
 </ul>
 </li>
 </ul>
@@ -239,6 +240,101 @@ python<span class="w"> </span>eval/download_images.py
 </div>
 </li>
 </ol>
+</section>
+<section id="organize-data">
+<h2>Organize Data<a class="headerlink" href="#organize-data" title="Link to this heading"></a></h2>
+<p>Organize the image files and annotation files as follows in <code class="docutils literal notranslate"><span class="pre">path/to/your/dataset</span></code> :</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">eval</span>
+├──<span class="w"> </span>vqav2
+│<span class="w">   </span>├──<span class="w"> </span>answers
+│<span class="w">   </span>├──<span class="w"> </span>answers_upload
+│<span class="w">   </span>├──<span class="w"> </span>test2015
+│<span class="w">   </span>├──<span class="w"> </span>llava_vqav2_mscoco_test2015.jsonl
+│<span class="w">   </span>├──<span class="w"> </span>llava_vqav2_mscoco_test-dev2015.jsonl
+├──<span class="w"> </span>gqa
+│<span class="w">   </span>├──<span class="w"> </span>answers
+│<span class="w">   </span>├──<span class="w"> </span>images
+│<span class="w">   </span>├──<span class="w"> </span>train_all_questions
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>train_all_questions_0.json
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>...
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>train_all_questions_9.json
+│<span class="w">   </span>├──<span class="w"> </span>llava_gqa_testdev_balanced.jsonl
+│<span class="w">   </span>├──<span class="w"> </span>eval.py
+│<span class="w">   </span>├──<span class="w"> </span>challenge_all_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>challenge_balanced_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>submission_all_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>test_all_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>test_balanced_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>testdev_all_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>testdev_balanced_predictions.json
+│<span class="w">   </span>├──<span class="w"> </span>testdev_balanced_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>train_balanced_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>val_all_questions.json
+│<span class="w">   </span>├──<span class="w"> </span>val_balanced_questions.json
+├──<span class="w"> </span>scienceqa
+│<span class="w">   </span>├──<span class="w"> </span>answers
+│<span class="w">   </span>├──<span class="w"> </span>images
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="nb">test</span>
+│<span class="w">   </span>├──<span class="w"> </span>llava_test_CQM-A.json
+│<span class="w">   </span>├──<span class="w"> </span>pid_splits.json
+│<span class="w">   </span>├──<span class="w"> </span>problems.json
+├──<span class="w"> </span>textvqa
+│<span class="w">   </span>├──<span class="w"> </span>answers
+│<span class="w">   </span>├──<span class="w"> </span>train_images
+│<span class="w">   </span>├──<span class="w"> </span>llava_textvqa_val_v051_ocr.jsonl
+│<span class="w">   </span>├──<span class="w"> </span>TextVQA_0.5.1_val.json
+├──<span class="w"> </span>pope
+│<span class="w">   </span>├──<span class="w"> </span>answers
+│<span class="w">   </span>├──<span class="w"> </span>coco
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>coco_pope_adversarial.json
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>coco_pope_popular.json
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>coco_pope_random.json
+│<span class="w">   </span>├──<span class="w"> </span>val2014
+│<span class="w">   </span>├──<span class="w"> </span>llava_pope_test.jsonl
+├──<span class="w"> </span>MME
+│<span class="w">   </span>├──<span class="w"> </span>answers
+│<span class="w">   </span>├──<span class="w"> </span>coco
+│<span class="w">   </span>├──<span class="w"> </span>eval_tool
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>LaVIN
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>Your_Results
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>calculation.py
+│<span class="w">   </span>├──<span class="w"> </span>MME_Benchmark_release_version
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>artwork
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>celebrity
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>code_reasoning
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>color
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>commonsense_reasoning
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>count
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>eval_tool
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>existence
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>landmark
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>numerical_calculation
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>OCR
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>position
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>posters
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>scene
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>text_translation
+│<span class="w">   </span>├──<span class="w"> </span>convert_answer_to_mme.py
+│<span class="w">   </span>├──<span class="w"> </span>llava_mme.jsonl
+├──<span class="w"> </span>mm-vet
+│<span class="w">   </span>├──<span class="w"> </span>answers
+│<span class="w">   </span>├──<span class="w"> </span>images
+│<span class="w">   </span>├──<span class="w"> </span>results
+│<span class="w">   </span>├──<span class="w"> </span>mm-vet
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>bard_set.json
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>mm-vet.json
+│<span class="w">   </span>├──<span class="w"> </span>convert_answers.py
+│<span class="w">   </span>├──<span class="w"> </span>llava-mm-vet.jsonl
+├──<span class="w"> </span>MMMU
+│<span class="w">   </span>├──<span class="w"> </span>all_images
+│<span class="w">   </span>├──<span class="w"> </span><span class="nb">eval</span>
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>utils
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>answer_dict_val.json
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>download_images.py
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>main_eval_only.py
+│<span class="w">   </span>├──<span class="w"> </span>anns_for_eval.json
+</pre></div>
+</div>
 </section>
 </section>
 

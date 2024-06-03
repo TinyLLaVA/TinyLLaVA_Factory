@@ -161,3 +161,100 @@ MMMU
 
       cd TinyLLaVA_Factorysh
       CUDA_VISIBLE_DEVICES=0 bash scripts/eval/mmmu.sh
+
+Organize Data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Organize the image files and annotation files as follows in ``path/to/your/dataset`` :
+
+.. code-block:: bash
+
+   eval
+   ├── vqav2
+   │   ├── answers
+   │   ├── answers_upload
+   │   ├── test2015
+   │   ├── llava_vqav2_mscoco_test2015.jsonl
+   │   ├── llava_vqav2_mscoco_test-dev2015.jsonl
+   ├── gqa
+   │   ├── answers
+   │   ├── images
+   │   ├── train_all_questions
+   │   │   ├── train_all_questions_0.json 
+   │   │   ├── ...
+   │   │   ├── train_all_questions_9.json 
+   │   ├── llava_gqa_testdev_balanced.jsonl
+   │   ├── eval.py
+   │   ├── challenge_all_questions.json
+   │   ├── challenge_balanced_questions.json
+   │   ├── submission_all_questions.json
+   │   ├── test_all_questions.json
+   │   ├── test_balanced_questions.json
+   │   ├── testdev_all_questions.json
+   │   ├── testdev_balanced_predictions.json
+   │   ├── testdev_balanced_questions.json
+   │   ├── train_balanced_questions.json
+   │   ├── val_all_questions.json
+   │   ├── val_balanced_questions.json
+   ├── scienceqa
+   │   ├── answers
+   │   ├── images
+   │   │   ├── test
+   │   ├── llava_test_CQM-A.json
+   │   ├── pid_splits.json
+   │   ├── problems.json
+   ├── textvqa
+   │   ├── answers
+   │   ├── train_images
+   │   ├── llava_textvqa_val_v051_ocr.jsonl
+   │   ├── TextVQA_0.5.1_val.json
+   ├── pope
+   │   ├── answers
+   │   ├── coco
+   │   │   ├── coco_pope_adversarial.json
+   │   │   ├── coco_pope_popular.json
+   │   │   ├── coco_pope_random.json
+   │   ├── val2014
+   │   ├── llava_pope_test.jsonl
+   ├── MME
+   │   ├── answers
+   │   ├── coco
+   │   ├── eval_tool
+   │   │   ├── LaVIN
+   │   │   ├── Your_Results
+   │   │   ├── calculation.py
+   │   ├── MME_Benchmark_release_version
+   │   │   ├── artwork
+   │   │   ├── celebrity
+   │   │   ├── code_reasoning
+   │   │   ├── color
+   │   │   ├── commonsense_reasoning
+   │   │   ├── count
+   │   │   ├── eval_tool
+   │   │   ├── existence
+   │   │   ├── landmark
+   │   │   ├── numerical_calculation
+   │   │   ├── OCR
+   │   │   ├── position
+   │   │   ├── posters
+   │   │   ├── scene
+   │   │   ├── text_translation
+   │   ├── convert_answer_to_mme.py
+   │   ├── llava_mme.jsonl
+   ├── mm-vet
+   │   ├── answers
+   │   ├── images
+   │   ├── results
+   │   ├── mm-vet
+   │   │   ├── bard_set.json
+   │   │   ├── mm-vet.json
+   │   ├── convert_answers.py
+   │   ├── llava-mm-vet.jsonl
+   ├── MMMU
+   │   ├── all_images
+   │   ├── eval
+   │   │   ├── utils
+   │   │   ├── answer_dict_val.json
+   │   │   ├── download_images.py
+   │   │   ├── main_eval_only.py
+   │   ├── anns_for_eval.json
