@@ -165,7 +165,7 @@ MMMU
 Organize Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Organize the image files and annotation files as follows in ``path/to/your/dataset`` :
+Organize the evaluation dataset as follows in ``path/to/your/eval`` :
 
 .. code-block:: bash
 
