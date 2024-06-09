@@ -1,0 +1,50 @@
+# model and data args
+model: !include ../model/phi.yml
+data: !include ../data/llava-v15-pretrain.yml
+
+training_recipe: common
+tune_type_llm: frozen             # < frozen | full | lora | qlora_int4 | qlora_int8 >
+tune_type_vision_tower: frozen    # < frozen | full | partially-tune >
+tune_vision_tower_from_layer: 0
+tune_type_connector: full         # < frozen | full >
+tune_embed_tokens: false
+
+optim: adamw_torch
+remove_unused_columns: false
+double_quant: true
+quant_type: nf4
+bits: 16
+
+lora_r: 64
+lora_alpha: 16
+lora_dropout: 0.05
+lora_weight_path: ''
+lora_bias: none
+
+mm_projector_lr: null
+group_by_modality_length: false
+vision_tower_lr: null
+pretrained_model_path: null
+
+# transformers.TrainingArguments
+deepspeed: null # specify via command line input
+output_dir: outputs
+num_train_epochs: 1
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 4
+gradient_accumulation_steps: 2
+evaluation_strategy: 'no'
+save_strategy: steps
+save_steps: 24000
+save_total_limit: 1
+learning_rate: 1e-3
+weight_decay: 0.
+warmup_ratio: 0.03
+lr_scheduler_type: cosine
+logging_steps: 1
+fp16: True
+tf32: false
+gradient_checkpointing: true
+dataloader_num_workers: 8
+report_to: ['tensorboard']
+run_name: tiny-llava

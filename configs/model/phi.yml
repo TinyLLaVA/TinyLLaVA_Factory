@@ -1,0 +1,15 @@
+cache_dir: null
+    
+model_name_or_path: microsoft/phi-2
+tokenizer_name_or_path: null
+attn_implementation: flash_attention_2
+vision_tower: google/siglip-so400m-patch14-384
+vision_tower2: ''
+connector_type: mlp2x_gelu
+
+mm_vision_select_layer: -2
+mm_patch_merge_type: flat
+mm_vision_select_feature: patch
+model_max_length: 3072
+tokenizer_use_fast: false
+tokenizer_padding_side: right

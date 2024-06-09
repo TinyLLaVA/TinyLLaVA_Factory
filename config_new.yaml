@@ -1,0 +1,179 @@
+_n_gpu: 1
+accelerator_config:
+  dispatch_batches: null
+  even_batches: true
+  split_batches: false
+  use_seedable_sampler: true
+adafactor: false
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_epsilon: 1.0e-08
+auto_find_batch_size: false
+bf16: false
+bf16_full_eval: false
+bits: 16
+data:
+  conv_version: pretrain
+  data_path: /home/ai/data/llava/dataset/text_files/blip_laion_cc_sbu_558k.json
+  image_aspect_ratio: square
+  image_folder: /home/ai/data/llava/dataset/llava/llava_pretrain/images
+  is_multimodal: true
+  lazy_preprocess: true
+data_seed: null
+dataloader_drop_last: false
+dataloader_num_workers: 8
+dataloader_persistent_workers: false
+dataloader_pin_memory: true
+dataloader_prefetch_factor: null
+ddp_backend: null
+ddp_broadcast_buffers: null
+ddp_bucket_cap_mb: null
+ddp_find_unused_parameters: null
+ddp_timeout: 1800
+debug: []
+deepspeed: ./configs/zero3.json
+disable_tqdm: false
+dispatch_batches: null
+do_eval: false
+do_predict: false
+do_train: false
+double_quant: true
+eval_accumulation_steps: null
+eval_delay: 0
+eval_steps: null
+evaluation_strategy: !!python/object/apply:transformers.trainer_utils.IntervalStrategy
+- 'no'
+fp16: true
+fp16_backend: auto
+fp16_full_eval: false
+fp16_opt_level: O1
+fsdp: []
+fsdp_config:
+  min_num_params: 0
+  xla: false
+  xla_fsdp_grad_ckpt: false
+  xla_fsdp_v2: false
+fsdp_min_num_params: 0
+fsdp_transformer_layer_cls_to_wrap: null
+full_determinism: false
+gradient_accumulation_steps: 2
+gradient_checkpointing: true
+gradient_checkpointing_kwargs: null
+greater_is_better: null
+group_by_length: false
+group_by_modality_length: false
+half_precision_backend: auto
+hub_always_push: false
+hub_model_id: null
+hub_private_repo: false
+hub_strategy: !!python/object/apply:transformers.trainer_utils.HubStrategy
+- every_save
+hub_token: null
+ignore_data_skip: false
+include_inputs_for_metrics: false
+include_num_input_tokens_seen: false
+include_tokens_per_second: false
+jit_mode_eval: false
+label_names: null
+label_smoothing_factor: 0.0
+learning_rate: 0.001
+length_column_name: length
+load_best_model_at_end: false
+local_rank: 2
+log_level: passive
+log_level_replica: warning
+log_on_each_node: true
+logging_dir: outputs/runs/Jun09_16-43-23_node6.athena
+logging_first_step: false
+logging_nan_inf_filter: true
+logging_steps: 1.0
+logging_strategy: !!python/object/apply:transformers.trainer_utils.IntervalStrategy
+- steps
+lora_alpha: 16
+lora_bias: none
+lora_dropout: 0.05
+lora_r: 64
+lora_weight_path: ''
+lr_scheduler_kwargs: {}
+lr_scheduler_type: !!python/object/apply:transformers.trainer_utils.SchedulerType
+- cosine
+max_grad_norm: 1.0
+max_steps: -1
+metric_for_best_model: null
+mm_projector_lr: null
+model:
+  attn_implementation: flash_attention_2
+  cache_dir: null
+  connector_type: mlp2x_gelu
+  mm_patch_merge_type: flat
+  mm_vision_select_feature: patch
+  mm_vision_select_layer: -2
+  model_max_length: 3072
+  model_name_or_path: microsoft/phi-2
+  num_queries: 128
+  num_resampler_layers: 3
+  resampler_hidden_size: 768
+  tokenizer_name_or_path: null
+  tokenizer_padding_side: right
+  tokenizer_use_fast: false
+  vision_tower: google/siglip-so400m-patch14-384
+  vision_tower2: ''
+mp_parameters: ''
+neftune_noise_alpha: null
+no_cuda: false
+num_train_epochs: 1.0
+optim: !!python/object/apply:transformers.training_args.OptimizerNames
+- adamw_torch
+optim_args: null
+optim_target_modules: null
+output_dir: outputs
+overwrite_output_dir: false
+past_index: -1
+per_device_eval_batch_size: 4
+per_device_train_batch_size: 32
+per_gpu_eval_batch_size: null
+per_gpu_train_batch_size: null
+prediction_loss_only: false
+pretrained_model_path: null
+push_to_hub: false
+push_to_hub_model_id: null
+push_to_hub_organization: null
+push_to_hub_token: null
+quant_type: nf4
+ray_scope: last
+remove_unused_columns: false
+report_to:
+- tensorboard
+resume_from_checkpoint: null
+run_name: tiny-llava
+save_on_each_node: false
+save_only_model: false
+save_safetensors: true
+save_steps: 24000
+save_strategy: !!python/object/apply:transformers.trainer_utils.IntervalStrategy
+- steps
+save_total_limit: 1
+seed: 42
+skip_memory_metrics: true
+split_batches: null
+tf32: false
+torch_compile: false
+torch_compile_backend: null
+torch_compile_mode: null
+torchdynamo: null
+tpu_metrics_debug: false
+tpu_num_cores: null
+training_recipe: common
+tune_embed_tokens: 0
+tune_type_connector: full
+tune_type_llm: frozen
+tune_type_vision_tower: frozen
+tune_vision_tower_from_layer: 0
+use_cpu: false
+use_ipex: false
+use_legacy_prediction_loop: false
+use_mps_device: false
+vision_tower_lr: null
+warmup_ratio: 0.03
+warmup_steps: 0
+weight_decay: 0.0

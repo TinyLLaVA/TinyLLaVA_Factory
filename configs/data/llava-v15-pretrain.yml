@@ -1,0 +1,6 @@
+data_path: /home/ai/data/llava/dataset/text_files/blip_laion_cc_sbu_558k.json
+lazy_preprocess: true
+is_multimodal: true
+image_folder: /home/ai/data/llava/dataset/llava/llava_pretrain/images
+image_aspect_ratio: square
+conv_version: pretrain
