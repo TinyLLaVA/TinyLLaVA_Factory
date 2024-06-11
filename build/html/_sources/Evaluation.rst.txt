@@ -191,7 +191,6 @@ Organize the evaluation dataset as follows in ``path/to/your/eval`` :
    │   ├── test_all_questions.json
    │   ├── test_balanced_questions.json
    │   ├── testdev_all_questions.json
-   │   ├── testdev_balanced_predictions.json
    │   ├── testdev_balanced_questions.json
    │   ├── train_balanced_questions.json
    │   ├── val_all_questions.json
@@ -218,7 +217,6 @@ Organize the evaluation dataset as follows in ``path/to/your/eval`` :
    │   ├── llava_pope_test.jsonl
    ├── MME
    │   ├── answers
-   │   ├── coco
    │   ├── eval_tool
    │   │   ├── LaVIN
    │   │   ├── Your_Results
