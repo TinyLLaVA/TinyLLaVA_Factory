@@ -2,11 +2,6 @@
 
 [![hf_space](https://img.shields.io/badge/🤗-%20Open%20In%20HF-blue.svg)](https://huggingface.co/tinyllava) [![arXiv](https://img.shields.io/badge/Arxiv-2402.14289-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2402.14289) [![arXiv](https://img.shields.io/badge/Arxiv-2405.11788-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2405.11788)[![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/main/LICENSE) [![Doc](https://img.shields.io/badge/Doc-Document-logo=read%20the%20docs&logoColor=white&label=Doc)](https://tinyllava-factory.readthedocs.io/en/latest/) [![Demo](https://img.shields.io/badge/Demo-Demo-red.svg)](http://8843843nmph5.vicp.fun/#/)
 
-## :hammer_and_wrench: Introduction
-TinyLLaVA Factory is a modularized codebase designed for small-scale large multimodal models, facilitating easy integration and flexible experimentation with various components of a multimodal learning pipeline.
-
-![architecture](./assets/architecture.jpg)
-
 ## &#x1F389; News
 * **[2024.05.21]**  Our paper: [TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models](https://arxiv.org/abs/2405.11788) is released!
 * **[2024.05.15]** [TinyLLaVA Factory](https://github.com/TinyLLaVA/TinyLLaVA_Factory), our new codebase, is released!  **Note that the old codebase, TinyLLaVABench, is moved to the [tinyllava_bench](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/tinyllava_bench) branch.**
@@ -32,12 +27,32 @@ TinyLLaVA Factory is a modularized codebase designed for small-scale large multi
 
 ## Contents
 
-- [Installation](#installation-and-requirements)
+- [🎉 News](#-news)
+- [🔥 Takeaways](#-takeaways)
+- [Contents](#contents)
+- [Installation and Requirements](#installation-and-requirements)
+    - [Upgrade to the latest code base](#upgrade-to-the-latest-code-base)
 - [Get Started](#get-started)
+    - [1. Data Preparation](#1-data-preparation)
+    - [2. Train](#2-train)
+    - [3. Evaluation](#3-evaluation)
 - [Model Zoo](#model-zoo)
+  - [Trained Models](#trained-models)
+    - [Model Performance](#model-performance)
+  - [Legacy Models](#legacy-models)
 - [Launch Demo Locally](#launch-demo-locally)
-- [Custom Finetune](#Custom-Finetune)
-- [Customize Your Own Large Multimodel Models](#customize-your-own-multimodel-models)
+  - [Gradio Web Demo](#gradio-web-demo)
+  - [CLI Inference](#cli-inference)
+  - [Quick Inference Scripts](#quick-inference-scripts)
+- [Custom Finetune](#custom-finetune)
+- [Customize Your Own Large Multimodel Models](#customize-your-own-large-multimodel-models)
+  - [LLM](#llm)
+  - [Vision Tower](#vision-tower)
+  - [Connector](#connector)
+- [Acknowledgement](#acknowledgement)
+- [Contact](#contact)
+- [✏ Citation](#-citation)
+- [❤️ Community efforts](#️-community-efforts)
 
 
 ## Installation and Requirements
@@ -188,6 +203,19 @@ When visiting this serene lakeside location with a wooden dock, there are a few 
 
 ## Launch Demo Locally
 
+### Gradio Web Demo
+Launch a local web demo by running:
+```bash
+python tinyllava/serve/app.py --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B
+```
+### CLI Inference
+We also support running inference with CLI. To use our model, run:
+```bash
+python -m tinyllava.serve.cli \
+   --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B \
+   --image-file "./tinyllava/serve/examples/extreme_ironing.jpg" 
+```
+### Quick Inference Scripts
 If you want to launch the model trained by yourself or us locally, here's an example.
 <details>
 <summary>Run inference with the model trained by yourself</summary>
@@ -202,7 +230,7 @@ conv_mode = "phi" # or llama, gemma, etc
 
 args = type('Args', (), {
     "model_path": model_path,
-    "model_base": None,
+    "model": None,
     "query": prompt,
     "conv_mode": conv_mode,
     "image_file": image_file,
