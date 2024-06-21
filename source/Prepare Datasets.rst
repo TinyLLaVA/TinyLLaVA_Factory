@@ -87,16 +87,17 @@ ShareGPT4V dataset
 
 • **Pretraining Annotations**: The pretraining annotations of ShareGPT4V. Download as follows.
 
-  • pretraining annotations: share-captioner_coco_lcs_sam_1246k_1107.json_.
+  • pretraining annotations: share-captioner_coco_lcs_sam_1246k_1107.json_ or really_cleaned_share-captioner_coco_lcs_sam_1246k_1107.json_.
 
   .. _share-captioner_coco_lcs_sam_1246k_1107.json: https://huggingface.co/datasets/Lin-Chen/ShareGPT4V/blob/main/share-captioner_coco_lcs_sam_1246k_1107.json
+  .. _really_cleaned_share-captioner_coco_lcs_sam_1246k_1107.json: https://pan.baidu.com/s/1yxUm6G-azD4MpQ-LkCSvhg?pwd=dlcv 
 
 • **SFT Annotations**: The SFT annotations of ShareGPT4V. Download as follows.
 
-  • SFT annotations: sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json_.
+  • SFT annotations: sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json_ or cleaned_sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json_.
 
   .. _sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json: https://huggingface.co/datasets/Lin-Chen/ShareGPT4V/blob/main/sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json
-
+  .. _cleaned_sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json: https://pan.baidu.com/s/1yxUm6G-azD4MpQ-LkCSvhg?pwd=dlcv 
 
 Organize Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -134,4 +135,6 @@ Organize the image files and annotation files as follows in ``path/to/your/datas
    │   ├── blip_laion_cc_sbu_558k.json
    │   ├── llava_v1_5_mix665k.json
    │   ├── share-captioner_coco_lcs_sam_1246k_1107.json
+   │   ├── really_cleaned_share-captioner_coco_lcs_sam_1246k_1107.json
    │   ├── sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json
+   │   ├── cleaned_sharegpt4v_mix665k_cap23k_coco-ap9k_lcs3k_sam9k_div2k.json
