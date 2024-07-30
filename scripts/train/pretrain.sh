@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 9 ]; then
+if [ $# -ne 9 ]; then
     echo "Usage: $0 <DATA_PATH> <IMAGE_PATH> <LLM_VERSION> <VT_VERSION> <VT_VERSION2> <CN_VERSION> <VERSION> <TRAIN_RECIPE> <MODEL_MAX_LENGTH>"
     exit 1
 fi
@@ -15,30 +15,12 @@ CN_VERSION="$6"
 VERSION="$7"
 TRAIN_RECIPE="$8"
 MODEL_MAX_LENGTH="$9"
-BATCH_SIZE="${10}"
-ACC_STEPS="${11}"
-ZERO="${12}"
 
 VT_VARIANT="${VT_VERSION#*/}"
 LLM_VARIANT="${LLM_VERSION#*/}"
 
-if [[ -z $BATCH_SIZE ]];
-then
-    BATCH_SIZE=32
-fi
-
-if [[ -z $ACC_STEPS ]];
-then
-    ACC_STEPS=2
-fi
-
-if [[ -z $ZERO ]];
-then
-    ZERO=2
-fi
-
-deepspeed --include localhost:0,1,2,3,4,5,6,7 --master_port 29501 tinyllava/train/train.py \
-    --deepspeed ./scripts/zero${ZERO}.json \
+deepspeed --include localhost:4,5,6,7 --master_port 29501 tinyllava/train/train.py \
+    --deepspeed ./scripts/zero3.json \
     --data_path  $DATA_PATH\
     --image_folder $IMAGE_PATH \
     --is_multimodal True \
@@ -56,11 +38,11 @@ deepspeed --include localhost:0,1,2,3,4,5,6,7 --master_port 29501 tinyllava/trai
     --tune_type_vision_tower frozen \
     --tune_vision_tower_from_layer 0 \
     --tune_type_connector full \
-    --output_dir /mnt/data/sata/zhaolei/checkpoints/llava_factory/tiny-llava-${LLM_VARIANT}-${VT_VARIANT}-${VERSION}-pretrain \
+    --output_dir /mnt/data/sata/yinghu/checkpoints/llava_factory/tiny-llava-${LLM_VARIANT}-${VT_VARIANT}-${VERSION}-pretrain \
     --num_train_epochs 1 \
-    --per_device_train_batch_size ${BATCH_SIZE} \
+    --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps ${ACC_STEPS} \
+    --gradient_accumulation_steps 2 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 24000 \
