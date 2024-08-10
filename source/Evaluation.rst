@@ -159,7 +159,7 @@ MMMU
 
    .. code-block:: bash
 
-      cd TinyLLaVA_Factorysh
+      cd TinyLLaVA_Factory
       CUDA_VISIBLE_DEVICES=0 bash scripts/eval/mmmu.sh
 
 Organize Data
