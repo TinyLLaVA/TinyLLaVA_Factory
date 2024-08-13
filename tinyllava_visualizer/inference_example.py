@@ -1,6 +1,6 @@
 from tinyllava.eval.run_tiny_llava import eval_model
 from tinyllava.model.convert_legecy_weights_to_tinyllavafactory import *
-from tinyllava_visualizer import *
+from tinyllava_visualizer.tinyllava_visualizer import *
 
 model = convert_legecy_weights_to_tinyllavafactory('TinyLLaVA-3.1B')
 prompt = "What is it?"
