@@ -76,7 +76,7 @@ prompt = "What is it?"
 
 image:
 
-<img title="" src="https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/demo_picture.webp" alt="" width="226">
+<img title="" src="https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/tinyllava_visualizer/demo/demo_picture.webp" alt="" width="226">
 
 output:
 
@@ -84,9 +84,9 @@ The image features a small, fluffy, light brown dog with a pink collar. The dog 
 
 ## *the visualization of word 'sweater'*
 
-| Word Probability Distributions                                                                                                    | Word Relationships                                                                                                  | Word-Image Relationships                                                                                                                                     |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ![](https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/Word%20Probability%20Distributions.png) | ![](https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/Word%20Relationships.png) | <img src="https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/Word-Image%20Relationships.png" title="" alt="" width="703"> |
+| Word Probability Distributions                                                                                                                         | Word Relationships                                                                                                                       | Word-Image Relationships                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![](https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/tinyllava_visualizer/demo/Word%20Probability%20Distributions.png) | ![](https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/tinyllava_visualizer/demo/Word%20Relationships.png) | <img title="" src="https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/tinyllava_visualizer/demo/Word-Image%20Relationships.png" alt="" width="703"> |
 
 ---
 

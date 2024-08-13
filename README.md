@@ -5,12 +5,14 @@
 ![architecture](./assets/architecture.jpg)
 
 ## &#x1F389; News
+
 * **[2024.05.21]**  Our paper: [TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models](https://arxiv.org/abs/2405.11788) is released!
 * **[2024.05.15]** [TinyLLaVA Factory](https://github.com/TinyLLaVA/TinyLLaVA_Factory), our new codebase, is released!  **Note that the old codebase, TinyLLaVABench, is moved to the [tinyllava_bench](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/tinyllava_bench) branch.**
 * **[2024.05.04]**  [TinyLLaVA Demo](http://8843843nmph5.vicp.fun/#/) is released!
 * **[2024.02.21]**  Our paper: [TinyLLaVA: A Framework of Small-scale Large Multimodal Models](https://arxiv.org/abs/2402.14289) is released!
 
 ## &#x1F525; Takeaways
+
 - Our best model, [TinyLLaVA-Phi-2-SigLIP-3.1B](https://huggingface.co/tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B), achieves better overall performance against existing 7B models such as LLaVA-1.5 and Qwen-VL.
 
 - TinyLLaVA Factory is an open-source modular codebase for small-scale large multimodal models (LMMs), implemented in PyTorch and HuggingFace, with a focus on simplicity of code implementations, extensibility of new features, and reproducibility of training results.
@@ -18,13 +20,13 @@
 - With TinyLLaVA Factory, you can customize your own large multimodal models with less coding effort and less coding mistakes.
 
 - TinyLLaVA Factory integrates a suite of cutting-edge models and methods. 
-
+  
   - LLM currently supports **OpenELM**, **TinyLlama**, **StableLM**, **Qwen**, **Gemma**, and **Phi**. 
-
+  
   - Vision tower currently supports **CLIP,** **SigLIP**, **Dino**, and **combination of CLIP and Dino**.
-    
+  
   - Connector currently supports **MLP**, **Qformer**, and **Resampler**.
-    
+  
   - Training Recipe currently supports **Frozen/Fully/Partially tuning** and **LoRA/QLoRA tuning**.
 
 ## Contents
@@ -33,11 +35,11 @@
 - [🔥 Takeaways](#-takeaways)
 - [Contents](#contents)
 - [Installation and Requirements](#installation-and-requirements)
-    - [Upgrade to the latest code base](#upgrade-to-the-latest-code-base)
+  - [Upgrade to the latest code base](#upgrade-to-the-latest-code-base)
 - [Get Started](#get-started)
-    - [1. Data Preparation](#1-data-preparation)
-    - [2. Train](#2-train)
-    - [3. Evaluation](#3-evaluation)
+  - [1. Data Preparation](#1-data-preparation)
+  - [2. Train](#2-train)
+  - [3. Evaluation](#3-evaluation)
 - [Model Zoo](#model-zoo)
   - [Trained Models](#trained-models)
     - [Model Performance](#model-performance)
@@ -56,30 +58,33 @@
 - [✏ Citation](#-citation)
 - [❤️ Community efforts](#️-community-efforts)
 
-
 ## Installation and Requirements
 
 Please note that our environment requirements are different from LLaVA's environment requirements. We strongly recommend you create the environment from scratch as follows.
 
 1. Clone this repository and navigate to the folder
-```bash
-git clone https://github.com/TinyLLaVA/TinyLLaVA_Factory.git
-cd TinyLLaVA_Factory
-```
+   
+   ```bash
+   git clone https://github.com/TinyLLaVA/TinyLLaVA_Factory.git
+   cd TinyLLaVA_Factory
+   ```
 
 2. Create a conda environment, activate it and install Packages
-```Shell
-conda create -n tinyllava_factory python=3.10 -y
-conda activate tinyllava_factory
-pip install --upgrade pip  # enable PEP 660 support
-pip install -e .
-```
+   
+   ```Shell
+   conda create -n tinyllava_factory python=3.10 -y
+   conda activate tinyllava_factory
+   pip install --upgrade pip  # enable PEP 660 support
+   pip install -e .
+   ```
 
 3. Install additional packages
-```Shell
-pip install flash-attn --no-build-isolation
-```
-#### Upgrade to the latest code base
+   
+   ```Shell
+   pip install flash-attn --no-build-isolation
+   ```
+   
+   #### Upgrade to the latest code base
 
 ```Shell
 git pull
@@ -108,7 +113,7 @@ bash scripts/train/train_phi.sh
 Important hyperparameters used in pretraining and finetuning are provided below.
 
 | Training Stage | Global Batch Size | Learning rate | conv_version |
-| -------------- | :---------------: | :-----------: | :----------: |
+| -------------- |:-----------------:|:-------------:|:------------:|
 | Pretraining    | 256               | 1e-3          | pretrain     |
 | Finetuning     | 128               | 2e-5          | phi          |
 
@@ -142,7 +147,7 @@ which are trained using TinyLLaVA Factory.
 #### Model Performance
 
 | VT (HF Path)                      | LLM (HF Path)                      | Recipe    | VQA-v2 | GQA  | SQA-image | TextVQA | MM-Vet | POPE | MME    | MMMU-val |
-| --------------------------------- | ---------------------------------- | --------- | :----: | :--: | :-------: | :-----: | :----: | :--: | :----: | :------: |
+| --------------------------------- | ---------------------------------- | --------- |:------:|:----:|:---------:|:-------:|:------:|:----:|:------:|:--------:|
 | openai/clip-vit-large-patch14-336 | apple/OpenELM-450M-Instruct        | base      | 69.5   | 52.1 | 50.6      | 40.4    | 20.0   | 83.6 | 1052.9 | 23.9     |
 | google/siglip-so400m-patch14-384  | apple/OpenELM-450M-Instruct        | base      | 71.7   | 53.9 | 54.1      | 44.0    | 20.0   | 85.4 | 1118.8 | 24.0     |
 | google/siglip-so400m-patch14-384  | Qwen/Qwen2-0.5B                    | base      | 72.3   | 55.8 | 60.1      | 45.2    | 19.5   | 86.6 | 1153   | 29.7     |
@@ -169,7 +174,6 @@ If you have models trained by our old codebase TinyLLaVABench and you still want
 
 <details>
 <summary>Example of using legacy models</summary>
-
 
 ```Python
 from tinyllava.eval.run_tiny_llava import eval_model
@@ -203,24 +207,30 @@ When visiting this serene lakeside location with a wooden dock, there are a few 
 
 </details>
 
-
-
 ## Launch Demo Locally
 
 ### Gradio Web Demo
+
 Launch a local web demo by running:
+
 ```bash
 python tinyllava/serve/app.py --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B
 ```
+
 ### CLI Inference
+
 We also support running inference with CLI. To use our model, run:
+
 ```bash
 python -m tinyllava.serve.cli \
    --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B \
    --image-file "./tinyllava/serve/examples/extreme_ironing.jpg" 
 ```
+
 ### Quick Inference Scripts
+
 If you want to launch the model trained by yourself or us locally, here's an example.
+
 <details>
 <summary>Run inference with the model trained by yourself</summary>
 
@@ -253,6 +263,7 @@ Output:
 XXXXXXXXXXXXXXXXX
 """
 ```
+
 </details>
 
 <details>
@@ -261,7 +272,8 @@ XXXXXXXXXXXXXXXXX
 The image features a small, fluffy, light brown dog with a pink collar. The dog is wearing a <font color=Fuchsia>sweater</font>, which adds a touch of warmth and style to its appearance. The dog is standing on a wooden floor, and its gaze is directed straight at the camera, creating a sense of connection between the viewer and the subject. The dog's fur appears soft and fluffy, and its pink collar stands out against its light brown coat. The wooden floor provides a natural and warm background that contrasts with the dog's vibrant colors. The dog's position and the way it looks at the camera give the image a sense of liveliness and personality. The image does not contain any text or other objects. The focus is solely on the dog, making it the central element of the image. The relative position of the dog to the camera and the wooden floor suggests that the photo was taken in a home setting, possibly in the living room or a similar area. The image does not provide any additional context or information about the dog's breed, age, or any other details beyond what can be seen in the image.
 
 ## *the visualization of word 'sweater' in line 1*
->>>>>>> 6221c48e2216e3f30fcbb3857a1dbdaa3efc5bfe
+
+> > > > > > > 6221c48e2216e3f30fcbb3857a1dbdaa3efc5bfe
 
 ```Python
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -278,9 +290,11 @@ output_text, genertaion_time = model.chat(prompt=prompt, image=image_url, tokeni
 print('model output:', output_text)
 print('runing time:', genertaion_time)
 ```
+
 </details>
 
 ## Custom Finetune
+
 If you want to finetune TinyLLaVA with your custom datasets, please refer to [here](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/main/CUSTOM_FINETUNE.md).
 
 ## Customize Your Own Large Multimodel Models
@@ -308,7 +322,7 @@ from transformers import PreTrainedTokenizer
 import torch
 import tokenizers
 
-    
+
 system = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
 
 @register_template('gemma') # Enable the TemplateFactory to obtain the added template by this string ('gemma').
@@ -324,6 +338,7 @@ class GemmaTemplate(Template):
         # your code here
         return labels, cur_len
 ```
+
 **Tips:**
 
 Please ensure that the `labels` (returned by the `_make_masks` function) follows this format: answers and the eos token id are not masked, and the other tokens are masked with `-100`.
@@ -361,7 +376,7 @@ class MoFVisionTower(VisionTower):
 
         self._vision_tower = MoF(cfg)
         self._image_processor = # your image processor
-  
+
     def _load_model(self, vision_tower_name, **kwargs):
         # your code here, make sure your model can be correctly loaded from pretrained parameters either by huggingface or pytorch loading
 
@@ -377,13 +392,12 @@ If you want to add a new connector, you need to implement a new connector class 
 
 First, create `tinyllava/model/connector/linear.py`
 
-
 ```python
 import torch.nn as nn
 
 from . import register_connector
 from .base import Connector
-    
+
 @register_connector('linear') #Enable the ConnectorMFactory to obtain the added connector by this string ('linear').     
 class LinearConnector(Connector):
     def __init__(self, config):
@@ -394,9 +408,11 @@ class LinearConnector(Connector):
 Then, modify your training scripts with the corresponding `CN_VERSION`.
 
 ## Acknowledgement
+
 We give special thanks to Lei Zhao, Luche Wang, Kaijun Luo, and Junchen Wang for building the [Demo](http://8843843nmph5.vicp.fun/#/).
 
 ## Contact
+
 If you have any questions, feel free to either initiate an *Issue* or contact us by WeChat (WeChatID: *TinyLLaVA*).
 
 ## &#x270F; Citation
@@ -413,6 +429,7 @@ If you find our paper and code useful in your research, please consider giving a
       primaryClass={cs.LG}
 }
 ```
+
 ```BibTeX
 @article{jia2024tinyllava,
   title={TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models},
@@ -422,7 +439,7 @@ If you find our paper and code useful in your research, please consider giving a
 }
 ```
 
-
 ## ❤️ Community efforts
+
 * Our codebase is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) project. Great work!
 * Our project uses data from the [ShareGPT4V](https://github.com/InternLM/InternLM-XComposer/tree/main/projects/ShareGPT4V) project. Great work!
