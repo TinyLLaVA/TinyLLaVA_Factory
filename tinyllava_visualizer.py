@@ -7,8 +7,9 @@ from io import BytesIO
 from PIL import Image, ImageDraw
 from torchvision.transforms import ToPILImage
 import torch.nn.functional as F
-import pdb
 import numpy as np
+import os
+import datetime
 from tinyllava.data import *
 from tinyllava.utils import *
 from tinyllava.model import *
@@ -32,15 +33,12 @@ def load_images(image_files):
 
 
 def extract_max_values_and_indices(tensor, k):
-    # 获取最大的8个数及其索引
     max_values, max_indices = torch.topk(tensor, k, dim=2)
-    # 将结果组合成新的tensor
     max_values_with_indices = torch.stack((max_indices, max_values), dim=3)
-    # 返回结果
     return max_values_with_indices
 
 
-def visualize_grid_to_grid(i, mask, image, grid_size=27, alpha=0.6):
+def visualize_grid_to_grid(i, mask, image, output_dir, grid_size=27, alpha=0.6):
     if not isinstance(grid_size, tuple):
         grid_size = (grid_size, grid_size)
     mask = mask.detach().cpu().numpy()
@@ -56,8 +54,9 @@ def visualize_grid_to_grid(i, mask, image, grid_size=27, alpha=0.6):
     ax[1].axis('off')
     cbar = fig.colorbar(im, ax=ax[1])
     cbar.set_label('Color Temperature')
-    name = "hot_image/" + str(i) + ".png"
+    name = os.path.join(output_dir, "hot_image", f"{i}.png")
     plt.savefig(name)
+    plt.close(fig)
 
 
 def generate_square_subsequent_mask(sz):
@@ -66,14 +65,12 @@ def generate_square_subsequent_mask(sz):
     return mask
 
 
-def generate_word_images(tokenizer, top_words_tensor, num, input_ids, embed_tokens):
+def generate_word_images(tokenizer, top_words_tensor, num, input_ids, embed_tokens, output_dir):
     num_top_words = top_words_tensor.shape[1]
     for i in range(num_top_words - num, num_top_words):
-        #  输出当前输出词的概率
         fig, ax = plt.subplots()
         word_indices = top_words_tensor[0, i, :, 0].detach().cpu().numpy()
         probabilities = top_words_tensor[0, i, :, 1].detach().cpu().numpy()
-        # 根据概率计算颜色，这里仅作示例，你可以根据自己的需求修改颜色映射
         colors = plt.cm.viridis(probabilities)
 
         for j, (word_index, color, prob) in enumerate(zip(word_indices, colors, probabilities)):
@@ -81,13 +78,12 @@ def generate_word_images(tokenizer, top_words_tensor, num, input_ids, embed_toke
             prob_text = f"{word}  P: {prob:.2f}"
             ax.text(0.5, 0.9 - j * 0.1, prob_text, color=color, ha='center', va='center', transform=ax.transAxes)
         ax.axis('off')
-        ax.set_title('Top Words for Index {}'.format(i))
-        plt.savefig('word/word_image_{}.png'.format(i))  # 保存图片
+        ax.set_title('Top Words for Index {}'.format(i - num_top_words + num + 1))
+        plt.savefig(os.path.join(output_dir, 'word', f"word_image_{i - num_top_words + num + 1}.png"))
         plt.close()
-        #  end
 
 
-def generate_word_images_before(tokenizer, input_ids, tensor, num, top_words_tensor):
+def generate_word_images_before(tokenizer, input_ids, tensor, num, top_words_tensor, output_dir):
     num_top_words = tensor.shape[2]
     result = tensor.mean(dim=1)  # [1, len, len]
     input_ids_fir = input_ids[input_ids != -200].unsqueeze(0)  # 去除了图像的token
@@ -107,7 +103,6 @@ def generate_word_images_before(tokenizer, input_ids, tensor, num, top_words_ten
         tv, ti = torch.topk(result_1.squeeze(), 8)
         tv = tv / torch.max(tv)
         probabilities = tv.detach().cpu().numpy()
-        # 根据概率计算颜色，这里仅作示例，你可以根据自己的需求修改颜色映射
         colors = plt.cm.viridis(probabilities)
         for j, (word_index, color, prob) in enumerate(zip(ti, colors, probabilities)):
             word = tokenizer.decode(input_ids_fir[0, word_index.item()])
@@ -116,12 +111,12 @@ def generate_word_images_before(tokenizer, input_ids, tensor, num, top_words_ten
         ax.axis('off')
         ax.set_title(
             'similarities of output word  {}'.format(tokenizer.decode([top1_indices.detach().cpu().numpy()])))
-        plt.savefig('word_before/word_image_{}.png'.format(i))  # 保存图片
+        plt.savefig(os.path.join(output_dir, 'word_before', f"word_image_{i - (num_top_words - num - 1)}.png"))
         plt.close()
 
 
 class Monitor:
-    def __init__(self, llm_layers_index, args):
+    def __init__(self, args, llm_layers_index, ):
         if args.model_path is not None:
             model, tokenizer, image_processor, context_len = load_pretrained_model(args.model_path)
         else:
@@ -185,8 +180,10 @@ class Monitor:
         self.logit = F.softmax(torch.cat(self.logit, dim=1), dim=2)  # 输出的词的概率
         hidden_tensor = torch.cat(self.hidden, dim=1)
         length = hidden_tensor.shape[1]
-        attention_mask = torch.unsqueeze(torch.unsqueeze(torch.tensor(generate_square_subsequent_mask(length)), dim=0),
-                                         dim=0).cuda()
+        attention_mask = torch.unsqueeze(
+            torch.unsqueeze(generate_square_subsequent_mask(length).clone().detach(), dim=0),
+            dim=0).cuda()
+
         # 获得attention map
         self.hidden = self.model.language_model.model.layers[self.llm_layers_index](hidden_tensor,
                                                                                     output_attentions=True,
@@ -194,17 +191,27 @@ class Monitor:
         self.image_token = self.image_token[0].squeeze()
         self.image_token = torch.cat((torch.zeros(1, 2560).cuda(), self.image_token), dim=0)
 
-    def get_output(self):
+    def get_output(self, output_dir='results/'):
+        print("Starting visualization...")
         self.prepare_input()
+        # 创建唯一的时间戳目录
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = os.path.join(output_dir, f"run_{timestamp}")
+        os.makedirs(output_dir, exist_ok=True)
 
-        #  生成输出概率
+        # 创建三个子文件夹
+        os.makedirs(os.path.join(output_dir, 'word'), exist_ok=True)
+        os.makedirs(os.path.join(output_dir, 'word_before'), exist_ok=True)
+        os.makedirs(os.path.join(output_dir, 'hot_image'), exist_ok=True)
+
+        # 生成输出概率
         num = self.logit.shape[1] - 726 - len(self.input_ids[0])
         result = extract_max_values_and_indices(self.logit, 8)
         generate_word_images(self.model.tokenizer, result, num, self.input_ids,
-                             self.model.language_model.model.embed_tokens.weight)
+                             self.model.language_model.model.embed_tokens.weight, output_dir)
 
-        #  llm输出和输入的词之间的关系
-        generate_word_images_before(self.model.tokenizer, self.input_ids, self.hidden[1], num, result)
+        # llm输出和输入的词之间的关系
+        generate_word_images_before(self.model.tokenizer, self.input_ids, self.hidden[1], num, result, output_dir)
 
         result_top1 = result[0, :, 0, 0].squeeze()
         for i in range(len(result_top1) - num, len(result_top1)):
@@ -216,6 +223,7 @@ class Monitor:
             matrix_norm = F.normalize(self.image_token, p=2, dim=1)
             cosine_similarities = torch.sum(vector_norm * matrix_norm, dim=1)
             normalized_similarities = F.softmax(cosine_similarities, dim=0)
-            visualize_grid_to_grid('第-' + str(i - (len(result_top1) - num) + 1) + '个token',
+            visualize_grid_to_grid('hot_image_' + str(i - (len(result_top1) - num) + 1),
                                    normalized_similarities.view(27, 27),
-                                   self.image)
+                                   self.image, output_dir)
+        print("Completed visualization.")

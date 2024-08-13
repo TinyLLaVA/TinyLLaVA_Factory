@@ -1,9 +1,10 @@
 from tinyllava.eval.run_tiny_llava import eval_model
 from tinyllava.model.convert_legecy_weights_to_tinyllavafactory import *
 from tinyllava_visualizer import *
+
 model = convert_legecy_weights_to_tinyllavafactory('TinyLLaVA-3.1B')
-prompt = "What are the things I should be cautious about when I visit here?"
-image_file = "image_test/1.jpeg"
+prompt = "What is it?"
+image_file = "image_test/2.webp"
 args = type('Args', (), {
     "model_path": None,
     "model": model,
@@ -18,6 +19,6 @@ args = type('Args', (), {
     "max_new_tokens": 512
 })()
 
-monitor = Monitor(31, args)
+monitor = Monitor(args, llm_layers_index=31)
 eval_model(args)
-monitor.get_output()
+monitor.get_output(output_dir='results/')
