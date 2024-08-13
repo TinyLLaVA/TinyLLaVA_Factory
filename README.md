@@ -83,9 +83,9 @@ The image features a small, fluffy, light brown dog with a pink collar. The dog 
 
 ### *the visualization of word 'sweater'*
 
-| Word Probability Distributions                                                           | Word Relationships                                                                                           | Word-Image Relationships                                                                |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| <img title="" src="file:///C:/Users/34701/Desktop/word_image_22.png" alt="" width="186"> | <img title="" src="file:///C:/Users/34701/Desktop/TinyLLaVABench-main/word_image_22.png" alt="" width="232"> | <img title="" src="file:///C:/Users/34701/Desktop/hot_image_22.png" alt="" width="250"> |
+| Word Probability Distributions                               | Word Relationships                                           | Word-Image Relationships                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![](https://github.com/bb0aed48-a835-463e-89fa-4e304973ab74) | ![](https://github.com/ab7554a1-a704-4175-a20f-1fe37b2f942d) | ![](https://github.com/da66066e-c33a-4749-bf57-9b0d29137f13) |
 
 ---
 
