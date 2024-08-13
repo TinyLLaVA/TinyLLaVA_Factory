@@ -50,9 +50,9 @@ def main():
         "max_new_tokens": 512
     })()
 
-    monitor = Monitor(31, args)
-    eval_model(args)
-    monitor.get_output()
+monitor = Monitor(args, llm_layers_index=31)
+eval_model(args)
+monitor.get_output(output_dir='results/')
 
 if __name__ == "__main__":
     main()
