@@ -86,7 +86,7 @@ def generate_word_images(tokenizer, top_words_tensor, num, input_ids, embed_toke
 def generate_word_images_before(tokenizer, input_ids, tensor, num, top_words_tensor, output_dir):
     num_top_words = tensor.shape[2]
     result = tensor.mean(dim=1)  # [1, len, len]
-    input_ids_fir = input_ids[input_ids != -200].unsqueeze(0)  # 去除了图像的token
+    input_ids_fir = input_ids[input_ids != -200].unsqueeze(0)
     for i in range(num_top_words - num, num_top_words - 1):
         top1_indices = top_words_tensor[0, i, 0, 0].long()
         fig, ax = plt.subplots()
@@ -175,16 +175,14 @@ class Monitor:
         image_tensor = image_tensor.byte()
         to_pil = ToPILImage()
         self.image = to_pil(image_tensor).convert('RGB')
-        #  预处理捕获的中间态
         self.model.cuda()
-        self.logit = F.softmax(torch.cat(self.logit, dim=1), dim=2)  # 输出的词的概率
+        self.logit = F.softmax(torch.cat(self.logit, dim=1), dim=2)
         hidden_tensor = torch.cat(self.hidden, dim=1)
         length = hidden_tensor.shape[1]
         attention_mask = torch.unsqueeze(
             torch.unsqueeze(generate_square_subsequent_mask(length).clone().detach(), dim=0),
             dim=0).cuda()
 
-        # 获得attention map
         self.hidden = self.model.language_model.model.layers[self.llm_layers_index](hidden_tensor,
                                                                                     output_attentions=True,
                                                                                     attention_mask=attention_mask)
@@ -194,23 +192,20 @@ class Monitor:
     def get_output(self, output_dir='results/'):
         print("Starting visualization...")
         self.prepare_input()
-        # 创建唯一的时间戳目录
+
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = os.path.join(output_dir, f"run_{timestamp}")
         os.makedirs(output_dir, exist_ok=True)
 
-        # 创建三个子文件夹
         os.makedirs(os.path.join(output_dir, 'word'), exist_ok=True)
         os.makedirs(os.path.join(output_dir, 'word_before'), exist_ok=True)
         os.makedirs(os.path.join(output_dir, 'hot_image'), exist_ok=True)
 
-        # 生成输出概率
         num = self.logit.shape[1] - 726 - len(self.input_ids[0])
         result = extract_max_values_and_indices(self.logit, 8)
         generate_word_images(self.model.tokenizer, result, num, self.input_ids,
                              self.model.language_model.model.embed_tokens.weight, output_dir)
 
-        # llm输出和输入的词之间的关系
         generate_word_images_before(self.model.tokenizer, self.input_ids, self.hidden[1], num, result, output_dir)
 
         result_top1 = result[0, :, 0, 0].squeeze()
