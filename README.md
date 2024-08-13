@@ -75,7 +75,7 @@ prompt = "What is it?"
 
 image:
 
-<img src="file:///C:/Users/34701/Desktop/2.webp" title="" alt="" width="281">
+<img title="" src="https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/demo_picture.webp" alt="" width="226">
 
 output:
 
@@ -83,9 +83,9 @@ The image features a small, fluffy, light brown dog with a pink collar. The dog 
 
 ### *the visualization of word 'sweater'*
 
-| Word Probability Distributions                               | Word Relationships                                           | Word-Image Relationships                                     |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![](https://github.com/bb0aed48-a835-463e-89fa-4e304973ab74) | ![](https://github.com/ab7554a1-a704-4175-a20f-1fe37b2f942d) | ![](https://github.com/da66066e-c33a-4749-bf57-9b0d29137f13) |
+| Word Probability Distributions                                                                                                    | Word Relationships                                                                                                  | Word-Image Relationships                                                                                                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ![](https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/Word%20Probability%20Distributions.png) | ![](https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/Word%20Relationships.png) | <img src="https://raw.githubusercontent.com/lingcco/TinyLLaVA_Factory/tinyllava_visualizer/demo/Word-Image%20Relationships.png" title="" alt="" width="703"> |
 
 ---
 
