@@ -21,7 +21,7 @@ pip install --upgrade pip  # enable PEP 660 support
 pip install -e .
 ```
 
-#### Usage
+### Usage
 
 ### Inference and Visualization
 
