@@ -66,6 +66,7 @@ This example demonstrates how to set up and use TinyLLaVA Visualizer in a typica
 - `tinyllava/`: Directory containing core model and data processing code.
 - `scripts/`: Contains utility scripts.
 - `eval/`: Evaluation scripts and tools.
+- `results/`: Storage for visualization results.
 
 ## Example Visualizations
 
