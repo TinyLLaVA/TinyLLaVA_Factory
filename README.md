@@ -247,6 +247,7 @@ args = type('Args', (), {
 
 eval_model(args)
 
+<<<<<<< HEAD
 """
 Output: 
 XXXXXXXXXXXXXXXXX
@@ -256,6 +257,11 @@ XXXXXXXXXXXXXXXXX
 
 <details>
 <summary>Run inference with the model trained by us using huggingface transformers</summary>
+=======
+The image features a small, fluffy, light brown dog with a pink collar. The dog is wearing a <font color=Fuchsia>sweater</font>, which adds a touch of warmth and style to its appearance. The dog is standing on a wooden floor, and its gaze is directed straight at the camera, creating a sense of connection between the viewer and the subject. The dog's fur appears soft and fluffy, and its pink collar stands out against its light brown coat. The wooden floor provides a natural and warm background that contrasts with the dog's vibrant colors. The dog's position and the way it looks at the camera give the image a sense of liveliness and personality. The image does not contain any text or other objects. The focus is solely on the dog, making it the central element of the image. The relative position of the dog to the camera and the wooden floor suggests that the photo was taken in a home setting, possibly in the living room or a similar area. The image does not provide any additional context or information about the dog's breed, age, or any other details beyond what can be seen in the image.
+
+## *the visualization of word 'sweater' in line 1*
+>>>>>>> 6221c48e2216e3f30fcbb3857a1dbdaa3efc5bfe
 
 ```Python
 from transformers import AutoTokenizer, AutoModelForCausalLM
