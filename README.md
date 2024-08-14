@@ -5,6 +5,7 @@
 ![architecture](./assets/architecture.jpg)
 
 ## &#x1F389; News
+* **[2024.08.13]**  A simple [visualizaiton tool](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/main/tinyllava_visualizer) for interpreting the prediction of TinyLLaVA is added.
 * **[2024.05.21]**  Our paper: [TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models](https://arxiv.org/abs/2405.11788) is released!
 * **[2024.05.15]** [TinyLLaVA Factory](https://github.com/TinyLLaVA/TinyLLaVA_Factory), our new codebase, is released!  **Note that the old codebase, TinyLLaVABench, is moved to the [tinyllava_bench](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/tinyllava_bench) branch.**
 * **[2024.05.04]**  [TinyLLaVA Demo](http://8843843nmph5.vicp.fun/#/) is released!
