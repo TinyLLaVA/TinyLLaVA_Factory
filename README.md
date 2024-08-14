@@ -411,7 +411,7 @@ If you find our paper and code useful in your research, please consider giving a
 ```BibTeX
 @article{jia2024tinyllava,
   title={TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models},
-  author={Jia, Junlong and Hu, Ying and Weng, Xi and Shi, Yiming and Li, Miao and Zhang, Xingjian and Zhou, Baichuan and Liu, Ziyu and Luo, Jie and Huang, Lei and others},
+  author={Jia, Junlong and Hu, Ying and Weng, Xi and Shi, Yiming and Li, Miao and Zhang, Xingjian and Zhou, Baichuan and Liu, Ziyu and Luo, Jie and Huang, Lei and Wu, Ji},
   journal={arXiv preprint arXiv:2405.11788},
   year={2024}
 }
