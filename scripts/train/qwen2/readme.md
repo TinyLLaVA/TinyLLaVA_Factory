@@ -1,0 +1,1 @@
+These codes work for Qwen/Qwen2-0.5B and Qwen/Qwen2-0.5B-Instruct. However there is bug causing from deepspeed when you use other Qwen2 models like qwen2-1.5B. If you want to use tinyllava to train other qwen2 models, please feel free to contact our team.
