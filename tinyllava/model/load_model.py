@@ -48,7 +48,7 @@ def load_pretrained_model(model_name_or_path, load_type='hf', load_8bit=False, l
             model.vision_tower._vision_tower.load_state_dict(vision_tower_ckp)
             connector_ckp_path = os.path.join(model_name_or_path, 'connector/pytorch_model.bin')
             connector_ckp = load_base_ckp_for_lora(connector_ckp_path)
-            model.connector.load_state_dict(connector_ckp)
+            model.connector.load_state_dict(connector_ckp, strict=False)
             model.to(torch.float16)
             from peft import PeftModel
             print('Loading LoRA weights...')
