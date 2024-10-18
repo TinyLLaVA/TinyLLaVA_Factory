@@ -148,8 +148,8 @@ class BaseTrainingRecipe:
             print('Loading LoRA weights...')
             model = PeftModel.from_pretrained(model, self.training_arguments.pretrained_model_path)
             print('Merging LoRA weights...')
-            model = model.merge_and_unload()
-            print('Model is loaded...')
+            # model = model.merge_and_unload()
+            # print('Model is loaded...')
 
         return model
         
