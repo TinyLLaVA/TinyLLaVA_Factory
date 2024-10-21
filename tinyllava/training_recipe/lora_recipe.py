@@ -47,7 +47,26 @@ class LoRATrainingRecipe(BaseTrainingRecipe):
             log("Adding LoRA adapters...")
             model = get_peft_model(model, lora_config)  
         return model
-        
+
+
+    def load(self, model, model_args={}):
+        if not ('lora' in self.training_arguments.pretrained_model_path and os.path.exists(os.path.join(self.training_arguments.pretrained_model_path, 'adapter_config.json'))): # loading model for non-lora/non-qlora pretraining
+            model.load_llm(**model_args['llm'])
+            model.load_vision_tower(**model_args['vision_tower'])
+            model.load_connector(**model_args['connector'])
+        else:
+            model.language_model = model.language_model.from_pretrained(model_args['llm']['model_name_or_path'],attn_implementation='flash_attention_2',torch_dtype=model_args['llm']['torch_dtype'])
+            model.load_vision_tower(**model_args['vision_tower'])
+            model.load_connector(**model_args['connector'])
+            model.to(model_args['llm']['torch_dtype'])
+            from peft import PeftModel
+            print('Loading LoRA weights...')
+            model = PeftModel.from_pretrained(model, self.training_arguments.pretrained_model_path)
+            print('Merging LoRA weights...')
+            # model = model.merge_and_unload()
+            # print('Model is loaded...')
+
+        return model        
         
     def save(self, model, trainer):
         model.config.use_cache = True
