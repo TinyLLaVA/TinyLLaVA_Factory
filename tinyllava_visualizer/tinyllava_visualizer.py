@@ -13,7 +13,7 @@ import datetime
 from tinyllava.data import *
 from tinyllava.utils import *
 from tinyllava.model import *
-
+import pdb
 
 def load_image(image_file):
     if image_file.startswith("http") or image_file.startswith("https"):
@@ -74,7 +74,7 @@ def generate_word_images(tokenizer, top_words_tensor, num, input_ids, embed_toke
         colors = plt.cm.viridis(probabilities)
 
         for j, (word_index, color, prob) in enumerate(zip(word_indices, colors, probabilities)):
-            word = tokenizer.decode([word_index])
+            word = tokenizer.decode([int(word_index)])
             prob_text = f"{word}  P: {prob:.2f}"
             ax.text(0.5, 0.9 - j * 0.1, prob_text, color=color, ha='center', va='center', transform=ax.transAxes)
         ax.axis('off')
@@ -116,16 +116,7 @@ def generate_word_images_before(tokenizer, input_ids, tensor, num, top_words_ten
 
 
 class Monitor:
-    def __init__(self, args, llm_layers_index, ):
-        if args.model_path is not None:
-            model, tokenizer, image_processor, context_len = load_pretrained_model(args.model_path)
-        else:
-            assert args.model is not None, 'model_path or model must be provided'
-            model = args.model
-            if hasattr(model.config, "max_sequence_length"):
-                context_len = model.config.max_sequence_length
-            else:
-                context_len = 2048
+    def __init__(self, args, model, llm_layers_index):
         self.model = model
         self.args = args
         self.input_ids = None
