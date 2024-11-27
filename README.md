@@ -27,6 +27,8 @@
   - Connector currently supports **MLP**, **Qformer**, and **Resampler**.
     
   - Training Recipe currently supports **Frozen/Fully/Partially tuning** and **LoRA/QLoRA tuning**.
+  
+- The password to access our demo is '1234'.
 
 ## Contents
 
