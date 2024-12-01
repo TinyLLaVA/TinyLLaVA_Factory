@@ -151,6 +151,7 @@ which are trained using TinyLLaVA Factory.
 | google/siglip-so400m-patch14-384  | Qwen/Qwen2-0.5B                    | base      | 72.3   | 55.8 | 60.1      | 45.2    | 19.5   | 86.6 | 1153.0 | 29.7     |
 | google/siglip-so400m-patch14-384  | Qwen/Qwen2.5-0.5B                  | base      | 75.3   | 59.5 | 60.3      | 48.3    | 23.9   | 86.1 | 1253.0 | 33.3     |
 | google/siglip-so400m-patch14-384  | Qwen/Qwen2.5-1.5B                  | base      | 79.0   | 61.8 | 71.6      | 56.9    | 26.7   | 86.7 | 1380.8 | 39.7     |
+| google/siglip-so400m-patch14-384  | Qwen/Qwen2.5-3B                    | base      | 79.4   | 62.5 | 74.1      | 58.3    | 34.8   | 86.7 | 1438.7 | 39.9     |
 | openai/clip-vit-large-patch14-336 | TinyLlama/TinyLlama-1.1B-Chat-v1.0 | base      | 73.7   | 58.0 | 59.9      | 46.3    | 23.2   | 85.5 | 1284.6 | 27.9     |
 | google/siglip-so400m-patch14-384  | TinyLlama/TinyLlama-1.1B-Chat-v1.0 | base      | 75.5   | 58.6 | 64.0      | 49.6    | 23.5   | 86.3 | 1256.5 | 28.3     |
 | openai/clip-vit-large-patch14-336 | stabilityai/stablelm-2-zephyr-1_6b | base      | 75.9   | 59.5 | 64.6      | 50.5    | 27.3   | 86.1 | 1368.1 | 31.8     |
