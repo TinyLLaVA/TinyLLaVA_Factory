@@ -227,7 +227,7 @@ python -m tinyllava.serve.cli \
 ### Quick Inference Scripts
 If you want to launch the model trained by yourself or us locally, here's an example.
 <details>
-<summary>Run inference with the model trained by yourself</summary>
+<summary>Run inference with the model trained by yourself or downloaded from HuggingFace</summary>
 
 ```Python
 from tinyllava.eval.run_tiny_llava import eval_model
@@ -251,11 +251,6 @@ args = type('Args', (), {
 })()
 
 eval_model(args)
-
-"""
-Output: 
-XXXXXXXXXXXXXXXXX
-"""
 ```
 </details>
 
