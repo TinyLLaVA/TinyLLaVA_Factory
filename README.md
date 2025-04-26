@@ -79,7 +79,7 @@ pip install -e .
 
 3. Install additional packages
 ```Shell
-pip install flash-attn --no-build-isolation
+pip install flash-attn==2.5.7 --no-build-isolation
 ```
 #### Upgrade to the latest code base
 
