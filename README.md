@@ -6,7 +6,7 @@
 
 ## &#x1F389; News
 * **[2025.01]**  Our new work [TinyLLaVA-Video](https://github.com/ZhangXJ199/TinyLLaVA-Video) is released.
-* **[2024.08.13]**  A simple [visualizaiton tool](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/main/tinyllava_visualizer) for interpreting the prediction of TinyLLaVA is added.
+* **[2024.08.13]**  A simple [visualization tool](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/main/tinyllava_visualizer) for interpreting the prediction of TinyLLaVA is added.
 * **[2024.05.21]**  Our paper: [TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models](https://arxiv.org/abs/2405.11788) is released!
 * **[2024.05.15]** [TinyLLaVA Factory](https://github.com/TinyLLaVA/TinyLLaVA_Factory), our new codebase, is released!  **Note that the old codebase, TinyLLaVABench, is moved to the [tinyllava_bench](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/tinyllava_bench) branch.**
 * **[2024.05.04]**  [TinyLLaVA Demo](http://8843843nmph5.vicp.fun/#/) is released! (The password to access our demo is '1234'.)
@@ -92,7 +92,7 @@ pip install -e .
 
 #### 1. Data Preparation
 
-Please refer to the [Data Preparation](https://tinyllava-factory.readthedocs.io/en/latest/Prepare%20Datasets.html) section in our [Documenation](https://tinyllava-factory.readthedocs.io/en/latest/).
+Please refer to the [Data Preparation](https://tinyllava-factory.readthedocs.io/en/latest/Prepare%20Datasets.html) section in our [Documentation](https://tinyllava-factory.readthedocs.io/en/latest/).
 
 #### 2. Train
 
@@ -116,7 +116,7 @@ Important hyperparameters used in pretraining and finetuning are provided below.
 
 **Tips:** 
 
-Global Batch Size = num of GPUs * `per_device_train_batch_size` * `gradient_accumulation_steps`, we recommand you always keep global batch size and learning rate as above except for lora tuning your model.
+Global Batch Size = num of GPUs * `per_device_train_batch_size` * `gradient_accumulation_steps`, we recommend you always keep global batch size and learning rate as above except for lora tuning your model.
 
 `conv_version` is a hyperparameter used for choosing different chat templates for different LLMs. In the pretraining stage, `conv_version` is the same for all LLMs, using `pretrain`. In the finetuning stage, we use
 
@@ -128,7 +128,7 @@ Global Batch Size = num of GPUs * `per_device_train_batch_size` * `gradient_accu
 
 #### 3. Evaluation
 
-Please refer to the [Evaluation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html) section in our [Documenation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html).
+Please refer to the [Evaluation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html) section in our [Documentation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html).
 
 ## Model Zoo
 
