@@ -20,7 +20,7 @@ import math
 def split_list(lst, n):
     """Split a list into n (roughly) equal-sized chunks"""
     chunk_size = math.ceil(len(lst) / n)  # integer division
-    return [lst[i:i+chunk_size] for i in range(0, len(lst), chunk_size)]
+    return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
 
 def get_chunk(lst, n, k):
@@ -43,11 +43,11 @@ class CustomDataset(Dataset):
 
         image = Image.open(os.path.join(args.image_folder, image_file)).convert('RGB')
         image_tensor = self.image_processor(image)
-        
+
         qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
         msg = Message()
         msg.add_message(qs)
-        #print(prompt)
+        # print(prompt)
         result = self.text_processor(msg.messages, mode='eval')
         input_ids = result['input_ids']
 
@@ -68,16 +68,18 @@ def collate_fn(batch):
 def create_data_loader(questions, image_folder, text_processor, image_processor, batch_size=1, num_workers=4):
     assert batch_size == 1, "batch_size must be 1"
     dataset = CustomDataset(questions, image_folder, text_processor, image_processor)
-    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, collate_fn=collate_fn)
+    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False,
+                             collate_fn=collate_fn)
     return data_loader
 
 
 def eval_model(args):
+    device = get_device()
     # Model
     disable_torch_init()
     model_path = os.path.expanduser(args.model_path)
     model, tokenizer, image_processor, context_len = load_pretrained_model(model_path)
-    
+
     text_processor = TextPreprocess(tokenizer, args.conv_mode)
     data_args = model.config
     image_processor = ImagePreprocess(image_processor, data_args)
@@ -88,20 +90,19 @@ def eval_model(args):
     os.makedirs(os.path.dirname(answers_file), exist_ok=True)
     ans_file = open(answers_file, "w")
 
-
     data_loader = create_data_loader(questions, args.image_folder, text_processor, image_processor)
     # print("Tokenizer's eos token: ", tokenizer.eos_token)
-    model.to(device='cuda')
+    model.to(device=device)
     for (input_ids, image_tensor, image_sizes), line in tqdm(zip(data_loader, questions), total=len(questions)):
         idx = line["question_id"]
         cur_prompt = line["text"]
         # keywords = [tokenizer.eos_token]
         # stopping_criteria = KeywordsStoppingCriteria(keywords, tokenizer, input_ids)
-        input_ids = input_ids.to(device='cuda', non_blocking=True)
+        input_ids = input_ids.to(device=device, non_blocking=True)
         with torch.inference_mode():
             output_ids = model.generate(
                 input_ids,
-                images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
+                images=image_tensor.to(dtype=torch.float16, device=device, non_blocking=True),
                 pad_token_id=tokenizer.pad_token_id,
                 do_sample=True if args.temperature > 0 else False,
                 temperature=args.temperature,
@@ -125,6 +126,7 @@ def eval_model(args):
                                    "metadata": {}}) + "\n")
         # ans_file.flush()
     ans_file.close()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

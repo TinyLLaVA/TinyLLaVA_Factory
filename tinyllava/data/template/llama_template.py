@@ -13,20 +13,22 @@ import torch
 import tokenizers
 
 IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse('0.14')
-    
-system = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
+
+system = ("A chat between a curious user and an artificial intelligence assistant. "
+          "The assistant gives helpful, detailed, and polite answers to the user's questions.")
+
 
 @register_template('llama')
 @dataclass
 class LlamaTemplate(Template):
-    format_image_token: "Formatter" = StringFormatter(slot="<image>\n{{content}}")
-    format_user: "Formatter" = StringFormatter(slot="USER" + ": " + "{{content}}" + " ")
-    format_assistant: "Formatter" = StringFormatter(slot="ASSISTANT" + ": " + "{{content}}" + "</s>")
-    system: "Formatter" = EmptyFormatter(slot=system+" ")
-    separator: "Formatter" = EmptyFormatter(slot=[' ASSISTANT: ', '</s>'])
-    
+    format_image_token: "Formatter" = StringFormatter.add(slot="<image>\n{{content}}")
+    format_user: "Formatter" = StringFormatter.add(slot="USER" + ": " + "{{content}}" + " ")
+    format_assistant: "Formatter" = StringFormatter.add(slot="ASSISTANT" + ": " + "{{content}}" + "</s>")
+    system: "Formatter" = EmptyFormatter.add(slot=system + " ")
+    separator: "Formatter" = EmptyFormatter.add(slot=[' ASSISTANT: ', '</s>'])
+
     def _make_masks(self, labels, tokenizer, sep, eos_token_length, rounds):
-        cur_len = 1 # bos
+        cur_len = 1  # bos
         eos_token_length = 1
         bos_token_length = 1
         labels[:cur_len] = IGNORE_INDEX
@@ -42,15 +44,8 @@ class LlamaTemplate(Template):
             if i != 0 and not tokenizer.legacy and IS_TOKENIZER_GREATER_THAN_0_14:
                 round_len -= 1
                 instruction_len -= 1
-            labels[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+            labels[cur_len: cur_len + instruction_len] = IGNORE_INDEX
             cur_len += round_len
-        
+
         labels[cur_len:] = IGNORE_INDEX
         return labels, cur_len
-
-
-
-
-
-
-

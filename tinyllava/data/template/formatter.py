@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import  Dict, Union, List
-
+from dataclasses import dataclass, field
+from typing import Dict, Union, List, Type
 
 SLOT = Union[str, List[str], Dict[str, str]]
+
 
 @dataclass
 class Formatter(ABC):
@@ -12,6 +12,9 @@ class Formatter(ABC):
     @abstractmethod
     def apply(self, **kwargs) -> SLOT: ...
 
+    @classmethod
+    def add(cls, *arg, **kwargs):
+        return field(default_factory=lambda: cls(*arg, **kwargs))
 
 
 @dataclass

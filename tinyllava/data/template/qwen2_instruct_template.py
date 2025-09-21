@@ -8,21 +8,16 @@ from . import register_template
 
 from transformers import PreTrainedTokenizer
 import torch
-    
-system = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
+
+system = ("A chat between a curious user and an artificial intelligence assistant. "
+          "The assistant gives helpful, detailed, and polite answers to the user's questions.")
+
 
 @register_template('qwen2_instruct')
 @dataclass
 class Qwen2InstructTemplate(Template):
-    format_image_token: "Formatter" = StringFormatter(slot="<image>\n{{content}}")
-    format_user: "Formatter" = StringFormatter(slot="USER" + ": " + "{{content}}" + " ")
-    format_assistant: "Formatter" = StringFormatter(slot="ASSISTANT" + ": " + "{{content}}" + "<|im_end|>")
-    system: "Formatter" = EmptyFormatter(slot=system+" ")
-    separator: "Formatter" = EmptyFormatter(slot=[' ASSISTANT: ', '<|im_end|>'])
-
-
-
-
-
-
-
+    format_image_token: "Formatter" = StringFormatter.add(slot="<image>\n{{content}}")
+    format_user: "Formatter" = StringFormatter.add(slot="USER" + ": " + "{{content}}" + " ")
+    format_assistant: "Formatter" = StringFormatter.add(slot="ASSISTANT" + ": " + "{{content}}" + "<|im_end|>")
+    system: "Formatter" = EmptyFormatter.add(slot=system + " ")
+    separator: "Formatter" = EmptyFormatter.add(slot=[' ASSISTANT: ', '<|im_end|>'])

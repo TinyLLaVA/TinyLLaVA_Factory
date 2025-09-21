@@ -4,12 +4,13 @@ from typing import Dict
 from .base import *
 from ...utils import import_modules
 
-
 TEMPlATE_FACTORY: Dict[str, Template] = {}
+
 
 def TemplateFactory(version):
     template = TEMPlATE_FACTORY.get(version, None)
-    assert template, f"{version} is not implmentation"
+    assert template, (f"{version} is not implmentation, "
+                      f"should be {TEMPlATE_FACTORY.keys()}")
     return template
 
 
