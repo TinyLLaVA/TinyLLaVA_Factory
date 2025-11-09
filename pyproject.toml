@@ -13,19 +13,58 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
-    "torch==2.0.1", "torchvision==0.15.2", "tiktoken", "openpyxl", "tensorboardX",
-    "transformers==4.40.1", "tokenizers==0.19.0", "sentencepiece==0.1.99", "shortuuid",
-    "accelerate==0.27.2", "bitsandbytes==0.41.0", "peft==0.10.0",
-    "pydantic<2,>=1", "markdown2[all]", "numpy==1.26.4", "scikit-learn==1.2.2",
-    "gradio==3.35.2", "gradio_client==0.2.9",
-    "requests", "httpx==0.24.0", "uvicorn", "fastapi",
-    "einops==0.6.1", "einops-exts==0.0.4", "timm==0.6.13",
-    "deepspeed==0.14.0", "ninja", "wandb",
+    "tiktoken",
+    "openpyxl",
+    "tensorboardX",
+    "transformers==4.40.1",
+    "tokenizers==0.19.0",
+    "sentencepiece==0.1.99",
+    "shortuuid",
+    "accelerate==0.27.2",
+    "pydantic", #<2,>=1
+    "markdown2[all]",
+    "numpy",
+    "scikit-learn",
+    "gradio==3.35.2",
+    "gradio_client==0.2.9",
+    "requests",
+    "httpx",
+    "uvicorn",
+    "fastapi",
+    "einop",
+    "einops-exts",
+    "timm",
+    "ninja",
+    "wandb",
+    "peft==0.10.0",
 ]
-
+#"torch==2.0.1", "torchvision==0.15.2", "tiktoken", "openpyxl", "tensorboardX",
+#    "transformers==4.40.1", "tokenizers==0.19.0", "sentencepiece==0.1.99", "shortuuid",
+#    "accelerate==0.27.2", "bitsandbytes==0.41.0", "peft==0.10.0",
+#    "pydantic<2,>=1", "markdown2[all]", "numpy==1.26.4", "scikit-learn==1.2.2",
+#    "gradio==3.35.2", "gradio_client==0.2.9",
+#    "requests", "httpx==0.24.0", "uvicorn", "fastapi",
+#    "einops==0.6.1", "einops-exts==0.0.4", "timm==0.6.13",
+#    "deepspeed==0.14.0", "ninja", "wandb",
 [project.optional-dependencies]
 train = ["deepspeed==0.14.0", "ninja", "wandb"]
+npu = [
+    "torch==2.5.1",
+    "torchvision",
+    "deepspeed",
+    ## for NPU
+    "torch-npu==2.5.1",
+]
 
+cuda = [
+    "torch==2.0.1", "torchvision==0.15.2",
+    "numpy==1.26.4", "scikit-learn==1.2.2",
+    "deepspeed==0.14.0",
+    ## for CUDA
+    "bitsandbytes==0.41.0",
+]
+[pip]
+index-url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
 [project.urls]
 "Homepage" = "https://github.com/DLCV-BUAA/TinyLLaVABench"
 "Bug Tracker" = "https://github.com/DLCV-BUAA/TinyLLaVABench/issues"
