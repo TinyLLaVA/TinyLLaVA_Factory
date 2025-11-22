@@ -60,6 +60,6 @@ deepspeed --include localhost:0 --master_port 29501 tinyllava/train/train.py \
     --report_to tensorboard \
     --tokenizer_use_fast False \
     --run_name tiny-llava-${LLM_VARIANT}-${VT_VARIANT}-${VERSION}-pretrain \
-    --save_steps 10 \
-    --max_steps 10 \
-    --logging_steps 1 \
+#    --save_steps 10 \
+#    --max_steps 10 \
+#    --logging_steps 1 \

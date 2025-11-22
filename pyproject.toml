@@ -51,7 +51,7 @@ train = ["deepspeed==0.14.0", "ninja", "wandb"]
 npu = [
     "torch==2.5.1",
     "torchvision",
-    "deepspeed",
+    "deepspeed==0.18.1",
     ## for NPU
     "torch-npu==2.5.1",
 ]
