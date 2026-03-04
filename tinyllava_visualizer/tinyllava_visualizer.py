@@ -1,10 +1,9 @@
 from collections import defaultdict
-from torch.nn.parallel import DistributedDataParallel
 from matplotlib import pyplot as plt
 import torch
 import requests
 from io import BytesIO
-from PIL import Image, ImageDraw
+from PIL import Image
 from torchvision.transforms import ToPILImage
 import torch.nn.functional as F
 import numpy as np
@@ -13,7 +12,6 @@ import datetime
 from tinyllava.data import *
 from tinyllava.utils import *
 from tinyllava.model import *
-import pdb
 
 
 def load_image(image_file):

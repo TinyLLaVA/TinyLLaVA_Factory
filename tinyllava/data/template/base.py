@@ -1,12 +1,9 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 import copy
 
-from .formatter import EmptyFormatter, StringFormatter
 from .formatter import Formatter
-from ...utils.constants import *
+from ...utils.constants import IGNORE_INDEX, DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX
 
-from transformers import PreTrainedTokenizer
 import torch
 
 
@@ -21,7 +18,7 @@ class Template:
     def encode(self, messages, tokenizer, mode="train"):
         """
         1. get list form messages(conversations:[{from:human, value:message}, {from:gpt, value:message}])
-            ===>  human_list, value_list
+            ->  human_list, value_list
         2. prompt two list
         3. tokenize prompt
         4. make target

@@ -1,15 +1,12 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 from packaging import version
 
 from .formatter import EmptyFormatter, StringFormatter
 from .base import Template
 from .formatter import Formatter
 from . import register_template
-from ...utils.constants import *
+from ...utils.constants import IGNORE_INDEX
 
-from transformers import PreTrainedTokenizer
-import torch
 import tokenizers
 
 IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse(

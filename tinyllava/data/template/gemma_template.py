@@ -1,16 +1,11 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
-from packaging import version
 
 from .formatter import EmptyFormatter, StringFormatter
 from .base import Template
 from .formatter import Formatter
 from . import register_template
-from ...utils.constants import *
+from ...utils.constants import IGNORE_INDEX
 
-from transformers import PreTrainedTokenizer
-import torch
-import tokenizers
 
 system = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
 

@@ -1,15 +1,12 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 import copy
 
 from .formatter import EmptyFormatter, StringFormatter
 from .base import Template
 from .formatter import Formatter
-from ...utils.constants import *
+from ...utils.constants import IGNORE_INDEX
 from . import register_template
 
-from transformers import PreTrainedTokenizer
-import torch
 
 
 @register_template("pretrain")

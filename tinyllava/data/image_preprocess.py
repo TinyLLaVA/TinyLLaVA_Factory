@@ -1,4 +1,3 @@
-import os
 
 from PIL import Image, ImageFile
 import torch

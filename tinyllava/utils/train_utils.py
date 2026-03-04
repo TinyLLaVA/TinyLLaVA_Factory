@@ -100,7 +100,6 @@ def find_all_linear_names(model, skip_keywords=["connector", "vision_tower"]):
         ):
             continue
         if isinstance(module, cls):
-            names = name.split(".")
             # lora_module_names.add(names[0] if len(names) == 1 else names[-1])
             lora_module_names.add(name)
     # if 'lm_head' in lora_module_names:

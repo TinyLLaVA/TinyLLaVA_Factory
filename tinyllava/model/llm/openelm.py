@@ -23,7 +23,6 @@ logger = logging.get_logger(__name__)
 # this import has to be relative, otherwise, when setting trust_remote_code=True
 # huggingface transformers won't be able to load the module correctly
 from numbers import Number
-from typing import List, Optional, Union
 
 import numpy as np
 from transformers import PretrainedConfig, AutoTokenizer

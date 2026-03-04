@@ -55,7 +55,7 @@ def log_trainable_params(model):
     log(
         f"Total Parameters: {total_params}, Total Trainable Parameters: {total_trainable_params}"
     )
-    log(f"Trainable Parameters:")
+    log("Trainable Parameters:")
     for name, param in model.named_parameters():
         if param.requires_grad:
             print_rank0(f"{name}: {param.numel()} parameters")

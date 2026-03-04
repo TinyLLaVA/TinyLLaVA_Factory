@@ -1,5 +1,4 @@
 import argparse
-import re
 import requests
 from PIL import Image
 from io import BytesIO
