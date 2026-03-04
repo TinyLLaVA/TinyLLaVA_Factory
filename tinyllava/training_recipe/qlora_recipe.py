@@ -1,18 +1,17 @@
 import os
 
-from collections import OrderedDict
-
 import torch
 from transformers import BitsAndBytesConfig
-from peft import prepare_model_for_kbit_training
-from peft import LoraConfig, get_peft_model, TaskType, PeftModel
-from peft.tuners.lora import LoraLayer
+from peft import LoraConfig, get_peft_model
 
 from .base import BaseTrainingRecipe
 from . import register_training_recipe
-from ..utils.train_utils import *
+from ..utils.train_utils import (
+    find_all_linear_names,
+    get_peft_state_non_lora_maybe_zero_3,
+    get_peft_state_maybe_zero_3,
+)
 from ..utils import log
-from ..model import TinyLlavaConfig, TinyLlavaForConditionalGeneration
 
 
 @register_training_recipe("qlora_int8")

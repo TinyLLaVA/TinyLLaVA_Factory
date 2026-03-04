@@ -1,7 +1,7 @@
-from transformers import PretrainedConfig, LlavaConfig
+from transformers import PretrainedConfig
 from transformers import CONFIG_MAPPING
 from transformers import AutoConfig
-from tinyllava.utils.constants import *
+from tinyllava.utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
 
 
 class TinyLlavaConfig(PretrainedConfig):
@@ -15,16 +15,11 @@ class TinyLlavaConfig(PretrainedConfig):
         vision_model_name_or_path2="",
         connector_type=None,
         text_config=None,
-        hidden_size=2048,
-        vocab_size=32000,
-        ignore_index=-100,
-        image_token_index=32000,
         pad_token=None,
         pad_token_id=None,
         tokenizer_padding_side="right",
         tokenizer_model_max_length=2048,
         vision_config=None,
-        vision_hidden_size=None,
         vision_feature_layer=-2,
         vision_feature_select_strategy="patch",
         image_aspect_ratio="square",

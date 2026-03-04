@@ -4,7 +4,6 @@ import torch.nn as nn
 from transformers import (
     CLIPVisionModel,
     CLIPImageProcessor,
-    CLIPVisionConfig,
     Dinov2Model,
     AutoConfig,
 )

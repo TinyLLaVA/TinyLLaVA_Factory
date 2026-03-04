@@ -1,10 +1,8 @@
-import os
 from PIL import Image
 from io import BytesIO
 import base64
-from transformers import AutoTokenizer
 import torch
-from transformers import StoppingCriteria, PhiForCausalLM
+from transformers import StoppingCriteria
 
 
 def disable_torch_init():

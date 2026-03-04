@@ -4,7 +4,11 @@ from PIL import Image, ImageFile
 import torch
 import ast
 
-from ..utils.data_utils import *
+from ..utils.data_utils import (
+    select_best_resolution,
+    resize_and_pad_image,
+    divide_to_patches,
+)
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 

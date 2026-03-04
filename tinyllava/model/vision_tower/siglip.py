@@ -1,4 +1,4 @@
-from transformers import SiglipVisionModel, SiglipVisionConfig, SiglipImageProcessor
+from transformers import SiglipVisionModel, SiglipImageProcessor
 
 from . import register_vision_tower
 from .base import VisionTower

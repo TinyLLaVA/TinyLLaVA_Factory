@@ -2,9 +2,6 @@ import os
 import torch
 from collections import OrderedDict
 from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    AutoConfig,
     BitsAndBytesConfig,
 )
 

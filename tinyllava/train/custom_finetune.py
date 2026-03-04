@@ -1,10 +1,19 @@
-import tokenizers
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoImageProcessor
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    AutoImageProcessor,
+    HfArgumentParser,
+)
 
 from tinyllava.train.tinyllava_trainer import LLaVATrainer
 from tinyllava.training_recipe import TrainingRecipeFactory
-from tinyllava.utils import *
-from tinyllava.model import *
+from tinyllava.utils import (
+    logger_setting,
+    log_trainable_params,
+    ModelArguments,
+    DataArguments,
+    TrainingArguments,
+)
 from tinyllava.data.dataset import make_supervised_data_module
 
 
@@ -17,7 +26,7 @@ def load_settings(model_arguments, data_arguments, training_arguments):
 
 def train():
     # load argument
-    parser = transformers.HfArgumentParser(
+    parser = HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments)
     )
     model_arguments, data_arguments, training_arguments = (

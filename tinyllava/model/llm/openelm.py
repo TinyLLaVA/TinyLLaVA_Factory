@@ -6,7 +6,6 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
-import torch.utils.checkpoint
 from torch import Tensor, nn
 from torch.nn import CrossEntropyLoss
 from torch.nn import functional as F

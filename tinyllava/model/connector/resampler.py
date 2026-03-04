@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from . import register_connector
 from .base import Connector
-import torch
 from einops import rearrange, repeat
 from einops_exts import rearrange_many
 from torch import einsum

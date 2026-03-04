@@ -1,4 +1,4 @@
-from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
+from transformers import CLIPVisionModel, CLIPImageProcessor
 
 from . import register_vision_tower
 from .base import VisionTower

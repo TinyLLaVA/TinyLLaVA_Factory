@@ -1,14 +1,14 @@
 import copy
 from dataclasses import dataclass
 import json
-from typing import Dict, Sequence, TYPE_CHECKING
+from typing import Dict, Sequence
 from PIL import Image, ImageFile
 import os
 
 from .text_preprocess import TextPreprocess
 from .image_preprocess import ImagePreprocess
 from ..utils.arguments import DataArguments
-from ..utils.constants import *
+from ..utils.constants import IGNORE_INDEX
 
 
 import transformers

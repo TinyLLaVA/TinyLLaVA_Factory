@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Sequence, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import transformers
 
 

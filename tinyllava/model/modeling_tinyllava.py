@@ -1,9 +1,6 @@
-from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
-import ast
 
 import torch
-import torch.utils.checkpoint
 from torch import nn
 
 from transformers import PreTrainedModel
@@ -12,7 +9,7 @@ from transformers.generation.utils import GenerateOutput
 
 from . import LLMFactory, ConnectorFactory, VisionTowerFactory
 from .configuration_tinyllava import TinyLlavaConfig
-from ..utils.constants import *
+from ..utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
 # from tinyllava.utils.data_utils import get_value_from_kwargs
 
 
