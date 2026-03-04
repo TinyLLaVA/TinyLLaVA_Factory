@@ -31,11 +31,13 @@ from transformers import PretrainedConfig, AutoTokenizer
 
 from . import register_llm
 
-@register_llm('openelm')
+
+@register_llm("openelm")
 def return_openelmclass():
     def tokenizer_and_post_load(tokenizer):
         tokenizer.pad_token = tokenizer.unk_token
         return tokenizer
+
     return OpenELMForCausalLM, (AutoTokenizer, tokenizer_and_post_load)
 
 
@@ -327,9 +329,9 @@ class OpenELMConfig(PretrainedConfig):
                     )
                 ]
             else:
-                assert (
-                    len(self.ffn_multipliers) == self.num_transformer_layers
-                ), f"{len(self.ffn_multipliers)=}!={self.num_transformer_layers=}"
+                assert len(self.ffn_multipliers) == self.num_transformer_layers, (
+                    f"{len(self.ffn_multipliers)=}!={self.num_transformer_layers=}"
+                )
         else:
             raise NotImplementedError(
                 f"FFN multipliers should be a single number or a list containing exactly two numbers. Got: {qkv_multipliers}."
@@ -338,6 +340,7 @@ class OpenELMConfig(PretrainedConfig):
         # check num_query_heads divisible by num_kv_heads for every layer
         for layer_idx in range(len(query_dims)):
             assert self.num_query_heads[layer_idx] % self.num_kv_heads[layer_idx] == 0
+
 
 class OpenELMRMSNorm(nn.Module):
     def __init__(self, num_features: int, eps: float = 1e-6):
@@ -532,9 +535,9 @@ class OpenELMRotaryEmbedding(torch.nn.Module):
         # can differ. For instance, when employing key-value (KV) caching for sequence prediction, the keys
         # represent embeddings of previous tokens and the current token, while the query corresponds
         # to the embedding of the current token only.
-        assert (
-            key_len >= query_len
-        ), "Number of keys has to be greater than or equal to number of queries."
+        assert key_len >= query_len, (
+            "Number of keys has to be greater than or equal to number of queries."
+        )
 
         query_float = query.float()
         key_float = key.float()

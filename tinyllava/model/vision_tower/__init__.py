@@ -5,8 +5,9 @@ from ...utils import import_modules
 
 VISION_TOWER_FACTORY = {}
 
+
 def VisionTowerFactory(vision_tower_name):
-    vision_tower_name = vision_tower_name.split(':')[0]
+    vision_tower_name = vision_tower_name.split(":")[0]
     model = None
     for name in VISION_TOWER_FACTORY.keys():
         if name.lower() in vision_tower_name.lower():
@@ -21,6 +22,7 @@ def register_vision_tower(name):
             return VISION_TOWER_FACTORY[name]
         VISION_TOWER_FACTORY[name] = cls
         return cls
+
     return register_vision_tower_cls
 
 

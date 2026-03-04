@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 
@@ -8,12 +7,11 @@ from . import register_connector
 from .base import Connector
 
 
-
 class QFormer(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        bert_config = BertConfig.from_pretrained('google-bert/bert-base-uncased')
+        bert_config = BertConfig.from_pretrained("google-bert/bert-base-uncased")
         bert_config.encoder_width = config.vision_hidden_size
         # insert cross-attention layer every other block
         bert_config.add_cross_attention = True
@@ -22,8 +20,8 @@ class QFormer(nn.Module):
         self.bert = BertModel(config=bert_config, add_pooling_layer=False)
         self.bert.embeddings.word_embeddings = None
         self.bert.embeddings.position_embeddings = None
-        self.bert.embeddings.LayerNorm.weight = None # added by ying
-        self.bert.embeddings.LayerNorm.bias = None # added by ying
+        self.bert.embeddings.LayerNorm.weight = None  # added by ying
+        self.bert.embeddings.LayerNorm.bias = None  # added by ying
         for layer in self.bert.encoder.layer:
             layer.output = None
             layer.intermediate = None
@@ -34,8 +32,6 @@ class QFormer(nn.Module):
         self.query_tokens.data.normal_(mean=0.0, std=bert_config.initializer_range)
 
         self.projector = nn.Linear(bert_config.hidden_size, config.hidden_size)
-
-     
 
     def forward(self, x):
         device = x.device
@@ -51,28 +47,39 @@ class QFormer(nn.Module):
         image_embeds = self.projector(image_embeds)
         return image_embeds
 
- 
 
-@register_connector('qformer')
+@register_connector("qformer")
 class QFormerConnector(Connector):
     def __init__(self, config):
         super().__init__()
         self._connector = QFormer(config)
 
-
     def load_model(self, **kwargs):
-        pretrained_connector_path = kwargs.get('pretrained_connector_path', None)
+        pretrained_connector_path = kwargs.get("pretrained_connector_path", None)
         if pretrained_connector_path is not None:
-            pretrained_connector_path = os.path.join(pretrained_connector_path, 'pytorch_model.bin')
-            connector_weights = torch.load(pretrained_connector_path, map_location='cpu')
+            pretrained_connector_path = os.path.join(
+                pretrained_connector_path, "pytorch_model.bin"
+            )
+            connector_weights = torch.load(
+                pretrained_connector_path, map_location="cpu"
+            )
+
             def get_w(weights, keyword):
-                return {k.split(keyword + '.')[1]: v for k, v in weights.items() if keyword in k}
-            self._connector.load_state_dict(get_w(connector_weights, '_connector'), strict=False)
-            print(f'Loading connector from {pretrained_connector_path}...')
+                return {
+                    k.split(keyword + ".")[1]: v
+                    for k, v in weights.items()
+                    if keyword in k
+                }
+
+            self._connector.load_state_dict(
+                get_w(connector_weights, "_connector"), strict=False
+            )
+            print(f"Loading connector from {pretrained_connector_path}...")
 
         for p in self._connector.parameters():
             p.requires_grad = False
- 
+
+
 # =================================qformer bert related =================================
 import math
 import os
@@ -242,7 +249,6 @@ class BertSelfAttention(nn.Module):
         past_key_value=None,
         output_attentions=False,
     ):
-
         # If this is instantiated as a cross-attention module, the keys
         # and values come from an encoder; the attention mask needs to be
         # such that the encoder's padding tokens are not attended to.
@@ -496,9 +502,9 @@ class BertLayer(nn.Module):
             query_attention_output = attention_output[:, :query_length, :]
 
             if self.has_cross_attention:
-                assert (
-                    encoder_hidden_states is not None
-                ), "encoder_hidden_states must be given for cross-attention layers"
+                assert encoder_hidden_states is not None, (
+                    "encoder_hidden_states must be given for cross-attention layers"
+                )
                 cross_attention_outputs = self.crossattention(
                     query_attention_output,
                     attention_mask,
@@ -589,7 +595,6 @@ class BertEncoder(nn.Module):
             past_key_value = past_key_values[i] if past_key_values is not None else None
 
             if getattr(self.config, "gradient_checkpointing", False) and self.training:
-
                 if use_cache:
                     logger.warn(
                         "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
@@ -918,9 +923,9 @@ class BertModel(BertPreTrainedModel):
         # use_cache = use_cache if use_cache is not None else self.config.use_cache
 
         if input_ids is None:
-            assert (
-                query_embeds is not None
-            ), "You have to specify query_embeds when input_ids is None"
+            assert query_embeds is not None, (
+                "You have to specify query_embeds when input_ids is None"
+            )
 
         # past_key_values_length
         past_key_values_length = (
@@ -1032,7 +1037,6 @@ class BertModel(BertPreTrainedModel):
 
 
 class BertLMHeadModel(BertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder.bias"]
 
@@ -1195,7 +1199,6 @@ class BertLMHeadModel(BertPreTrainedModel):
 
 
 class BertForMaskedLM(BertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder.bias"]
 
@@ -1280,4 +1283,3 @@ class BertForMaskedLM(BertPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-

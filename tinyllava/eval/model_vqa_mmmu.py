@@ -104,7 +104,9 @@ def eval_model(args):
         if "image" in line:
             image_file = line["image"]
             # image = Image.open(image_file).convert("RGB")
-            image = Image.open(os.path.join(args.image_folder, image_file)).convert("RGB")
+            image = Image.open(os.path.join(args.image_folder, image_file)).convert(
+                "RGB"
+            )
             image_sizes = [image.size]
             image = image_processor(image)
             images = image.unsqueeze(0).half().cuda()
@@ -117,9 +119,9 @@ def eval_model(args):
         msg.add_message(question)
         # print(msg.messages)
 
-        result = text_processor(msg.messages, mode='eval')
+        result = text_processor(msg.messages, mode="eval")
         # print(result["prompt"])
-        input_ids = result['input_ids']
+        input_ids = result["input_ids"]
         input_ids = input_ids.unsqueeze(0).cuda()
 
         with torch.inference_mode():
@@ -134,7 +136,9 @@ def eval_model(args):
                     use_cache=True,
                     pad_token_id=tokenizer.pad_token_id,
                 )
-                outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
+                outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[
+                    0
+                ]
             else:
                 if line["question_type"] == "multiple-choice":
                     all_choices = line["all_choices"]
@@ -148,16 +152,23 @@ def eval_model(args):
             )
         else:  # open question
             pred_ans = outputs
-        
+
         # print(outputs, pred_ans)
 
         ans_id = shortuuid.uuid()
-        ans_file.write(json.dumps({"question_id": idx,
-                                   "prompt": questions,
-                                   "text": pred_ans,
-                                   "answer_id": ans_id,
-                                   "model_id": args.model_path.split("/")[-1],
-                                   "metadata": {}}) + "\n")
+        ans_file.write(
+            json.dumps(
+                {
+                    "question_id": idx,
+                    "prompt": questions,
+                    "text": pred_ans,
+                    "answer_id": ans_id,
+                    "model_id": args.model_path.split("/")[-1],
+                    "metadata": {},
+                }
+            )
+            + "\n"
+        )
         ans_file.flush()
     ans_file.close()
 
@@ -178,4 +189,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     eval_model(args)
-

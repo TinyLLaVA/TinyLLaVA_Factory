@@ -1,10 +1,11 @@
-'''
-@Description: 
+"""
+@Description:
 @Author: jiajunlong
 @Date: 2024-06-19 19:30:17
 @LastEditTime: 2024-06-19 19:32:47
 @LastEditors: jiajunlong
-'''
+"""
+
 import argparse
 import hashlib
 import json
@@ -51,7 +52,7 @@ The template for this web demo is from [LLaVA](https://github.com/haotian-liu/LL
 
 
 def regenerate(state, image_process_mode):
-    state.messages[-1]['value'] = None
+    state.messages[-1]["value"] = None
     state.skip_next = False
     return (state, state.to_gradio_chatbot(), "", None)
 
@@ -97,7 +98,9 @@ def get_response(params):
             image = images[0][0]
             image = image_processor(image)
             image = image.unsqueeze(0).to(model.device, dtype=torch.float16)
-            num_image_tokens = getattr(model.vision_tower._vision_tower, "num_patches", 336)
+            num_image_tokens = getattr(
+                model.vision_tower._vision_tower, "num_patches", 336
+            )
         else:
             image = None
         image_args = {"images": image}
@@ -125,13 +128,16 @@ def get_response(params):
     )
 
     if max_new_tokens < 1:
-        yield json.dumps(
-            {
-                "text": prompt
-                + "Exceeds max token length. Please start a new conversation, thanks.",
-                "error_code": 0,
-            }
-        ).encode() + b"\0"
+        yield (
+            json.dumps(
+                {
+                    "text": prompt
+                    + "Exceeds max token length. Please start a new conversation, thanks.",
+                    "error_code": 0,
+                }
+            ).encode()
+            + b"\0"
+        )
         return
 
     generate_kwargs = dict(
@@ -142,7 +148,7 @@ def get_response(params):
         max_new_tokens=max_new_tokens,
         streamer=streamer,
         use_cache=True,
-        pad_token_id = tokenizer.eos_token_id,
+        pad_token_id=tokenizer.eos_token_id,
         **image_args,
     )
     thread = Thread(target=model.generate, kwargs=generate_kwargs)
@@ -163,12 +169,11 @@ def http_bot(state, temperature, top_p, max_new_tokens):
         # This generate call is skipped due to invalid inputs
         yield (state, state.to_gradio_chatbot())
         return
-    
-    
+
     images = state.images
-    result = text_processor(state.messages, mode='eval')
-    prompt = result['prompt']
-    input_ids = result['input_ids']
+    result = text_processor(state.messages, mode="eval")
+    prompt = result["prompt"]
+    input_ids = result["input_ids"]
     pload = {
         "model": model_name,
         "prompt": prompt,
@@ -176,11 +181,11 @@ def http_bot(state, temperature, top_p, max_new_tokens):
         "temperature": float(temperature),
         "top_p": float(top_p),
         "max_new_tokens": min(int(max_new_tokens), 1536),
-        "stop": (
-            text_processor.template.separator.apply()[1]
-        ), "images": images}
+        "stop": (text_processor.template.separator.apply()[1]),
+        "images": images,
+    }
 
-    state.messages[-1]['value'] = "▌"
+    state.messages[-1]["value"] = "▌"
     yield (state, state.to_gradio_chatbot())
 
     # for stream
@@ -190,16 +195,16 @@ def http_bot(state, temperature, top_p, max_new_tokens):
             data = json.loads(chunk.decode())
             if data["error_code"] == 0:
                 output = data["text"][len(prompt) :].strip()
-                state.messages[-1]['value'] = output + "▌"
+                state.messages[-1]["value"] = output + "▌"
                 yield (state, state.to_gradio_chatbot())
             else:
                 output = data["text"] + f" (error_code: {data['error_code']})"
-                state.messages[-1]['value'] = output
+                state.messages[-1]["value"] = output
                 yield (state, state.to_gradio_chatbot())
                 return
             time.sleep(0.03)
 
-    state.messages[-1]['value'] = state.messages[-1]['value'][:-1]
+    state.messages[-1]["value"] = state.messages[-1]["value"][:-1]
     yield (state, state.to_gradio_chatbot())
 
 
@@ -215,8 +220,8 @@ def build_demo():
             with gr.Column(scale=5):
                 with gr.Row(elem_id="Model ID"):
                     gr.Dropdown(
-                        choices=[DEFAULT_MODEL_PATH.split('/')[-1]],
-                        value=DEFAULT_MODEL_PATH.split('/')[-1],
+                        choices=[DEFAULT_MODEL_PATH.split("/")[-1]],
+                        value=DEFAULT_MODEL_PATH.split("/")[-1],
                         interactive=True,
                         label="Model ID",
                         container=False,
@@ -329,7 +334,9 @@ def parse_args():
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--conv-mode", type=str, default="phi")
     parser.add_argument("--model-path", type=str, default=DEFAULT_MODEL_PATH)
-    parser.add_argument("--model-name", type=str, default=DEFAULT_MODEL_PATH.split('/')[-1])
+    parser.add_argument(
+        "--model-name", type=str, default=DEFAULT_MODEL_PATH.split("/")[-1]
+    )
     parser.add_argument("--load-8bit", action="store_true")
     parser.add_argument("--load-4bit", action="store_true")
     args = parser.parse_args()
@@ -346,9 +353,7 @@ if __name__ == "__main__":
     args = parse_args()
     model_name = args.model_name
     model, tokenizer, image_processor, context_len = load_pretrained_model(
-        args.model_path,
-        load_4bit=args.load_4bit,
-        load_8bit=args.load_8bit
+        args.model_path, load_4bit=args.load_4bit, load_8bit=args.load_8bit
     )
     model.to(args.device)
     image_processor = ImagePreprocess(image_processor, model.config)

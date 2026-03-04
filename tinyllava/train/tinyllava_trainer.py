@@ -40,7 +40,9 @@ def split_to_even_chunks(indices, lengths, num_chunks):
     return chunks
 
 
-def get_modality_length_grouped_indices(lengths, batch_size, world_size, generator=None):
+def get_modality_length_grouped_indices(
+    lengths, batch_size, world_size, generator=None
+):
     # We need to use torch for the random part as a distributed sampler will set the random seed for torch.
     assert all(l != 0 for l in lengths), "Should not have zero length."
     mm_indices, mm_lengths = zip(*[(i, l) for i, l in enumerate(lengths) if l > 0])
@@ -49,11 +51,27 @@ def get_modality_length_grouped_indices(lengths, batch_size, world_size, generat
     assert len(mm_indices) > 0, "Should have at least one multimodal sample."
     assert len(lang_indices) > 0, "Should have at least one language sample."
 
-    mm_shuffle = [mm_indices[i] for i in get_length_grouped_indices(mm_lengths, batch_size, world_size, generator=None)]
-    lang_shuffle = [lang_indices[i] for i in get_length_grouped_indices(lang_lengths, batch_size, world_size, generator=None)]
+    mm_shuffle = [
+        mm_indices[i]
+        for i in get_length_grouped_indices(
+            mm_lengths, batch_size, world_size, generator=None
+        )
+    ]
+    lang_shuffle = [
+        lang_indices[i]
+        for i in get_length_grouped_indices(
+            lang_lengths, batch_size, world_size, generator=None
+        )
+    ]
     megabatch_size = world_size * batch_size
-    mm_megabatches = [mm_shuffle[i : i + megabatch_size] for i in range(0, len(mm_shuffle), megabatch_size)]
-    lang_megabatches = [lang_shuffle[i : i + megabatch_size] for i in range(0, len(lang_shuffle), megabatch_size)]
+    mm_megabatches = [
+        mm_shuffle[i : i + megabatch_size]
+        for i in range(0, len(mm_shuffle), megabatch_size)
+    ]
+    lang_megabatches = [
+        lang_shuffle[i : i + megabatch_size]
+        for i in range(0, len(lang_shuffle), megabatch_size)
+    ]
 
     last_mm = mm_megabatches[-1]
     last_lang = lang_megabatches[-1]
@@ -72,13 +90,24 @@ def get_modality_length_grouped_indices(lengths, batch_size, world_size, generat
     return [i for megabatch in megabatches for i in megabatch]
 
 
-def get_length_grouped_indices(lengths, batch_size, world_size, generator=None, merge=True):
+def get_length_grouped_indices(
+    lengths, batch_size, world_size, generator=None, merge=True
+):
     # We need to use torch for the random part as a distributed sampler will set the random seed for torch.
     indices = torch.randperm(len(lengths), generator=generator)
     megabatch_size = world_size * batch_size
-    megabatches = [indices[i : i + megabatch_size].tolist() for i in range(0, len(lengths), megabatch_size)]
-    megabatches = [sorted(megabatch, key=lambda i: lengths[i], reverse=True) for megabatch in megabatches]
-    megabatches = [split_to_even_chunks(megabatch, lengths, world_size) for megabatch in megabatches]
+    megabatches = [
+        indices[i : i + megabatch_size].tolist()
+        for i in range(0, len(lengths), megabatch_size)
+    ]
+    megabatches = [
+        sorted(megabatch, key=lambda i: lengths[i], reverse=True)
+        for megabatch in megabatches
+    ]
+    megabatches = [
+        split_to_even_chunks(megabatch, lengths, world_size)
+        for megabatch in megabatches
+    ]
 
     return [i for megabatch in megabatches for batch in megabatch for i in batch]
 
@@ -111,14 +140,17 @@ class LengthGroupedSampler(Sampler):
 
     def __iter__(self):
         if self.group_by_modality:
-            indices = get_modality_length_grouped_indices(self.lengths, self.batch_size, self.world_size, generator=self.generator)
+            indices = get_modality_length_grouped_indices(
+                self.lengths, self.batch_size, self.world_size, generator=self.generator
+            )
         else:
-            indices = get_length_grouped_indices(self.lengths, self.batch_size, self.world_size, generator=self.generator)
+            indices = get_length_grouped_indices(
+                self.lengths, self.batch_size, self.world_size, generator=self.generator
+            )
         return iter(indices)
 
 
 class LLaVATrainer(Trainer):
-
     def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]:
         if self.train_dataset is None or not has_length(self.train_dataset):
             return None
@@ -153,63 +185,106 @@ class LLaVATrainer(Trainer):
             decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
             decay_parameters = [name for name in decay_parameters if "bias" not in name]
             if self.args.mm_projector_lr is not None:
-                connector_parameters = [name for name, _ in opt_model.named_parameters() if "connector" in name]
+                connector_parameters = [
+                    name
+                    for name, _ in opt_model.named_parameters()
+                    if "connector" in name
+                ]
                 optimizer_grouped_parameters = [
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and n not in connector_parameters and p.requires_grad)
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n in decay_parameters
+                                and n not in connector_parameters
+                                and p.requires_grad
+                            )
                         ],
                         "weight_decay": self.args.weight_decay,
-                        "name": "decay_no_connector_parameters"
+                        "name": "decay_no_connector_parameters",
                     },
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n not in connector_parameters and p.requires_grad)
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n not in decay_parameters
+                                and n not in connector_parameters
+                                and p.requires_grad
+                            )
                         ],
                         "weight_decay": 0.0,
-                        "name": "no_decay_no_connector_parameters"
+                        "name": "no_decay_no_connector_parameters",
                     },
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and n in connector_parameters and p.requires_grad)
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n in decay_parameters
+                                and n in connector_parameters
+                                and p.requires_grad
+                            )
                         ],
                         "weight_decay": self.args.weight_decay,
                         "lr": self.args.mm_projector_lr,
-                        "name": "decay_connector_parameters"
+                        "name": "decay_connector_parameters",
                     },
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n in connector_parameters and p.requires_grad)
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n not in decay_parameters
+                                and n in connector_parameters
+                                and p.requires_grad
+                            )
                         ],
                         "weight_decay": 0.0,
                         "lr": self.args.mm_projector_lr,
-                        "name": "no_decay_proj_parameters"
+                        "name": "no_decay_proj_parameters",
                     },
                 ]
             else:
                 optimizer_grouped_parameters = [
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad)
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (n in decay_parameters and p.requires_grad)
                         ],
                         "weight_decay": self.args.weight_decay,
-                        "name": "decay_parameters"
+                        "name": "decay_parameters",
                     },
                     {
                         "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (n not in decay_parameters and p.requires_grad)
                         ],
                         "weight_decay": 0.0,
-                        "name": "no_decay_parameters"
+                        "name": "no_decay_parameters",
                     },
                 ]
 
             if getattr(self.args, "moe_enable", False):
-                from deepspeed.moe.utils import split_params_into_different_moe_groups_for_optimizer
-                optimizer_grouped_parameters = split_params_into_different_moe_groups_for_optimizer(optimizer_grouped_parameters)
-            optimizer_cls, optimizer_kwargs = self.get_optimizer_cls_and_kwargs(self.args)
+                from deepspeed.moe.utils import (
+                    split_params_into_different_moe_groups_for_optimizer,
+                )
 
-            self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
+                optimizer_grouped_parameters = (
+                    split_params_into_different_moe_groups_for_optimizer(
+                        optimizer_grouped_parameters
+                    )
+                )
+            optimizer_cls, optimizer_kwargs = self.get_optimizer_cls_and_kwargs(
+                self.args
+            )
+
+            self.optimizer = optimizer_cls(
+                optimizer_grouped_parameters, **optimizer_kwargs
+            )
             if optimizer_cls.__name__ == "Adam8bit":
                 import bitsandbytes
 
@@ -218,14 +293,16 @@ class LLaVATrainer(Trainer):
                 skipped = 0
                 for module in opt_model.modules():
                     if isinstance(module, nn.Embedding):
-                        skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
-                        logger.info(f"skipped {module}: {skipped/2**20}M params")
-                        manager.register_module_override(module, "weight", {"optim_bits": 32})
+                        skipped += sum(
+                            {
+                                p.data_ptr(): p.numel() for p in module.parameters()
+                            }.values()
+                        )
+                        logger.info(f"skipped {module}: {skipped / 2**20}M params")
+                        manager.register_module_override(
+                            module, "weight", {"optim_bits": 32}
+                        )
                         logger.debug(f"bitsandbytes: will optimize {module} in fp32")
-                logger.info(f"skipped: {skipped/2**20}M params")
+                logger.info(f"skipped: {skipped / 2**20}M params")
 
         return self.optimizer
-
-
-
-

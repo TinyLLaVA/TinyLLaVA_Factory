@@ -5,6 +5,7 @@ from ..utils import import_modules
 
 RECIPE_FACTORY = {}
 
+
 def TrainingRecipeFactory(training_recipe):
     recipe = None
     for name in RECIPE_FACTORY.keys():
@@ -20,6 +21,7 @@ def register_training_recipe(name):
             return RECIPE_FACTORY[name]
         RECIPE_FACTORY[name] = cls
         return cls
+
     return register_training_recipe_cls
 
 

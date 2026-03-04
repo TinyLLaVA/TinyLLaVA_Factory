@@ -9,6 +9,5 @@ from ..utils import get_state_maybe_zero_3
 from ..model import TinyLlavaConfig, TinyLlavaForConditionalGeneration
 
 
-@register_training_recipe('common')
-class CommonTrainingRecipe(BaseTrainingRecipe):
-    ... 
+@register_training_recipe("common")
+class CommonTrainingRecipe(BaseTrainingRecipe): ...

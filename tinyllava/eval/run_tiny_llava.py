@@ -39,9 +39,11 @@ def eval_model(args):
     disable_torch_init()
 
     if args.model_path is not None:
-        model, tokenizer, image_processor, context_len = load_pretrained_model(args.model_path)
+        model, tokenizer, image_processor, context_len = load_pretrained_model(
+            args.model_path
+        )
     else:
-        assert args.model is not None, 'model_path or model must be provided'
+        assert args.model is not None, "model_path or model must be provided"
         model = args.model
         if hasattr(model.config, "max_sequence_length"):
             context_len = model.config.max_sequence_length
@@ -60,18 +62,15 @@ def eval_model(args):
     msg = Message()
     msg.add_message(qs)
 
-    result = text_processor(msg.messages, mode='eval')
-    input_ids = result['input_ids']
-    prompt = result['prompt']
+    result = text_processor(msg.messages, mode="eval")
+    input_ids = result["input_ids"]
+    prompt = result["prompt"]
     input_ids = input_ids.unsqueeze(0).cuda()
-        
 
     image_files = image_parser(args)
     images = load_images(image_files)[0]
     images_tensor = image_processor(images)
     images_tensor = images_tensor.unsqueeze(0).half().cuda()
-
-    
 
     stop_str = text_processor.template.separator.apply()[1]
     keywords = [stop_str]
@@ -91,9 +90,7 @@ def eval_model(args):
             stopping_criteria=[stopping_criteria],
         )
 
-    outputs = tokenizer.batch_decode(
-        output_ids, skip_special_tokens=True
-    )[0]
+    outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
     outputs = outputs.strip()
     if outputs.endswith(stop_str):
         outputs = outputs[: -len(stop_str)]

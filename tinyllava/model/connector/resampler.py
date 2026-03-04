@@ -8,13 +8,12 @@ from einops_exts import rearrange_many
 from torch import einsum
 
 
-
 class PerceiverResampler(nn.Module):
     def __init__(self, config):
         super().__init__()
         dim = config.hidden_size
-        depth=config.num_resampler_layers
-        num_latents=config.num_queries
+        depth = config.num_resampler_layers
+        num_latents = config.num_queries
         self.latents = nn.Parameter(torch.randn(num_latents, dim))
         self.layers = nn.ModuleList([])
         self.linear = nn.Linear(config.vision_hidden_size, config.hidden_size)
@@ -41,15 +40,15 @@ class PerceiverResampler(nn.Module):
             latents = ff(latents) + latents
         return self.norm(latents).squeeze(1)
 
-    
-@register_connector('resampler')    
+
+@register_connector("resampler")
 class ResamplerConnector(Connector):
     def __init__(self, config):
         super().__init__()
 
         self._connector = PerceiverResampler(config)
 
-   
+
 # =================================resampler related =================================
 def exists(val):
     return val is not None
@@ -106,4 +105,3 @@ class PerceiverAttention(nn.Module):
         out = einsum("... i j, ... j d -> ... i d", attn, v)
         out = rearrange(out, "b h t n d -> b t n (h d)", h=h)
         return self.to_out(out)
-    

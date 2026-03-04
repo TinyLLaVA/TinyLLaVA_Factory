@@ -7,6 +7,7 @@ from ...utils import import_modules
 
 TEMPlATE_FACTORY: Dict[str, Template] = {}
 
+
 def TemplateFactory(version):
     template = TEMPlATE_FACTORY.get(version, None)
     assert template, f"{version} is not implmentation"

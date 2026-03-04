@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import  Dict, Union, List
+from typing import Dict, Union, List
 
 
 SLOT = Union[str, List[str], Dict[str, str]]
+
 
 @dataclass
 class Formatter(ABC):
@@ -11,7 +12,6 @@ class Formatter(ABC):
 
     @abstractmethod
     def apply(self, **kwargs) -> SLOT: ...
-
 
 
 @dataclass
@@ -26,7 +26,7 @@ class StringFormatter(Formatter):
         msg = ""
         for name, value in kwargs.items():
             if value is None:
-                msg = self.slot.split(':')[0] + ":"
+                msg = self.slot.split(":")[0] + ":"
                 return msg
             if not isinstance(value, str):
                 raise RuntimeError("Expected a string, got {}".format(value))

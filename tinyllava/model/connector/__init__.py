@@ -5,6 +5,7 @@ from ...utils import import_modules
 
 CONNECTOR_FACTORY = {}
 
+
 def ConnectorFactory(connector_name):
     model = None
     for name in CONNECTOR_FACTORY.keys():
@@ -20,6 +21,7 @@ def register_connector(name):
             return CONNECTOR_FACTORY[name]
         CONNECTOR_FACTORY[name] = cls
         return cls
+
     return register_connector_cls
 
 

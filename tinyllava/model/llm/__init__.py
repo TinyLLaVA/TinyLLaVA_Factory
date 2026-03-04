@@ -5,6 +5,7 @@ from ...utils import import_modules
 
 LLM_FACTORY = {}
 
+
 def LLMFactory(model_name_or_path):
     model, tokenizer_and_post_load = None, None
     for name in LLM_FACTORY.keys():
@@ -20,6 +21,7 @@ def register_llm(name):
             return LLM_FACTORY[name]
         LLM_FACTORY[name] = cls
         return cls
+
     return register_llm_cls
 
 
