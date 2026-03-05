@@ -23,12 +23,11 @@ class EmptyFormatter(Formatter):
 @dataclass
 class StringFormatter(Formatter):
     def apply(self, **kwargs) -> SLOT:
-        msg = ""
+        msg = self.slot
         for name, value in kwargs.items():
             if value is None:
-                msg = self.slot.split(":")[0] + ":"
-                return msg
+                value = ""
             if not isinstance(value, str):
-                raise RuntimeError("Expected a string, got {}".format(value))
-            msg = self.slot.replace("{{" + name + "}}", value, 1)
+                raise TypeError(f"Expected a string, got {type(value).__name__}")
+            msg = msg.replace("{{" + name + "}}", value, 1)
         return msg
