@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .formatter import EmptyFormatter, StringFormatter
 from .base import Template
@@ -12,10 +12,10 @@ system = "A chat between a curious user and an artificial intelligence assistant
 @register_template("qwen2_base")
 @dataclass
 class Qwen2BaseTemplate(Template):
-    format_image_token: "Formatter" = StringFormatter(slot="<image>\n{{content}}")
-    format_user: "Formatter" = StringFormatter(slot="USER" + ": " + "{{content}}" + " ")
-    format_assistant: "Formatter" = StringFormatter(
+    format_image_token: Formatter = field(default_factory=lambda: StringFormatter(slot="<image>\n{{content}}"))
+    format_user: Formatter = field(default_factory=lambda: StringFormatter(slot="USER" + ": " + "{{content}}" + " "))
+    format_assistant: Formatter = field(default_factory=lambda: StringFormatter(
         slot="ASSISTANT" + ": " + "{{content}}" + "<|endoftext|>"
-    )
-    system: "Formatter" = EmptyFormatter(slot=system + " ")
-    separator: "Formatter" = EmptyFormatter(slot=[" ASSISTANT: ", "<|endoftext|>"])
+    ))
+    system: Formatter = field(default_factory=lambda: EmptyFormatter(slot=system + " "))
+    separator: Formatter = field(default_factory=lambda: EmptyFormatter(slot=[" ASSISTANT: ", "<|endoftext|>"]))

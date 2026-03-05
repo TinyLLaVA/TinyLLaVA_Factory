@@ -1,12 +1,3 @@
-"""
-@Description:
-@Author: jiajunlong
-@Date: 2024-06-19 19:30:17
-@LastEditTime: 2024-06-19 19:32:47
-@LastEditors: jiajunlong
-"""
-
-
 class Message:
     def __init__(self, msg=None):
         self._messages = msg if msg else []
