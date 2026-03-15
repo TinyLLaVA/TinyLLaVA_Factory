@@ -8,7 +8,7 @@ from .base import VisionTower
 class DINOv2VisionTower(VisionTower):
     def __init__(self, cfg):
         super().__init__(cfg)
-        self._vision_tower = Dinov2Model(cfg)
+        self._vision_tower_cls = Dinov2Model
         self._image_processor = AutoImageProcessor.from_pretrained(
             cfg.model_name_or_path
         )

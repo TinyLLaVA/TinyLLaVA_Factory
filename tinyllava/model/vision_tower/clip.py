@@ -8,7 +8,7 @@ from .base import VisionTower
 class CLIPVisionTower(VisionTower):
     def __init__(self, cfg):
         super().__init__(cfg)
-        self._vision_tower = CLIPVisionModel(cfg)
+        self._vision_tower_cls = CLIPVisionModel
         self._image_processor = CLIPImageProcessor.from_pretrained(
             cfg.model_name_or_path
         )

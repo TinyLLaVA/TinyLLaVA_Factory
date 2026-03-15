@@ -72,33 +72,22 @@ class MoFVisionTower(VisionTower):
             cfg.model_name_or_path
         )
 
-    def _load_model(self, vision_tower_name, **kwargs):
-        pretrained_vision_tower_path = kwargs.pop("pretrained_vision_tower_path", None)
+    def _load_model(self, vision_tower_name, pretrained_vision_tower_path=None, model_name_or_path2=None, **kwargs):
         if pretrained_vision_tower_path is None:
-            model_name_or_path_dinov2 = kwargs.pop("model_name_or_path2")
             self._vision_tower.clip = self._vision_tower.clip.from_pretrained(
                 vision_tower_name, **kwargs
             )
             self._vision_tower.dinov2 = self._vision_tower.dinov2.from_pretrained(
-                model_name_or_path_dinov2, **kwargs
+                model_name_or_path2, **kwargs
             )
             print("Loading vision tower1 from ", vision_tower_name)
-            print("Loading vision tower2 from ", model_name_or_path_dinov2)
+            print("Loading vision tower2 from ", model_name_or_path2)
         else:  # nn.Module
-            if pretrained_vision_tower_path is not None:
-                vision_tower_weights = torch.load(
-                    os.path.join(pretrained_vision_tower_path, "pytorch_model.bin"),
-                    map_location="cpu",
-                )
-
-                def get_w(weights, keyword):
-                    return {
-                        k.split(keyword + ".")[1]: v
-                        for k, v in weights.items()
-                        if keyword in k
-                    }
-
-                self._vision_tower.load_state_dict(vision_tower_weights)
+            vision_tower_weights = torch.load(
+                os.path.join(pretrained_vision_tower_path, "pytorch_model.bin"),
+                map_location="cpu",
+            )
+            self._vision_tower.load_state_dict(vision_tower_weights)
             print("Loading vision tower from ", pretrained_vision_tower_path)
 
     def forward(self, x, **kwargs):
