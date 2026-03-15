@@ -6,3 +6,4 @@ from .train_utils import *
 from .message import *
 from .eval_utils import *
 from .data_utils import *
+from .auto_switch_npu_and_gpu import get_device
