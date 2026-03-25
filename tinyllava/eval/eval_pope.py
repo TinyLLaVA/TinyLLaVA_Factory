@@ -50,9 +50,10 @@ def eval_pope(answers, label_file):
     print('TP\tFP\tTN\tFN\t')
     print('{}\t{}\t{}\t{}'.format(TP, FP, TN, FN))
 
-    precision = float(TP) / float(TP + FP)
-    recall = float(TP) / float(TP + FN)
-    f1 = 2*precision*recall / (precision + recall)
+    eps = 1e-6
+    precision = float(TP) / (float(TP + FP) + eps)
+    recall = float(TP) / float(TP + FN + eps)
+    f1 = 2*precision*recall / (precision + recall + eps)
     acc = (TP + TN) / (TP + TN + FP + FN)
     print('Accuracy: {}'.format(acc))
     print('Precision: {}'.format(precision))
