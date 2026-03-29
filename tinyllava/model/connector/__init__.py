@@ -1,9 +1,11 @@
 import os
-
+from typing import Callable, TypeVar
 from ...utils import import_modules
+from .base import Connector
 
+C = TypeVar("C", bound=Connector)
 
-CONNECTOR_FACTORY = {}
+CONNECTOR_FACTORY: dict[str, type[Connector]] = {}
 
 
 def ConnectorFactory(connector_name):
@@ -15,10 +17,10 @@ def ConnectorFactory(connector_name):
     return model
 
 
-def register_connector(name):
-    def register_connector_cls(cls):
+def register_connector(name: str) -> Callable[[type[C]], type[C]]:
+    def register_connector_cls(cls: type[C]) -> type[C]:
         if name in CONNECTOR_FACTORY:
-            return CONNECTOR_FACTORY[name]
+            raise ValueError(f"{name} is already registered")
         CONNECTOR_FACTORY[name] = cls
         return cls
 

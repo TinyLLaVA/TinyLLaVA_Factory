@@ -1,9 +1,11 @@
 import os
-
+from typing import Callable, TypeVar
 from ...utils import import_modules
+from .base import VisionTower
 
+V = TypeVar("V", bound="VisionTower")
 
-VISION_TOWER_FACTORY = {}
+VISION_TOWER_FACTORY: dict[str, type] = {}
 
 
 def VisionTowerFactory(vision_tower_name):
@@ -16,10 +18,10 @@ def VisionTowerFactory(vision_tower_name):
     return model
 
 
-def register_vision_tower(name):
-    def register_vision_tower_cls(cls):
+def register_vision_tower(name: str) -> Callable[[type[V]], type[V]]:
+    def register_vision_tower_cls(cls: type[V]) -> type[V]:
         if name in VISION_TOWER_FACTORY:
-            return VISION_TOWER_FACTORY[name]
+            raise ValueError(f"{name} is already registered")
         VISION_TOWER_FACTORY[name] = cls
         return cls
 
