@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Union, List
+from typing import List, Dict, Union
 
 
 SLOT = Union[str, List[str], Dict[str, str]]
@@ -24,6 +24,11 @@ class EmptyFormatter(Formatter):
 class StringFormatter(Formatter):
     def apply(self, **kwargs) -> SLOT:
         msg = self.slot
+        if not isinstance(msg, str):
+            raise TypeError(
+                f"Expected a string slot, got {type(msg).__name__}. "
+                f"Check the template configuration."
+            )
         for name, value in kwargs.items():
             if value is None:
                 value = ""
