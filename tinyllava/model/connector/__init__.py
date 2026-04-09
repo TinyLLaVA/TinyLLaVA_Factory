@@ -8,12 +8,18 @@ C = TypeVar("C", bound=Connector)
 CONNECTOR_FACTORY: dict[str, type[Connector]] = {}
 
 
-def ConnectorFactory(connector_name):
-    model = None
+def ConnectorFactory(connector_name: str) -> type[Connector]:
+    model: type[Connector] | None = None
     for name in CONNECTOR_FACTORY.keys():
         if name.lower() in connector_name.lower():
+            if model is not None:
+                raise ValueError(
+                    f"Multiple connectors found for {connector_name}, "
+                    "please specify the model name more precisely"
+                )
             model = CONNECTOR_FACTORY[name]
-    assert model, f"{connector_name} is not registered"
+    if not model:
+        raise ValueError(f"{connector_name} is not registered")
     return model
 
 

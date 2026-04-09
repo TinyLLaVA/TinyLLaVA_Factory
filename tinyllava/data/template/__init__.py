@@ -1,25 +1,28 @@
 import os
-from typing import Dict
+from typing import Callable, TypeVar
 
-from .base import *
+from .base import Template
 from ...utils import import_modules
 
 
-TEMPlATE_FACTORY: Dict[str, Template] = {}
+T = TypeVar("T", bound=Template)
+
+TEMPLATE_FACTORY: dict[str, type[Template]] = {}
 
 
-def TemplateFactory(version):
-    template = TEMPlATE_FACTORY.get(version, None)
-    assert template, f"{version} is not implmentation"
+def TemplateFactory(version: str) -> type[Template]:
+    template = TEMPLATE_FACTORY.get(version, None)
+    if not template:
+        raise ValueError(f"{version} is not registered")
     return template
 
 
-def register_template(name):
-    def register_template_cls(cls):
-        if name in TEMPlATE_FACTORY:
-            return TEMPlATE_FACTORY[name]
+def register_template(name: str) -> Callable[[type[T]], type[T]]:
+    def register_template_cls(cls: type[T]) -> type[T]:
+        if name in TEMPLATE_FACTORY:
+            raise ValueError(f"{name} is already registered")
 
-        TEMPlATE_FACTORY[name] = cls
+        TEMPLATE_FACTORY[name] = cls
         return cls
 
     return register_template_cls

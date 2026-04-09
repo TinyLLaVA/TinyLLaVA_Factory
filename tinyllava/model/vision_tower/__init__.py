@@ -5,16 +5,22 @@ from .base import VisionTower
 
 V = TypeVar("V", bound="VisionTower")
 
-VISION_TOWER_FACTORY: dict[str, type] = {}
+VISION_TOWER_FACTORY: dict[str, type[VisionTower]] = {}
 
 
-def VisionTowerFactory(vision_tower_name):
+def VisionTowerFactory(vision_tower_name: str) -> type[VisionTower]:
     vision_tower_name = vision_tower_name.split(":")[0]
-    model = None
+    model: type[VisionTower] | None = None
     for name in VISION_TOWER_FACTORY.keys():
         if name.lower() in vision_tower_name.lower():
+            if model is not None:
+                raise ValueError(
+                    f"Multiple vision towers found for {vision_tower_name}, "
+                    "please specify the model name more precisely"
+                )
             model = VISION_TOWER_FACTORY[name]
-    assert model, f"{vision_tower_name} is not registered"
+    if not model:
+        raise ValueError(f"{vision_tower_name} is not registered")
     return model
 
 
