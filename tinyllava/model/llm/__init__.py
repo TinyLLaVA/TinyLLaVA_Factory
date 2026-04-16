@@ -1,14 +1,21 @@
 import os
 from typing import Callable, TypeVar
 from transformers import PreTrainedModel, AutoTokenizer
+from transformers.generation.utils import GenerationMixin
 from ...utils import import_modules
 
 P = TypeVar("P")
 
 PostLoadCallable = Callable[[P], P]
 
+
+class PreTrainedModelWithGenerationMixin(PreTrainedModel, GenerationMixin):
+    pass
+
+
 ModelAndTokenizer = tuple[
-    type[PreTrainedModel], tuple[type[AutoTokenizer], PostLoadCallable]
+    type[PreTrainedModelWithGenerationMixin],
+    tuple[type[AutoTokenizer], PostLoadCallable],
 ]
 
 ReturnLlmCallable = Callable[[], ModelAndTokenizer]
