@@ -1,5 +1,6 @@
 import os
-from typing import Callable, TypeVar
+from typing import TypeVar
+from collections.abc import Callable
 from transformers import PreTrainedModel, AutoTokenizer
 from transformers.generation.utils import GenerationMixin
 from ...utils import import_modules

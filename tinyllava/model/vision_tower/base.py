@@ -2,7 +2,6 @@ import os
 import warnings
 import torch
 import torch.nn as nn
-from typing import Optional
 from transformers import PreTrainedModel, BaseImageProcessor
 
 
@@ -10,9 +9,9 @@ from transformers import PreTrainedModel, BaseImageProcessor
 class VisionTower(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        self._vision_tower_cls: Optional[type[PreTrainedModel]] = None
-        self._vision_tower: Optional[nn.Module] = None
-        self._image_processor: Optional[BaseImageProcessor] = None
+        self._vision_tower_cls: type[PreTrainedModel] | None = None
+        self._vision_tower: nn.Module | None = None
+        self._image_processor: BaseImageProcessor | None = None
         self.config = cfg
 
     def load_model(self, vision_tower_name, **kwargs):

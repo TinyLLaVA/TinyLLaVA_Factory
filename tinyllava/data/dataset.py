@@ -1,7 +1,7 @@
 import copy
 from dataclasses import dataclass
 import json
-from typing import Dict, Sequence
+from collections.abc import Sequence
 from PIL import Image, ImageFile
 import os
 
@@ -28,8 +28,8 @@ class LazySupervisedDataset(Dataset):
         tokenizer: transformers.PreTrainedTokenizer,
         data_args: DataArguments,
     ):
-        super(LazySupervisedDataset, self).__init__()
-        list_data_dict = json.load(open(data_path, "r"))
+        super().__init__()
+        list_data_dict = json.load(open(data_path))
 
         self.tokenizer = tokenizer
         self.list_data_dict = list_data_dict
@@ -62,7 +62,7 @@ class LazySupervisedDataset(Dataset):
             length_list.append(cur_len)
         return length_list
 
-    def __getitem__(self, i) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, i) -> dict[str, torch.Tensor]:
         sources = self.list_data_dict[i]
         data_dict = self.text_preprocess(copy.deepcopy(sources["conversations"]))
         if "image" in sources:
@@ -84,12 +84,12 @@ class LazySupervisedDataset(Dataset):
 
 
 @dataclass
-class DataCollatorForSupervisedDataset(object):
+class DataCollatorForSupervisedDataset:
     """Collate examples for supervised fine-tuning."""
 
     tokenizer: transformers.PreTrainedTokenizer
 
-    def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
+    def __call__(self, instances: Sequence[dict]) -> dict[str, torch.Tensor]:
         input_ids, labels = tuple(
             [instance[key] for instance in instances] for key in ("input_ids", "labels")
         )
@@ -130,7 +130,7 @@ class DataCollatorForSupervisedDataset(object):
 
 def make_supervised_data_module(
     tokenizer: transformers.PreTrainedTokenizer, data_args
-) -> Dict:
+) -> dict:
     """Make dataset and collator for supervised fine-tuning."""
     train_dataset = LazySupervisedDataset(
         tokenizer=tokenizer, data_path=data_args.data_path, data_args=data_args

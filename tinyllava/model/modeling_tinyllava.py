@@ -1,4 +1,3 @@
-from typing import List, Optional, Tuple, Union
 
 import torch
 from torch import nn
@@ -98,7 +97,7 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
         return self.language_model.tie_weights()
 
     def resize_token_embeddings(
-        self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None
+        self, new_num_tokens: int | None = None, pad_to_multiple_of=None
     ) -> nn.Embedding:
         model_embeds = self.language_model.resize_token_embeddings(
             new_num_tokens, pad_to_multiple_of
@@ -112,18 +111,18 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
     def forward(
         self,
         input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        images: Optional[torch.FloatTensor] = None,
-        image_sizes: Optional[List[List[int]]] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        past_key_values: list[torch.FloatTensor] | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
+        labels: torch.LongTensor | None = None,
+        use_cache: bool | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = None,
+        images: torch.FloatTensor | None = None,
+        image_sizes: list[list[int]] | None = None,
+        return_dict: bool | None = None,
+    ) -> tuple | CausalLMOutputWithPast:
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         if inputs_embeds is None:
             (
@@ -158,11 +157,11 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
     @torch.no_grad()
     def generate(
         self,
-        inputs: Optional[torch.Tensor] = None,
-        images: Optional[torch.Tensor] = None,
-        image_sizes: Optional[torch.Tensor] = None,
+        inputs: torch.Tensor | None = None,
+        images: torch.Tensor | None = None,
+        image_sizes: torch.Tensor | None = None,
         **kwargs,
-    ) -> Union[GenerateOutput, torch.LongTensor]:
+    ) -> GenerateOutput | torch.LongTensor:
         position_ids = kwargs.pop("position_ids", None)
         attention_mask = kwargs.pop("attention_mask", None)
         if "inputs_embeds" in kwargs:

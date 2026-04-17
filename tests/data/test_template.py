@@ -11,9 +11,7 @@ from tinyllava.data.template.formatter import (
 from tinyllava.data.template.base import Template
 from tinyllava.data.template.phi_template import PhiTemplate
 from tinyllava.utils.constants import (
-    IGNORE_INDEX,
     DEFAULT_IMAGE_TOKEN,
-    IMAGE_TOKEN_INDEX,
 )
 
 

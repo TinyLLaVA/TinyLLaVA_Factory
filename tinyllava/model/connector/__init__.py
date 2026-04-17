@@ -1,5 +1,6 @@
 import os
-from typing import Callable, TypeVar
+from typing import TypeVar
+from collections.abc import Callable
 from ...utils import import_modules
 from .base import Connector
 

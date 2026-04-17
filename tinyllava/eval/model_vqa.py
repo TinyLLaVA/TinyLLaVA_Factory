@@ -36,7 +36,7 @@ def eval_model(args):
     image_processor = ImagePreprocess(image_processor, data_args)
 
     questions = [
-        json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")
+        json.loads(q) for q in open(os.path.expanduser(args.question_file))
     ]
     questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
     answers_file = os.path.expanduser(args.answers_file)

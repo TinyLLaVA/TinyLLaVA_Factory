@@ -83,7 +83,6 @@ class QFormerConnector(Connector):
 # =================================qformer bert related =================================
 import math
 import os
-from typing import Tuple
 
 
 from torch import Tensor, device, nn
@@ -773,7 +772,7 @@ class BertModel(BertPreTrainedModel):
     def get_extended_attention_mask(
         self,
         attention_mask: Tensor,
-        input_shape: Tuple[int],
+        input_shape: tuple[int],
         device: device,
         is_decoder: bool,
         has_query: bool = False,
@@ -845,9 +844,7 @@ class BertModel(BertPreTrainedModel):
                 extended_attention_mask = attention_mask[:, None, None, :]
         else:
             raise ValueError(
-                "Wrong shape for input_ids (shape {}) or attention_mask (shape {})".format(
-                    input_shape, attention_mask.shape
-                )
+                f"Wrong shape for input_ids (shape {input_shape}) or attention_mask (shape {attention_mask.shape})"
             )
 
         # Since attention_mask is 1.0 for positions we want to attend and 0.0 for

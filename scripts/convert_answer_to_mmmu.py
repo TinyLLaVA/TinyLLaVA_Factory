@@ -4,7 +4,7 @@ import os
 
 
 def eval_model(args):
-    answers = [json.loads(q) for q in open(os.path.expanduser(args.answers_file), "r")]
+    answers = [json.loads(q) for q in open(os.path.expanduser(args.answers_file))]
     answers_dict = {}
     for answer in answers:
         answers_dict[answer["question_id"]] = answer["text"]

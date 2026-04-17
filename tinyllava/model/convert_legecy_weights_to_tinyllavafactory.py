@@ -32,7 +32,7 @@ def convert_legecy_config_to_tinyllavaconfig(old_config_path):
     else:
         config_path = hf_hub_download(old_config_path, "config.json")
 
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         old_config = json.load(f)
     llm_model_name_or_path = KEYS_TO_MODELNAME_MAPPING[old_config["architectures"][0]]
     vision_model_name_or_path = KEYS_TO_MODELNAME_MAPPING[old_config["mm_vision_tower"]]
@@ -60,7 +60,7 @@ def convert_state_dict_to_tinyllavafactory(old_state_dict_path):
             old_state_dict_path, "model.safetensors.index.json"
         )
         if os.path.exists(meta_file_name):
-            with open(meta_file_name, "r") as f:
+            with open(meta_file_name) as f:
                 meta_file = json.load(f)
             meta_file = list(set(meta_file["weight_map"].values()))
             for name in meta_file:
@@ -74,7 +74,7 @@ def convert_state_dict_to_tinyllavafactory(old_state_dict_path):
             meta_file_name = hf_hub_download(
                 old_state_dict_path, "model.safetensors.index.json"
             )
-            with open(meta_file_name, "r") as f:
+            with open(meta_file_name) as f:
                 meta_file = json.load(f)
             meta_file = list(set(meta_file["weight_map"].values()))
             for name in meta_file:

@@ -12,7 +12,6 @@ from transformers.trainer import (
     # ShardedDDPOption,
     logger,
 )
-from typing import List, Optional
 
 from ..utils.train_utils import *
 
@@ -121,7 +120,7 @@ class LengthGroupedSampler(Sampler):
         self,
         batch_size: int,
         world_size: int,
-        lengths: Optional[List[int]] = None,
+        lengths: list[int] | None = None,
         generator=None,
         group_by_modality: bool = False,
     ):
@@ -150,7 +149,7 @@ class LengthGroupedSampler(Sampler):
 
 
 class LLaVATrainer(Trainer):
-    def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]:
+    def _get_train_sampler(self) -> torch.utils.data.Sampler | None:
         if self.train_dataset is None or not has_length(self.train_dataset):
             return None
 

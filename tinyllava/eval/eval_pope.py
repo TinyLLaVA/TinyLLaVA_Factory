@@ -4,7 +4,7 @@ import argparse
 
 
 def eval_pope(answers, label_file):
-    label_list = [json.loads(q)["label"] for q in open(label_file, "r")]
+    label_list = [json.loads(q)["label"] for q in open(label_file)]
 
     for answer in answers:
         text = answer["text"]
@@ -49,18 +49,18 @@ def eval_pope(answers, label_file):
             FN += 1
 
     print("TP\tFP\tTN\tFN\t")
-    print("{}\t{}\t{}\t{}".format(TP, FP, TN, FN))
+    print(f"{TP}\t{FP}\t{TN}\t{FN}")
 
     eps = 1e-6
     precision = float(TP) / float(TP + FP + eps)
     recall = float(TP) / float(TP + FN + eps)
     f1 = 2 * precision * recall / (precision + recall + eps)
     acc = (TP + TN) / (TP + TN + FP + FN)
-    print("Accuracy: {}".format(acc))
-    print("Precision: {}".format(precision))
-    print("Recall: {}".format(recall))
-    print("F1 score: {}".format(f1))
-    print("Yes ratio: {}".format(yes_ratio))
+    print(f"Accuracy: {acc}")
+    print(f"Precision: {precision}")
+    print(f"Recall: {recall}")
+    print(f"F1 score: {f1}")
+    print(f"Yes ratio: {yes_ratio}")
     print("%.3f, %.3f, %.3f, %.3f, %.3f" % (f1, acc, precision, recall, yes_ratio))
 
 
@@ -81,6 +81,6 @@ if __name__ == "__main__":
         cur_answers = [
             x for x in answers if questions[x["question_id"]]["category"] == category
         ]
-        print("Category: {}, # samples: {}".format(category, len(cur_answers)))
+        print(f"Category: {category}, # samples: {len(cur_answers)}")
         eval_pope(cur_answers, os.path.join(args.annotation_dir, file))
         print("====================================")

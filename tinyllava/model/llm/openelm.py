@@ -3,7 +3,6 @@
 # Copyright (C) 2024 Apple Inc. All Rights Reserved.
 #
 
-from typing import List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor, nn
@@ -40,10 +39,10 @@ def return_openelmclass():
 
 
 def make_divisible(
-    v: Union[float, int],
-    divisor: Optional[int] = 8,
-    min_value: Optional[Union[float, int]] = None,
-) -> Union[float, int]:
+    v: float | int,
+    divisor: int | None = 8,
+    min_value: float | int | None = None,
+) -> float | int:
     """
     This function is taken from the original tf repo.
     It ensures that all layers have a channel number that is divisible by the divisor
@@ -204,10 +203,10 @@ class OpenELMConfig(PretrainedConfig):
         num_transformer_layers: int = 12,
         model_dim: int = 2048,
         head_dim: int = 128,
-        qkv_multipliers: Union[Number, List[Number]] = 1.0,
-        num_query_heads: Union[int, None] = None,
+        qkv_multipliers: Number | list[Number] = 1.0,
+        num_query_heads: int | None = None,
         num_gqa_groups: int = 1,
-        ffn_multipliers: Union[Number, List[Number]] = 4.0,
+        ffn_multipliers: Number | list[Number] = 4.0,
         ffn_with_glu: bool = True,
         ffn_dim_divisor: int = 256,
         activation_fn_name: str = "swish",
@@ -505,7 +504,7 @@ class OpenELMRotaryEmbedding(torch.nn.Module):
         self,
         query: torch.Tensor,
         key: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         The forward function of RoPE embeddings.
         Args:
@@ -611,12 +610,12 @@ class OpenELMMultiHeadCausalAttention(nn.Module):
     def forward(
         self,
         hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        past_key_value: Optional[Cache] = None,
+        attention_mask: torch.Tensor | None = None,
+        past_key_value: Cache | None = None,
         output_attentions: bool = False,
         use_cache: bool = False,
-        cache_position: Optional[torch.LongTensor] = None,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+        cache_position: torch.LongTensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor | None, tuple[torch.Tensor] | None]:
         """
         Forward pass of multi-head self-attention.
         Args:
@@ -770,15 +769,15 @@ class OpenELMDecoderLayer(nn.Module):
     def forward(
         self,
         hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
-        cache_position: Optional[torch.LongTensor] = None,
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        past_key_value: tuple[torch.Tensor] | None = None,
+        output_attentions: bool | None = False,
+        use_cache: bool | None = False,
+        cache_position: torch.LongTensor | None = None,
         **kwargs,
-    ) -> Tuple[
-        torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]
+    ) -> tuple[
+        torch.FloatTensor, tuple[torch.FloatTensor, torch.FloatTensor] | None
     ]:
         """
         Args:
@@ -910,16 +909,16 @@ class OpenELMModel(OpenELMPreTrainedModel):
     def forward(
         self,
         input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        past_key_values: list[torch.FloatTensor] | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
+        use_cache: bool | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = None,
+        return_dict: bool | None = None,
+        cache_position: torch.LongTensor | None = None,
+    ) -> tuple | BaseModelOutputWithPast:
         output_attentions = (
             output_attentions
             if output_attentions is not None
@@ -1126,17 +1125,17 @@ class OpenELMForCausalLM(OpenELMPreTrainedModel):
     def forward(
         self,
         input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        past_key_values: list[torch.FloatTensor] | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
+        labels: torch.LongTensor | None = None,
+        use_cache: bool | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = None,
+        return_dict: bool | None = None,
+        cache_position: torch.LongTensor | None = None,
+    ) -> tuple | CausalLMOutputWithPast:
         output_attentions = (
             output_attentions
             if output_attentions is not None

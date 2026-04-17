@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict, Union
 
 
-SLOT = Union[str, List[str], Dict[str, str]]
+SLOT = str | list[str] | dict[str, str]
 
 
 @dataclass

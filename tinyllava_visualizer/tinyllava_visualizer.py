@@ -63,7 +63,7 @@ def generate_square_subsequent_mask(sz):
     mask = (
         mask.float()
         .masked_fill(mask == 0, float("-inf"))
-        .masked_fill(mask == 1, float(0.0))
+        .masked_fill(mask == 1, 0.0)
     )
     return mask
 
@@ -93,7 +93,7 @@ def generate_word_images(
                 transform=ax.transAxes,
             )
         ax.axis("off")
-        ax.set_title("Top Words for Index {}".format(i - num_top_words + num + 1))
+        ax.set_title(f"Top Words for Index {i - num_top_words + num + 1}")
         plt.savefig(
             os.path.join(
                 output_dir, "word", f"word_image_{i - num_top_words + num + 1}.png"
@@ -141,9 +141,7 @@ def generate_word_images_before(
             )
         ax.axis("off")
         ax.set_title(
-            "similarities of output word  {}".format(
-                tokenizer.decode([top1_indices.detach().cpu().numpy()])
-            )
+            f"similarities of output word  {tokenizer.decode([top1_indices.detach().cpu().numpy()])}"
         )
         plt.savefig(
             os.path.join(

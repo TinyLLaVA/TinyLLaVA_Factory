@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 import transformers
 
 
@@ -10,27 +10,27 @@ if TYPE_CHECKING:
 @dataclass
 class VisionTowerArguments:
     """Vision tower model configuration parameters."""
-    vision_tower: Optional[str] = field(
+    vision_tower: str | None = field(
         default="",
         metadata={"help": "Vision tower model name or path (e.g., openai/clip-vit-large-patch14-336). Empty string means no vision tower."}
     )
-    vision_tower2: Optional[str] = field(
+    vision_tower2: str | None = field(
         default="",
         metadata={"help": "Secondary vision tower model name (for multi-tower architectures). Empty string means not used."}
     )
-    vision_tower_pretrained: Optional[str] = field(
+    vision_tower_pretrained: str | None = field(
         default=None,
         metadata={"help": "Path to pretrained vision tower weights. If None, uses weights from HuggingFace model hub."}
     )
-    mm_vision_select_layer: Optional[int] = field(
+    mm_vision_select_layer: int | None = field(
         default=-1,
         metadata={"help": "Which layer of the vision tower to select features from. -1 denotes the last layer."}
     )
-    mm_patch_merge_type: Optional[str] = field(
+    mm_patch_merge_type: str | None = field(
         default="flat",
         metadata={"help": "Patch merging strategy: 'flat' (concatenate all patches) or 'spatial' (preserve spatial structure)."}
     )
-    mm_vision_select_feature: Optional[str] = field(
+    mm_vision_select_feature: str | None = field(
         default="patch",
         metadata={"help": "Which features to select: 'patch' (patch tokens), 'cls_patch' (CLS + patches), or 'cls' (only CLS token)."}
     )
@@ -72,11 +72,11 @@ class TinyLLaVAFinetuningArguments:
         default=8,
         metadata={"help": "LoRA rank (dimension of low-rank decomposition). Larger values capture more expressiveness but use more memory."}
     )
-    lora_alpha: Optional[int] = field(
+    lora_alpha: int | None = field(
         default=None,
         metadata={"help": "LoRA scaling factor. If None, automatically set to lora_rank * 2. Controls the learning rate of LoRA parameters."}
     )
-    lora_target: Optional[Union[str, List[str]]] = field(
+    lora_target: str | list[str] | None = field(
         default=None,
         metadata={"help": "Target module names for LoRA (comma-separated string or list). e.g., 'q_proj,v_proj' or ['q_proj', 'v_proj']. If None, applies to all linear layers."}
     )
@@ -101,32 +101,32 @@ class TinyLLaVAFinetuningArguments:
 @dataclass
 class ModelArguments(VisionTowerArguments, ConnectorArguments):
     """Model configuration parameters combining vision, connector, and LLM components."""
-    cache_dir: Optional[str] = field(
+    cache_dir: str | None = field(
         default=None,
         metadata={"help": "Directory to cache downloaded models and tokenizers (e.g., '/path/to/cache'). If None, uses HuggingFace's default cache."}
     )
 
-    model_name_or_path: Optional[str] = field(
+    model_name_or_path: str | None = field(
         default="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
-    tokenizer_name_or_path: Optional[str] = field(
+    tokenizer_name_or_path: str | None = field(
         default=None,
         metadata={"help": "Path to tokenizer or tokenizer identifier. If None, uses the same as model_name_or_path."}
     )
-    attn_implementation: Optional[str] = field(
+    attn_implementation: str | None = field(
         default=None,
         metadata={"help": "Attention implementation: 'eager' (PyTorch default), 'sdpa' (scaled dot-product attention), 'flash_attention_2', or None (auto-detect)."}
     )
-    resampler_hidden_size: Optional[int] = field(
+    resampler_hidden_size: int | None = field(
         default=768,
         metadata={"help": "Hidden dimension size for the resampler module if used. Controls the bottleneck width."}
     )
-    num_queries: Optional[int] = field(
+    num_queries: int | None = field(
         default=128,
         metadata={"help": "Number of query tokens in the resampler. Determines the number of tokens output by the resampler."}
     )
-    num_resampler_layers: Optional[int] = field(
+    num_resampler_layers: int | None = field(
         default=3,
         metadata={"help": "Number of transformer layers in the resampler. Larger values increase expressiveness but add computation."}
     )
@@ -147,7 +147,7 @@ class ModelArguments(VisionTowerArguments, ConnectorArguments):
 @dataclass
 class DataArguments:
     """Data loading and preprocessing configuration parameters."""
-    data_path: Optional[str] = field(
+    data_path: str | None = field(
         default=None,
         metadata={"help": "Path to the training data file (JSON, JSONL, CSV, or other formats). Can be a single file or directory of files."}
     )
@@ -159,7 +159,7 @@ class DataArguments:
         default=True,
         metadata={"help": "Whether the dataset contains multimodal data (images + text). If False, treats as text-only."}
     )
-    image_folder: Optional[str] = field(
+    image_folder: str | None = field(
         default=None,
         metadata={"help": "Root directory containing image files referenced in the training data."}
     )
@@ -188,7 +188,7 @@ class TrainingArguments(transformers.TrainingArguments):
         default="frozen",
         metadata={"help": "Vision tower tuning strategy: 'frozen' (no update), 'full' (fine-tune all layers), 'partially-tune' (tune last N layers)."}
     )
-    tune_vision_tower_from_layer: Optional[int] = field(
+    tune_vision_tower_from_layer: int | None = field(
         default=10,
         metadata={"help": "If tune_type_vision_tower='partially-tune', fine-tune from this layer onwards. Higher number = deeper layers."}
     )
@@ -196,7 +196,7 @@ class TrainingArguments(transformers.TrainingArguments):
         default="full",
         metadata={"help": "Connector/projector tuning strategy: 'frozen' (no update), 'full' (fine-tune all layers)."}
     )
-    tune_embed_tokens: Optional[int] = field(
+    tune_embed_tokens: int | None = field(
         default=False,
         metadata={"help": "Whether to fine-tune embedding tokens. True means update all embeddings, False means frozen."}
     )
@@ -241,7 +241,7 @@ class TrainingArguments(transformers.TrainingArguments):
         default="none",
         metadata={"help": "LoRA bias configuration: 'all' (add bias to all), 'none' (no bias), 'lora_only' (only to LoRA)."}
     )
-    mm_projector_lr: Optional[float] = field(
+    mm_projector_lr: float | None = field(
         default=None,
         metadata={"help": "Learning rate for multimodal projector. If None, uses default learning rate."}
     )
@@ -249,11 +249,11 @@ class TrainingArguments(transformers.TrainingArguments):
         default=False,
         metadata={"help": "Group samples by modality (image vs text) to improve batch efficiency."}
     )
-    vision_tower_lr: Optional[float] = field(
+    vision_tower_lr: float | None = field(
         default=None,
         metadata={"help": "Learning rate for vision tower. If None, uses default learning rate."}
     )
-    pretrained_model_path: Optional[str] = field(
+    pretrained_model_path: str | None = field(
         default=None,
         metadata={"help": "Path to pretrained model checkpoint for initialization. Takes priority over model_name_or_path."}
     )
