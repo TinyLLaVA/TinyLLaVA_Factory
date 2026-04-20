@@ -1,9 +1,6 @@
 import os
 import torch
 
-from ..utils import *
-from ..model import *
-
 
 class BaseTrainingRecipe:
     def __init__(self, training_arguments):

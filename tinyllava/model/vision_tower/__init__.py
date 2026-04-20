@@ -1,7 +1,7 @@
 import os
 from typing import TypeVar
 from collections.abc import Callable
-from ...utils import import_modules
+from ...utils.import_module import import_modules
 from .base import VisionTower
 
 V = TypeVar("V", bound="VisionTower")

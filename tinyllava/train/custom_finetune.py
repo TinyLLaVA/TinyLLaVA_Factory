@@ -7,9 +7,11 @@ from transformers import (
 
 from tinyllava.train.tinyllava_trainer import LLaVATrainer
 from tinyllava.training_recipe import TrainingRecipeFactory
-from tinyllava.utils import (
+from tinyllava.utils.logging import (
     logger_setting,
     log_trainable_params,
+)
+from tinyllava.utils.arguments import (
     ModelArguments,
     DataArguments,
     TrainingArguments,

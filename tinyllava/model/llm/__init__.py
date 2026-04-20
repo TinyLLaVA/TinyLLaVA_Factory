@@ -3,7 +3,7 @@ from typing import TypeVar
 from collections.abc import Callable
 from transformers import PreTrainedModel, AutoTokenizer
 from transformers.generation.utils import GenerationMixin
-from ...utils import import_modules
+from ...utils.import_module import import_modules
 
 P = TypeVar("P")
 

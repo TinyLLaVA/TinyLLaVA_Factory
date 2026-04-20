@@ -3,20 +3,19 @@ from packaging import version
 import tokenizers
 import transformers
 
-
 from tinyllava.train.tinyllava_trainer import LLaVATrainer
 from tinyllava.training_recipe import TrainingRecipeFactory
-from tinyllava.utils import (
+from tinyllava.utils.logging import (
     logger_setting,
     log_trainable_params,
+)
+from tinyllava.utils.arguments import (
     ModelArguments,
     DataArguments,
     TrainingArguments,
 )
-from tinyllava.model import (
-    TinyLlavaConfig,
-    TinyLlavaForConditionalGeneration,
-)
+from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
+from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
 from tinyllava.data.dataset import make_supervised_data_module
 
 IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse(

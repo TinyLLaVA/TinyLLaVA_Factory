@@ -1,6 +1,6 @@
 import os
 
-from ..utils import import_modules
+from ..utils.import_module import import_modules
 
 
 RECIPE_FACTORY = {}

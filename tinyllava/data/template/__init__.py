@@ -3,7 +3,7 @@ from typing import TypeVar
 from collections.abc import Callable
 
 from .base import Template
-from ...utils import import_modules
+from ...utils.import_module import import_modules
 
 
 T = TypeVar("T", bound=Template)

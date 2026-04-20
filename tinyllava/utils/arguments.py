@@ -1,10 +1,5 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 import transformers
-
-
-if TYPE_CHECKING:
-    import transformers
 
 
 @dataclass
@@ -257,3 +252,46 @@ class TrainingArguments(transformers.TrainingArguments):
         default=None,
         metadata={"help": "Path to pretrained model checkpoint for initialization. Takes priority over model_name_or_path."}
     )
+
+
+# Argument groups for unified parser entrypoints.
+_TINYLLAVA_TRAIN_ARGS = (
+    ModelArguments,
+    DataArguments,
+    TrainingArguments,
+    TinyLLaVAFinetuningArguments,
+)
+
+_TINYLLAVA_INFER_ARGS = (
+    ModelArguments,
+)
+
+_TINYLLAVA_EVAL_ARGS = (
+    ModelArguments,
+    DataArguments,
+)
+
+
+def _parse_with_dataclasses(arg_types, args=None):
+    parser = transformers.HfArgumentParser(arg_types)
+    if isinstance(args, dict):
+        return parser.parse_dict(args)
+    return parser.parse_args_into_dataclasses(args=args)
+
+
+def get_tinyllava_train_args(args=None):
+    """Parse TinyLLaVA training arguments.
+
+    Supports CLI (None), list of CLI tokens, or a dict payload.
+    """
+    return _parse_with_dataclasses(_TINYLLAVA_TRAIN_ARGS, args=args)
+
+
+def get_tinyllava_infer_args(args=None):
+    """Parse TinyLLaVA inference arguments."""
+    return _parse_with_dataclasses(_TINYLLAVA_INFER_ARGS, args=args)
+
+
+def get_tinyllava_eval_args(args=None):
+    """Parse TinyLLaVA evaluation arguments."""
+    return _parse_with_dataclasses(_TINYLLAVA_EVAL_ARGS, args=args)
