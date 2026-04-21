@@ -4,68 +4,64 @@ from transformers import AutoConfig
 from tinyllava.utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
 
 
+# TODO: (incompatible change) replace with `PreTrainedConfig` as hf transformers
+# corrected CamelCasing in https://github.com/huggingface/transformers/pull/41300
 class TinyLlavaConfig(PretrainedConfig):
     model_type = "tinyllava"
 
-    def __init__(
-        self,
-        llm_model_name_or_path="",
-        tokenizer_name_or_path=None,
-        vision_model_name_or_path="",
-        vision_model_name_or_path2="",
-        connector_type=None,
-        text_config=None,
-        pad_token=None,
-        pad_token_id=None,
-        tokenizer_padding_side="right",
-        tokenizer_model_max_length=2048,
-        vision_config=None,
-        vision_feature_layer=-2,
-        vision_feature_select_strategy="patch",
-        image_aspect_ratio="square",
-        resampler_hidden_size=None,
-        num_queries=None,
-        num_resampler_layers=None,
-        use_cache=False,
-        cache_dir=None,
-        tokenizer_use_fast=False,
-        tune_type_llm="frozen",
-        tune_type_connector="frozen",
-        tune_type_vision_tower="frozen",
-        tune_vision_tower_from_layer=-1,
-        **kwargs,
-    ):
-        self.llm_model_name_or_path = llm_model_name_or_path
-        self.tokenizer_name_or_path = (
-            tokenizer_name_or_path or self.llm_model_name_or_path
-        )
-        self.vision_model_name_or_path = vision_model_name_or_path
-        self.vision_model_name_or_path2 = vision_model_name_or_path2
-        self.connector_type = connector_type
-        self.tune_type_llm = tune_type_llm
-        self.tune_type_connector = tune_type_connector
-        self.tune_type_vision_tower = tune_type_vision_tower
-        self.tune_vision_tower_from_layer = tune_vision_tower_from_layer
+    # Model path and tokenizer configuration
+    llm_model_name_or_path: str = ""
+    tokenizer_name_or_path: str | None = None
+    vision_model_name_or_path: str = ""
+    vision_model_name_or_path2: str = ""
+    connector_type: str | None = None
 
-        self.ignore_index = IGNORE_INDEX
-        self.image_token_index = IMAGE_TOKEN_INDEX
-        self.pad_token = pad_token
-        self.pad_token_id = pad_token_id
-        self.tokenizer_padding_side = tokenizer_padding_side
-        self.tokenizer_model_max_length = tokenizer_model_max_length
-        self.vision_feature_layer = vision_feature_layer
-        self.vision_feature_select_strategy = vision_feature_select_strategy
-        self.image_aspect_ratio = image_aspect_ratio
-        self.resampler_hidden_size = resampler_hidden_size
-        self.num_queries = num_queries
-        self.num_resampler_layers = num_resampler_layers
-        self.use_cache = use_cache
-        self.cache_dir = cache_dir
-        self.tokenizer_use_fast = tokenizer_use_fast
-        self._load_text_config(text_config)
-        self._load_vision_config(vision_config)
+    # Sub-configs
+    text_config: dict | PretrainedConfig | None = None
+    vision_config: dict | PretrainedConfig | None = None
 
-        super().__init__(**kwargs)
+    # Tokenizer parameters
+    pad_token: str | None = None
+    pad_token_id: int | None = None
+    tokenizer_padding_side: str = "right"
+    tokenizer_model_max_length: int = 2048
+    tokenizer_use_fast: bool = False
+
+    # Vision tower parameters
+    vision_feature_layer: int = -2
+    vision_feature_select_strategy: str = "patch"
+    image_aspect_ratio: str = "square"
+
+    # Connector/projector parameters
+    resampler_hidden_size: int | None = None
+    num_queries: int | None = None
+    num_resampler_layers: int | None = None
+
+    # Training parameters
+    tune_type_llm: str = "frozen"
+    tune_type_connector: str = "frozen"
+    tune_type_vision_tower: str = "frozen"
+    tune_vision_tower_from_layer: int = -1
+
+    # Cache and constants
+    use_cache: bool = False
+    cache_dir: str | None = None
+    ignore_index: int = IGNORE_INDEX
+    image_token_index: int = IMAGE_TOKEN_INDEX
+
+    # Derived attributes
+    hidden_size: int | None = None
+    vocab_size: int | None = None
+    vision_hidden_size: int | None = None
+
+    def __post_init__(self, **kwargs):
+        if self.tokenizer_name_or_path is None or self.tokenizer_name_or_path == "":
+            self.tokenizer_name_or_path = self.llm_model_name_or_path
+
+        self._load_text_config(self.text_config)
+        self._load_vision_config(self.vision_config)
+
+        super().__post_init__(**kwargs)
 
     def load_from_config(self, config):
         self.llm_model_name_or_path = getattr(config, "model_name_or_path", "")
