@@ -147,7 +147,9 @@ class LengthGroupedSampler(Sampler):
 
 
 class LLaVATrainer(Trainer):
-    def _get_train_sampler(self) -> torch.utils.data.Sampler | None:
+    # HACK: add *args to avoid type error due to extra `train_dataset` arg introduced by
+    # https://github.com/huggingface/transformers/pull/38090
+    def _get_train_sampler(self, *args, **kwargs) -> torch.utils.data.Sampler | None:
         if self.train_dataset is None or not has_length(self.train_dataset):
             return None
 
@@ -161,7 +163,7 @@ class LLaVATrainer(Trainer):
                 group_by_modality=True,
             )
         else:
-            return super()._get_train_sampler()
+            return super()._get_train_sampler(*args, **kwargs)
 
     def create_optimizer(self):
         """

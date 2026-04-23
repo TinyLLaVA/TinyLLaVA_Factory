@@ -9,7 +9,6 @@ from transformers.generation.utils import GenerateOutput
 from . import LLMFactory, ConnectorFactory, VisionTowerFactory
 from .configuration_tinyllava import TinyLlavaConfig
 from ..utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
-# from tinyllava.utils.data_utils import get_value_from_kwargs
 
 
 def get_value_from_kwargs(kwargs, name):
@@ -48,9 +47,15 @@ class TinyLlavaPreTrainedModel(PreTrainedModel):
 
     @property
     def _supports_sdpa(self):
-        return self.language_model._supports_sdpa
+        # HACK: avoiding attribute error introduced by
+        # https://github.com/huggingface/transformers/pull/39423
+        language_model = getattr(self, "language_model", None)
+        return bool(getattr(language_model, "_supports_sdpa", False))
 
 
+# TODO: manually inherit from `GenerationMixin` as
+# https://github.com/huggingface/transformers/pull/33203
+# deprecated `PreTrainedModel` inheriting from `GenerationMixin`
 class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
     def __init__(self, config: TinyLlavaConfig):
         super().__init__(config)
@@ -110,7 +115,7 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
 
     def forward(
         self,
-        input_ids: torch.LongTensor = None,
+        input_ids: torch.LongTensor | None = None,
         attention_mask: torch.Tensor | None = None,
         position_ids: torch.LongTensor | None = None,
         past_key_values: list[torch.FloatTensor] | None = None,
@@ -227,8 +232,7 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
         images,
         image_sizes=None,
     ):
-        vision_tower = self.vision_tower
-        if vision_tower is None or images is None or input_ids.shape[1] == 1:
+        if self.vision_tower is None or images is None or input_ids.shape[1] == 1:
             return (
                 input_ids,
                 position_ids,
@@ -263,7 +267,6 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
             labels = torch.full_like(input_ids, IGNORE_INDEX)
 
         # remove the padding using attention_mask -- FIXME
-        _input_ids = input_ids
         input_ids = [
             cur_input_ids[cur_attention_mask]
             for cur_input_ids, cur_attention_mask in zip(input_ids, attention_mask)
