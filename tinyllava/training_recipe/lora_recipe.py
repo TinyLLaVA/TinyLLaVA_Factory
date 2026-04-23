@@ -10,7 +10,7 @@ from ..utils.train_utils import (
     get_peft_state_non_lora_maybe_zero_3,
     get_peft_state_maybe_zero_3,
 )
-from ..utils import log
+from ..utils.logging import log
 
 
 @register_training_recipe("lora")
