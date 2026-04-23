@@ -1,3 +1,4 @@
+import warnings
 
 import torch
 from torch import nn
@@ -126,10 +127,24 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
         output_hidden_states: bool | None = None,
         images: torch.FloatTensor | None = None,
         image_sizes: list[list[int]] | None = None,
+        is_multimodal: bool | None = None,
         return_dict: bool | None = None,
     ) -> tuple | CausalLMOutputWithPast:
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        if inputs_embeds is None:
+        if is_multimodal is True and images is None:
+            warnings.warn(
+                "`is_multimodal=True` but `images` is None; fallback to pure language_model mode.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if is_multimodal is False and images is not None:
+            warnings.warn(
+                "`images` is provided but `is_multimodal=False`; skip image features and use pure language_model mode.",
+                UserWarning,
+                stacklevel=2,
+            )
+        use_multimodal = images is not None if is_multimodal is None else is_multimodal
+        if inputs_embeds is None and use_multimodal:
             (
                 input_ids,
                 position_ids,
@@ -169,10 +184,24 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
     ) -> GenerateOutput | torch.LongTensor:
         position_ids = kwargs.pop("position_ids", None)
         attention_mask = kwargs.pop("attention_mask", None)
+        is_multimodal = kwargs.pop("is_multimodal", None)
         if "inputs_embeds" in kwargs:
             raise NotImplementedError("`inputs_embeds` is not supported")
 
-        if images is not None:
+        if is_multimodal is True and images is None:
+            warnings.warn(
+                "`is_multimodal=True` but `images` is None; fallback to pure language_model mode.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if is_multimodal is False and images is not None:
+            warnings.warn(
+                "`images` is provided but `is_multimodal=False`; skip image features and use pure language_model mode.",
+                UserWarning,
+                stacklevel=2,
+            )
+        use_multimodal = images is not None if is_multimodal is None else is_multimodal
+        if images is not None and use_multimodal:
             (inputs, position_ids, attention_mask, _, inputs_embeds, _) = (
                 self.prepare_inputs_labels_for_multimodal(
                     inputs,
