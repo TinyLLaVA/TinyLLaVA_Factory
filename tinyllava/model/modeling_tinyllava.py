@@ -3,7 +3,7 @@ import warnings
 import torch
 from torch import nn
 
-from transformers import PreTrainedModel
+from transformers import PreTrainedModel, GenerationMixin
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.generation.utils import GenerateOutput
 
@@ -54,10 +54,7 @@ class TinyLlavaPreTrainedModel(PreTrainedModel):
         return bool(getattr(language_model, "_supports_sdpa", False))
 
 
-# TODO: manually inherit from `GenerationMixin` as
-# https://github.com/huggingface/transformers/pull/33203
-# deprecated `PreTrainedModel` inheriting from `GenerationMixin`
-class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel):
+class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixin):
     def __init__(self, config: TinyLlavaConfig):
         super().__init__(config)
 
