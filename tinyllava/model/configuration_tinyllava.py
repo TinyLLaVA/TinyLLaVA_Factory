@@ -1,13 +1,12 @@
-from transformers import PretrainedConfig
+from transformers import PreTrainedConfig
 from transformers import CONFIG_MAPPING
 from transformers import AutoConfig
 from tinyllava.utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
 
 
-# TODO: (incompatible change) replace with `PreTrainedConfig` as hf transformers
-# corrected CamelCasing in https://github.com/huggingface/transformers/pull/41300
-class TinyLlavaConfig(PretrainedConfig):
+class TinyLlavaConfig(PreTrainedConfig):
     model_type = "tinyllava"
+    sub_configs = {"text_config": PreTrainedConfig, "vision_config": PreTrainedConfig}
 
     # Model path and tokenizer configuration
     llm_model_name_or_path: str = ""
@@ -17,8 +16,8 @@ class TinyLlavaConfig(PretrainedConfig):
     connector_type: str | None = None
 
     # Sub-configs
-    text_config: dict | PretrainedConfig | None = None
-    vision_config: dict | PretrainedConfig | None = None
+    text_config: dict | PreTrainedConfig | None = None
+    vision_config: dict | PreTrainedConfig | None = None
 
     # Tokenizer parameters
     pad_token: str | None = None
