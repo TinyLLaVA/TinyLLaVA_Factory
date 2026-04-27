@@ -96,14 +96,23 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
     def get_decoder(self):
         return self.language_model.get_decoder()
 
-    def tie_weights(self):
-        return self.language_model.tie_weights()
+    def tie_weights(self,
+        missing_keys: set[str] | None = None,
+        recompute_mapping: bool = True
+    ):
+        return self.language_model.tie_weights(
+            missing_keys=missing_keys,
+            recompute_mapping=recompute_mapping,
+        )
 
     def resize_token_embeddings(
-        self, new_num_tokens: int | None = None, pad_to_multiple_of=None
+        self,
+        new_num_tokens: int | None = None,
+        pad_to_multiple_of: int | None = None,
+        mean_resizing: bool = True,
     ) -> nn.Embedding:
         model_embeds = self.language_model.resize_token_embeddings(
-            new_num_tokens, pad_to_multiple_of
+            new_num_tokens, pad_to_multiple_of, mean_resizing
         )
         # update vocab size
         self.config.text_config.vocab_size = model_embeds.num_embeddings
@@ -150,13 +159,13 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
                 inputs_embeds,
                 labels,
             ) = self.prepare_inputs_labels_for_multimodal(
-                input_ids,
-                position_ids,
-                attention_mask,
-                past_key_values,
-                labels,
-                images,
-                image_sizes,
+                input_ids=input_ids,
+                position_ids=position_ids,
+                attention_mask=attention_mask,
+                past_key_values=past_key_values,
+                labels=labels,
+                images=images,
+                image_sizes=image_sizes,
             )
         return self.language_model.forward(
             input_ids=input_ids,
@@ -199,18 +208,28 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
             )
         use_multimodal = images is not None if is_multimodal is None else is_multimodal
         if images is not None and use_multimodal:
-            (inputs, position_ids, attention_mask, _, inputs_embeds, _) = (
-                self.prepare_inputs_labels_for_multimodal(
-                    inputs,
-                    position_ids,
-                    attention_mask,
-                    None,
-                    None,
-                    images,
-                    image_sizes=image_sizes,
-                )
+            (
+                input_ids,
+                position_ids,
+                attention_mask,
+                _,
+                inputs_embeds,
+                _,
+            ) = self.prepare_inputs_labels_for_multimodal(
+                input_ids=inputs,
+                position_ids=position_ids,
+                attention_mask=attention_mask,
+                past_key_values=None,
+                labels=None,
+                images=images,
+                image_sizes=image_sizes,
             )
         else:
+            if inputs is None:
+                raise ValueError(
+                    "`inputs` must be provided when `images` is None or multimodal mode is disabled."
+                )
+            input_ids = inputs
             inputs_embeds = self.language_model.get_input_embeddings()(inputs)
 
         return self.language_model.generate(
@@ -250,14 +269,41 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
 
     def prepare_inputs_labels_for_multimodal(
         self,
-        input_ids,
-        position_ids,
-        attention_mask,
-        past_key_values,
-        labels,
-        images,
-        image_sizes=None,
-    ):
+        input_ids: torch.LongTensor | None,
+        position_ids: torch.LongTensor | None,
+        attention_mask: torch.Tensor | None,
+        past_key_values: list[torch.FloatTensor] | None,
+        labels: torch.LongTensor | None,
+        images: torch.FloatTensor | None,
+        image_sizes: list[list[int]] | torch.Tensor | None = None,
+    ) -> tuple[
+        torch.LongTensor | None,
+        torch.LongTensor | None,
+        torch.Tensor | None,
+        list[torch.FloatTensor] | None,
+        torch.FloatTensor | None,
+        torch.LongTensor | None,
+    ]:
+        """Prepare multimodal embeddings by interleaving text tokens and image features.
+
+        This routine replaces each ``IMAGE_TOKEN_INDEX`` placeholder with encoded
+        image features, then repads the variable-length sequences into a dense
+        batch for the language model.
+
+        Returns:
+            tuple:
+                ``(input_ids, position_ids, attention_mask, past_key_values,
+                inputs_embeds, labels)``. In multimodal mode, ``input_ids`` is
+                returned as ``None`` and ``inputs_embeds`` contains the merged
+                text-image embeddings.
+
+        Notes:
+            - If there is no vision tower, no images, or decoding with one token,
+              the function falls back to pure language-mode passthrough.
+            - Mixed batches where some samples have no image tokens while others
+              consume multiple images are currently not fully generalized.
+            - ``image_sizes`` is currently reserved and not consumed here.
+        """
         if self.vision_tower is None or images is None or input_ids.shape[1] == 1:
             return (
                 input_ids,
@@ -320,6 +366,8 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
                 cur_image_idx += 1
                 continue
 
+            # Split text by image placeholders, then interleave each segment with
+            # its corresponding encoded image feature block.
             image_token_indices = (
                 [-1]
                 + torch.where(cur_input_ids == IMAGE_TOKEN_INDEX)[0].tolist()
