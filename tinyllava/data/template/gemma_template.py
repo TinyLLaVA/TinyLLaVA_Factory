@@ -14,9 +14,9 @@ system = "A chat between a curious user and an artificial intelligence assistant
 @dataclass
 class GemmaTemplate(Template):
     format_image_token: Formatter = field(default_factory=lambda: StringFormatter(slot="<image>\n{{content}}"))
-    format_user: Formatter = field(default_factory=lambda: StringFormatter(slot="USER" + ": " + "{{content}}" + " "))
+    format_user: Formatter = field(default_factory=lambda: StringFormatter(slot="USER: {{content}} ASSISTANT: "))
     format_assistant: Formatter = field(default_factory=lambda: StringFormatter(
-        slot="ASSISTANT" + ": " + "{{content}}" + "<eos>"
+        slot="{{content}}<eos>"
     ))
     system: Formatter = field(default_factory=lambda: EmptyFormatter(slot=system + " "))
     separator: Formatter = field(default_factory=lambda: EmptyFormatter(slot=[" ASSISTANT: ", "<eos>"]))

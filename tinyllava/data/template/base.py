@@ -77,7 +77,8 @@ class Template:
                 question = question.replace(DEFAULT_IMAGE_TOKEN, "").strip()
                 question = self.format_image_token.apply(content=question).strip()
             msg += self.format_user.apply(content=question)
-            msg += self.format_assistant.apply(content=answer)
+            if answer is not None:
+                msg += self.format_assistant.apply(content=answer)
         return msg
 
     def make_labels(self, input_ids, prompt, tokenizer):
