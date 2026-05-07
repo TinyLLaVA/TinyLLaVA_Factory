@@ -6,9 +6,12 @@ from io import BytesIO
 import torch
 from transformers import PreTrainedModel
 
-from tinyllava.utils import *
-from tinyllava.data import *
-from tinyllava.model import *
+from tinyllava.utils.eval_utils import (disable_torch_init, KeywordsStoppingCriteria)
+from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
+from tinyllava.utils.message import Message
+from tinyllava.data.image_preprocess import ImagePreprocess
+from tinyllava.data.text_preprocess import TextPreprocess
+from tinyllava.model.load_model import load_pretrained_model
 
 
 def image_parser(args):
