@@ -14,7 +14,6 @@ from .base import VisionTower
 
 class MoF(nn.Module):
     def __init__(self, cfg):
-        super().__init__()
         self.clip = CLIPVisionModel(cfg)
 
         cfg_dinov2 = AutoConfig.from_pretrained(cfg.model_name_or_path2)

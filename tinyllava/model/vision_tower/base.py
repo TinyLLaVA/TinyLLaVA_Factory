@@ -7,12 +7,13 @@ from transformers import PreTrainedModel, BaseImageProcessor
 
 # TODO: (incompatible change) cancel the improper inheritance from nn.Module
 class VisionTower(nn.Module):
+    _vision_tower_cls: type[PreTrainedModel]
+    _image_processor_cls: type[BaseImageProcessor]
+
     def __init__(self, cfg):
         super().__init__()
-        self._vision_tower_cls: type[PreTrainedModel] | None = None
-        self._vision_tower: nn.Module | None = None
-        self._image_processor: BaseImageProcessor | None = None
-        self.config = cfg
+        self._vision_tower = self._vision_tower_cls(cfg)
+        self._image_processor = self._image_processor_cls.from_pretrained(cfg.model_name_or_path)
 
     def load_model(self, vision_tower_name, **kwargs):
         if self._vision_tower is PreTrainedModel:
