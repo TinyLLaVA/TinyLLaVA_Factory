@@ -27,6 +27,7 @@ def load_pretrained_model(
     device="cuda",
     **kwargs,
 ):
+    # FIXME: kwargs not passed. Should be checked and fixed.
     kwargs = {"device_map": device_map, **kwargs}
     if device != "cuda":
         kwargs["device_map"] = {"": device}
@@ -43,11 +44,13 @@ def load_pretrained_model(
         )
     else:
         kwargs["torch_dtype"] = torch.float16
+
     if model_name_or_path is not None and "lora" not in model_name_or_path:
         model = TinyLlavaForConditionalGeneration.from_pretrained(
             model_name_or_path, low_cpu_mem_usage=True
         )
 
+    # TODO: not standard, should be refactored and unified with the standard loading process
     elif model_name_or_path is not None and "lora" in model_name_or_path:
         if os.path.exists(os.path.join(model_name_or_path, "adapter_config.json")):
             model_config = TinyLlavaConfig.from_pretrained(model_name_or_path)
@@ -75,6 +78,13 @@ def load_pretrained_model(
             print("Merging LoRA weights...")
             model = model.merge_and_unload()
             print("Model is loaded...")
+        else:
+            raise ValueError(
+                f"LoRA checkpoint must contain adapter_config.json and pytorch_model.bin files, but not found in {model_name_or_path}"
+            )
+
+    else:
+        raise ValueError(f"Invalid model_name_or_path: {model_name_or_path}")
 
     image_processor = model.vision_tower._image_processor
     context_len = getattr(model.config, "max_sequence_length", 2048)
