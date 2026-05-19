@@ -12,13 +12,6 @@ from .configuration_tinyllava import TinyLlavaConfig
 from ..utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
 
 
-def get_value_from_kwargs(kwargs, name):
-    if name in kwargs:
-        return kwargs.pop(name)
-    else:
-        return None
-
-
 class TinyLlavaPreTrainedModel(PreTrainedModel):
     config_class = TinyLlavaConfig
     base_model_prefix = "model"
@@ -26,25 +19,6 @@ class TinyLlavaPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["LlavaVisionAttention"]
     _skip_keys_device_placement = "past_key_values"
     _supports_flash_attn_2 = True
-
-    def _init_weights(self, module):
-        std = (
-            self.config.initializer_range
-            if hasattr(self.config, "initializer_range")
-            else self.config.text_config.initializer_range
-        )
-
-        if hasattr(module, "class_embedding"):
-            module.class_embedding.data.normal_(mean=0.0, std=std)
-
-        if isinstance(module, (nn.Linear, nn.Conv2d)):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
 
     @property
     def _supports_sdpa(self):
@@ -286,9 +260,11 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
     ]:
         """Prepare multimodal embeddings by interleaving text tokens and image features.
 
-        This routine replaces each ``IMAGE_TOKEN_INDEX`` placeholder with encoded
-        image features, then repads the variable-length sequences into a dense
-        batch for the language model.
+        Example input:
+            "Test <image> describe"
+            -> token ids like [Test, IMAGE_TOKEN_INDEX, describe]
+            -> the placeholder is replaced by image features
+            -> the final sequence becomes text embeddings + image embeddings + text embeddings.
 
         Returns:
             tuple:
@@ -304,6 +280,7 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
               consume multiple images are currently not fully generalized.
             - ``image_sizes`` is currently reserved and not consumed here.
         """
+        # If multimodal input is not needed, keep the original tensors unchanged.
         if self.vision_tower is None or images is None or input_ids.shape[1] == 1:
             return (
                 input_ids,
@@ -314,16 +291,16 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
                 labels,
             )
 
+        # Encode the image batch into feature blocks for later insertion at each
+        # IMAGE_TOKEN_INDEX position.
         image_features = self.encode_images(images)
 
         # TODO: image start / end is not implemented here to support pretraining.
         if getattr(self.config, "tune_mm_mlp_adapter", False):
             raise NotImplementedError
 
-        # Let's just add dummy tensors if they do not exist,
-        # it is a headache to deal with None all the time.
-        # But it is not ideal, and if you have a better idea,
-        # please open an issue / submit a PR, thanks.
+        # Normalize optional inputs so the indexing logic below can treat them as
+        # real tensors instead of repeatedly checking for None.
         _labels = labels
         _position_ids = position_ids
         _attention_mask = attention_mask
@@ -338,7 +315,9 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         if labels is None:
             labels = torch.full_like(input_ids, IGNORE_INDEX)
 
-        # remove the padding using attention_mask -- FIXME
+        # Remove padding so each sample becomes a compact 1D token stream before
+        # image insertion. For "Test <image> describe", the sample is now the
+        # unpadded sequence of text tokens plus the image placeholder.
         input_ids = [
             cur_input_ids[cur_attention_mask]
             for cur_input_ids, cur_attention_mask in zip(input_ids, attention_mask)
@@ -352,8 +331,10 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         new_labels = []
         cur_image_idx = 0
         for batch_idx, cur_input_ids in enumerate(input_ids):
+            # Count how many image placeholders are present in this sample.
             num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
             if num_images == 0:
+                # Text-only sample: embed the tokens directly and keep labels as-is.
                 cur_image_features = image_features[cur_image_idx]
                 cur_input_embeds_1 = self.language_model.get_input_embeddings()(
                     cur_input_ids
@@ -366,13 +347,15 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
                 cur_image_idx += 1
                 continue
 
-            # Split text by image placeholders, then interleave each segment with
-            # its corresponding encoded image feature block.
+            # Multimodal sample: split the text around each <image> token.
+            # For "Test <image> describe this <image> please", this yields:
+            #   ["Test"], ["describe this"], ["please"]
+            # and one image feature block inserted between them.
             image_token_indices = (
                 [-1]
                 + torch.where(cur_input_ids == IMAGE_TOKEN_INDEX)[0].tolist()
                 + [cur_input_ids.shape[0]]
-            )
+            )  # e.g. [-1, 1, 4, 6] for "Test <image> describe this <image> please" with token ids [Test, IMAGE_TOKEN_INDEX, describe, this, IMAGE_TOKEN_INDEX, please]
             cur_input_ids_noim = []
             cur_labels = labels[batch_idx]
             cur_labels_noim = []
@@ -381,25 +364,32 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
                     cur_input_ids[
                         image_token_indices[i] + 1 : image_token_indices[i + 1]
                     ]
-                )
+                )  # e.g. 1) [0:1] -> [Test], 2) [2:4] -> [describe, this], 3) [5:6] -> [please]
+                # now cur_input_ids_noim = [[Test], [describe, this], [please]]
                 cur_labels_noim.append(
                     cur_labels[image_token_indices[i] + 1 : image_token_indices[i + 1]]
                 )
             split_sizes = [x.shape[0] for x in cur_labels_noim]
+            # split_sizes = [1, 2, 1] for the example above
+            # Convert only the text spans to embeddings first.
             cur_input_embeds = self.language_model.get_input_embeddings()(
                 torch.cat(cur_input_ids_noim)
             )
+            # Split them back so text chunks and image features can be interleaved.
             cur_input_embeds_no_im = torch.split(cur_input_embeds, split_sizes, dim=0)
             cur_new_input_embeds = []
             cur_new_labels = []
 
             for i in range(num_images + 1):
+                # Add the text chunk before the next image placeholder.
                 cur_new_input_embeds.append(cur_input_embeds_no_im[i])
                 cur_new_labels.append(cur_labels_noim[i])
                 if i < num_images:
+                    # Insert the corresponding image features at the placeholder.
                     cur_image_features = image_features[cur_image_idx]
                     cur_image_idx += 1
                     cur_new_input_embeds.append(cur_image_features)
+                    # Image tokens should not contribute to the language-model loss.
                     cur_new_labels.append(
                         torch.full(
                             (cur_image_features.shape[0],),
@@ -411,13 +401,15 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
 
             cur_new_input_embeds = [x.to(self.device) for x in cur_new_input_embeds]
 
+            # Merge the interleaved pieces back into one sample sequence.
             cur_new_input_embeds = torch.cat(cur_new_input_embeds)
             cur_new_labels = torch.cat(cur_new_labels)
 
             new_input_embeds.append(cur_new_input_embeds)
             new_labels.append(cur_new_labels)
 
-        # Truncate sequences to max length as image embeddings can make the sequence longer
+        # Truncate sequences to the configured maximum length because image
+        # embeddings can make the final sequence longer than the tokenizer limit.
         tokenizer_model_max_length = getattr(
             self.config, "tokenizer_model_max_length", None
         )
@@ -427,7 +419,8 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
             ]
             new_labels = [x[:tokenizer_model_max_length] for x in new_labels]
 
-        # Combine them
+        # Pad each sample back to a dense batch so the language model can process
+        # it like a normal batched forward pass.
         max_len = max(x.shape[0] for x in new_input_embeds)
         batch_size = len(new_input_embeds)
 
@@ -492,8 +485,10 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
                         0, cur_len, dtype=position_ids.dtype, device=position_ids.device
                     )
 
+        # Stack the padded sequences into a single batch tensor.
         new_input_embeds = torch.stack(new_input_embeds_padded, dim=0)
 
+        # Restore optional outputs to their original None/non-None state.
         if _labels is None:
             new_labels = None
         else:
@@ -517,8 +512,8 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         )
 
     def load_llm(self, **kwargs):
-        language_model_name = get_value_from_kwargs(kwargs, "model_name_or_path")
-        pretrained_llm_path = get_value_from_kwargs(kwargs, "pretrained_llm_path")
+        language_model_name = kwargs.pop("model_name_or_path", None)
+        pretrained_llm_path = kwargs.pop("pretrained_llm_path", None)
         if pretrained_llm_path is not None:
             language_model_name = pretrained_llm_path
         if language_model_name is not None:
@@ -535,7 +530,7 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         # self.config.tokenizer_model_max_length =  getattr(self.tokenizer, 'model_max_length', None)
 
     def load_vision_tower(self, **kwargs):
-        vision_tower_name = get_value_from_kwargs(kwargs, "model_name_or_path")
+        vision_tower_name = kwargs.pop("model_name_or_path", None)
         self.vision_tower.load_model(vision_tower_name, **kwargs)
 
     def load_connector(self, **kwargs):
