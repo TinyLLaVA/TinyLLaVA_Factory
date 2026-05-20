@@ -77,35 +77,33 @@
 Please note that our environment requirements are different from LLaVA's environment requirements. We strongly recommend
 you create the environment from scratch as follows.
 
-1. Clone this repository and navigate to the folder
+1. Clone this repository and navigate to the folder, then checkout to this branch
 
 ```bash
 git clone https://github.com/TinyLLaVA/TinyLLaVA_Factory.git
 cd TinyLLaVA_Factory
+git checkout npu
 ```
 
-2. Create a conda environment, activate it and install Packages
+2. Install CANN for NPU
+
+Install CANN following the guide at the [documentation of Ascend](https://www.hiascend.com/document/detail/zh/canncommercial/900/softwareinst/instg). An [English version](https://www.hiascend.com/document/detail/en/canncommercial/800/softwareinst/instg) exists but has not yet been updated. Hardware support and software compatibility can be verified against the [documentation of torch_npu](https://github.com/Ascend/pytorch#ascend-auxiliary-software).  
+Note: After installing CANN, please do not forget to run the provided `set_env.sh` scripts to activate the environment and apply the configuration.
+
+3. Create a conda environment, activate it and install Packages
 
 ```Shell
 conda create -n tinyllava_factory python=3.10 -y
 conda activate tinyllava_factory
 pip install --upgrade pip  # enable PEP 660 support
-pip install -e .[trian, cuda]
-# pip install -e .[train, npu] # For Ascend 
-```
-
-3. Install additional packages for GPU
-
-```Shell
-pip install flash-attn==2.5.7 --no-build-isolation
+pip install -e .[train, npu]
 ```
 
 #### Upgrade to the latest code base
 
 ```Shell
 git pull
-pip install -e .[train, cuda] # For GPU
-# pip install -e . [train, npu] # For Ascend
+pip install -e .[train, npu]
 ```
 
 ## Get Started
@@ -119,14 +117,14 @@ section in our [Documentation](https://tinyllava-factory.readthedocs.io/en/lates
 
 Here's an example for training a LMM using Phi-2.
 
-- Replace data paths with yours in `scripts/train/train_phi.sh`
-- Replace `output_dir` with yours in `scripts/train/pretrain.sh`
-- Replace `pretrained_model_path` and `output_dir` with yours in `scripts/train/finetune.sh`
-- Adjust your GPU ids (localhost) and `per_device_train_batch_size` in `scripts/train/pretrain.sh` and
-  `scripts/train/finetune.sh`
+- Replace data paths with yours in `scripts/train_npu/train_phi.sh`
+- Replace `output_dir` with yours in `scripts/train_npu/pretrain.sh`
+- Replace `pretrained_model_path` and `output_dir` with yours in `scripts/train_npu/finetune.sh`
+- Adjust your GPU ids (localhost) and `per_device_train_batch_size` in `scripts/train_npu/pretrain.sh` and
+  `scripts/train_npu/finetune.sh`
 
 ```bash
-bash scripts/train/train_phi.sh
+bash scripts/train_npu/train_phi.sh
 ```
 
 Important hyperparameters used in pretraining and finetuning are provided below.
@@ -149,6 +147,11 @@ stage, `conv_version` is the same for all LLMs, using `pretrain`. In the finetun
 `llama` for TinyLlama, OpenELM
 
 `gemma` for Gemma
+
+##### Changes required to migrate from CUDA
+
+1. Use `scripts/zero3_npu.json` for deepspeed configuration, which replaces `'auto'` in `zero_optimization` with an explicit value.
+2. Replace `flash_attention_2` with `sdpa` in `attn_implementation`.
 
 #### 3. Evaluation
 
@@ -382,7 +385,7 @@ def return_gemmaclass():
     return (GemmaForCausalLM, (AutoTokenizer, tokenizer_and_post_load))
 ```
 
-Finally, create `scripts/train/train_gemma.sh` with the corresponding `LLM_VERSION` and `CONV_VERSION`.
+Finally, create `scripts/train_npu/train_gemma.sh` with the corresponding `LLM_VERSION` and `CONV_VERSION`.
 
 ### Vision Tower
 
