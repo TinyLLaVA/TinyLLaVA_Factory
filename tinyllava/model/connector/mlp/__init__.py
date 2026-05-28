@@ -7,8 +7,8 @@ from transformers.utils.import_utils import (
 
 
 if TYPE_CHECKING:
-    from .auto import *
-    from .mlp import *
+    from .configuration_mlp import *
+    from .modeling_mlp import *
 else:
     import sys
 

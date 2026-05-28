@@ -1,117 +1,61 @@
-from transformers import PreTrainedConfig
-from transformers import CONFIG_MAPPING
-from transformers import AutoConfig
-from tinyllava.utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
+# Copyright 2023 Microsoft Research & University of Wisconsin-Madison, the HuggingFace Inc. team and TinyLLaVA group. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""TinyLLaVA model configuration"""
+
+from typing import Literal
+
+from huggingface_hub.dataclasses import strict
+
+from transformers import (
+    PreTrainedConfig,
+    CONFIG_MAPPING,
+    AutoConfig,
+)
+
+from .llm import LANGUAGE_CONFIG_MAPPING
+from .vision_tower import VISION_TOWER_CONFIG_MAPPING
+from .connector import CONNECTOR_CONFIG_MAPPING
 
 
+@strict
 class TinyLlavaConfig(PreTrainedConfig):
     model_type = "tinyllava"
-    sub_configs = {"text_config": PreTrainedConfig, "vision_config": PreTrainedConfig}
+    attribute_map = {
+        "image_token_id": "image_token_index",
+    }
+    sub_configs = {
+        "text_config": AutoConfig,
+        "vision_config": AutoConfig,
+        "connector_config": AutoConfig,
+    }
 
-    # Model path and tokenizer configuration
-    llm_model_name_or_path: str = ""
-    tokenizer_name_or_path: str | None = None
-    vision_model_name_or_path: str = ""
-    vision_model_name_or_path2: str = ""
-    connector_type: str | None = None
-
-    # Sub-configs
-    text_config: dict | PreTrainedConfig | None = None
     vision_config: dict | PreTrainedConfig | None = None
-
-    # Tokenizer parameters
-    pad_token: str | None = None
-    pad_token_id: int | None = None
-    tokenizer_padding_side: str = "right"
-    tokenizer_model_max_length: int = 2048
-    tokenizer_use_fast: bool = False
-
-    # Vision tower parameters
-    vision_feature_layer: int = -2
-    vision_feature_select_strategy: str = "patch"
-    image_aspect_ratio: str = "square"
-
-    # Connector/projector parameters
-    resampler_hidden_size: int | None = None
-    num_queries: int | None = None
-    num_resampler_layers: int | None = None
-
-    # Training parameters
-    tune_type_llm: str = "frozen"
-    tune_type_connector: str = "frozen"
-    tune_type_vision_tower: str = "frozen"
-    tune_vision_tower_from_layer: int = -1
-
-    # Cache and constants
-    use_cache: bool = False
-    cache_dir: str | None = None
-    ignore_index: int = IGNORE_INDEX
-    image_token_index: int = IMAGE_TOKEN_INDEX
-
-    # Derived attributes
-    hidden_size: int | None = None
-    vocab_size: int | None = None
-    vision_hidden_size: int | None = None
+    connector_config: dict | PreTrainedConfig | None = None
+    text_config: dict | PreTrainedConfig | None = None
+    image_token_index: int = 32000
+    image_seq_length: int = 576
+    projector_hidden_act: str = "gelu"
+    vision_feature_select_strategy: Literal["default", "full"] = "default"
+    vision_feature_layer: int | list[int] = -2
+    multimodal_projector_bias: bool = True
+    tie_word_embeddings: bool = False
 
     def __post_init__(self, **kwargs):
-        if self.tokenizer_name_or_path is None or self.tokenizer_name_or_path == "":
-            self.tokenizer_name_or_path = self.llm_model_name_or_path
-
-        self._load_text_config(self.text_config)
-        self._load_vision_config(self.vision_config)
-
-        super().__post_init__(**kwargs)
-
-    def load_from_config(self, config):
-        self.llm_model_name_or_path = getattr(config, "model_name_or_path", "")
-        self.tokenizer_name_or_path = (
-            getattr(config, "tokenizer_name_or_path", None)
-            or self.llm_model_name_or_path
-        )
-        self.vision_model_name_or_path = getattr(config, "vision_tower", "")
-        self.vision_model_name_or_path2 = getattr(config, "vision_tower2", "")
-        self.connector_type = getattr(config, "connector_type", None)
-        self.vision_feature_layer = getattr(config, "mm_vision_select_layer", -2)
-        self.vision_feature_select_strategy = getattr(
-            config, "mm_vision_select_feature", "patch"
-        )
-        self.image_aspect_ratio = getattr(config, "image_aspect_ratio", "pad")
-        self.resampler_hidden_size = getattr(config, "resampler_hidden_size", None)
-        self.num_queries = getattr(config, "num_queries", None)
-        self.num_resampler_layers = getattr(config, "num_resampler_layers", None)
-
-        self.cache_dir = getattr(config, "cache_dir", None)
-        self.tokenizer_use_fast = getattr(config, "tokenizer_use_fast", False)
-        self.tokenizer_model_max_length = getattr(config, "model_max_length", 2048)
-        self.tokenizer_padding_side = getattr(config, "tokenizer_padding_side", "right")
-
-        self._load_text_config()
-        self._load_vision_config()
-
-    def _load_text_config(self, text_config=None):
-        if self.llm_model_name_or_path is None or self.llm_model_name_or_path == "":
-            self.text_config = CONFIG_MAPPING["llama"]()
-
-        else:
-            self.text_config = AutoConfig.from_pretrained(
-                self.llm_model_name_or_path, trust_remote_code=True
-            )
-            if text_config is not None:
-                self.text_config = self.text_config.from_dict(text_config)
-
-        self.hidden_size = getattr(
-            self.text_config,
-            "hidden_size",
-            getattr(self.text_config, "model_dim", None),
-        )
-        self.vocab_size = getattr(self.text_config, "vocab_size", None)
-
-    def _load_vision_config(self, vision_config=None):
-        if (
-            self.vision_model_name_or_path is None
-            or self.vision_model_name_or_path == ""
-        ):
-            self.vision_config = CONFIG_MAPPING["clip_vision_model"](
+        if isinstance(self.vision_config, dict):
+            self.vision_config["model_type"] = self.vision_config.get("model_type", "clip_vision_model")
+            self.vision_config = VISION_TOWER_CONFIG_MAPPING[self.vision_config["model_type"]](**self.vision_config)
+        elif self.vision_config is None:
+            self.vision_config = VISION_TOWER_CONFIG_MAPPING["clip_vision_model"](
                 intermediate_size=4096,
                 hidden_size=1024,
                 patch_size=14,
@@ -122,20 +66,40 @@ class TinyLlavaConfig(PreTrainedConfig):
                 projection_dim=768,
             )
 
-        else:
-            self.vision_config = AutoConfig.from_pretrained(
-                self.vision_model_name_or_path.split(":")[-1]
-            )
-            self.vision_config = getattr(
-                self.vision_config, "vision_config", self.vision_config
-            )
-            if vision_config is not None:
-                self.vision_config = self.vision_config.from_dict(vision_config)
+        if isinstance(self.text_config, dict):
+            self.text_config["model_type"] = self.text_config.get("model_type", "llama")
+            self.text_config = LANGUAGE_CONFIG_MAPPING[self.text_config["model_type"]](**self.text_config)
+        elif self.text_config is None:
+            self.text_config = LANGUAGE_CONFIG_MAPPING["llama"]()
 
-        self.vision_config.model_name_or_path = self.vision_model_name_or_path.split(
-            ":"
-        )[-1]
-        self.vision_config.model_name_or_path2 = self.vision_model_name_or_path2.split(
-            ":"
-        )[-1]
-        self.vision_hidden_size = getattr(self.vision_config, "hidden_size", None)
+        # The default value is `False` but this config is used with many model types
+        # Attr `tie_word_embeddings` was saved in text config for those models, so we
+        # need an ugly workaround and forward-pass the attr from text config
+        if not self.tie_word_embeddings and self.text_config.tie_word_embeddings:
+            self.tie_word_embeddings = self.text_config.tie_word_embeddings
+
+        if isinstance(self.connector_config, dict):
+            self.connector_config["model_type"] = self.connector_config.get("model_type", "mlp__tlf_connector")
+            self.connector_config = CONNECTOR_CONFIG_MAPPING[self.connector_config["model_type"]](
+                vision_hidden_size=self.vision_config.hidden_size,
+                text_hidden_size=self.text_config.hidden_size,
+                vision_feature_layer=self.vision_feature_layer,
+                **self.connector_config,
+            )
+        elif self.connector_config is None:
+            from .connector.mlp.configuration_mlp import MLPConnectorConfig
+            self.connector_config = MLPConnectorConfig(
+                vision_hidden_size=self.vision_config.hidden_size,
+                text_hidden_size=self.text_config.hidden_size,
+                vision_feature_layer=self.vision_feature_layer,
+                bias=self.multimodal_projector_bias,
+                act=self.projector_hidden_act
+            )
+
+        super().__post_init__(**kwargs)
+
+
+CONFIG_MAPPING.register("tinyllava", TinyLlavaConfig)
+
+
+__all__ = ["CONFIG_MAPPING", "TinyLlavaConfig"]

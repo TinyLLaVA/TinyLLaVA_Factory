@@ -1,55 +1,109 @@
-import warnings
+# Copyright 2023 the HuggingFace Inc. team and TinyLLaVA. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""PyTorch TinyLlava model."""
+
+from dataclasses import dataclass
 
 import torch
 from torch import nn
 
-from transformers import PreTrainedModel, GenerationMixin
-from transformers.modeling_outputs import CausalLMOutputWithPast
-from transformers.generation.utils import GenerateOutput
+from transformers import (
+    PreTrainedModel,
+    GenerationMixin,
+    Cache,
+)
+from transformers.processing_utils import Unpack
+from transformers.modeling_outputs import BaseModelOutputWithPast, BaseModelOutputWithPooling
+from transformers.utils.generic import (
+    ModelOutput,
+    TransformersKwargs,
+    can_return_tuple,
+    merge_with_config_defaults,
+)
+from transformers.utils.import_utils import torch_compilable_check
 
-from . import LLMFactory, ConnectorFactory, VisionTowerFactory
+from .llm import AutoLanguageModel
+from .vision_tower import AutoVisionTowerModel
+from .connector import AutoConnectorModel
 from .configuration_tinyllava import TinyLlavaConfig
-from ..utils.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX
+
+
+@dataclass
+class TinyLlavaModelOutputWithPast(BaseModelOutputWithPast):
+    r"""
+    past_key_values (`Cache`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        It is a [`~cache_utils.Cache`] instance. For more details, see our [kv cache guide](https://huggingface.co/docs/transformers/en/kv_cache).
+
+        Contains pre-computed hidden-states (key and values in the self-attention blocks) that can be used (see
+        `past_key_values` input) to speed up sequential decoding.
+    image_hidden_states (`torch.FloatTensor`, *optional*):
+        A `torch.FloatTensor` of size `(batch_size, num_images, sequence_length, hidden_size)`.
+        image_hidden_states of the model produced by the vision encoder and after projecting the last hidden state.
+    """
+
+    image_hidden_states: torch.FloatTensor | None = None
+
+
+@dataclass
+class TinyLlavaCausalLMOutputWithPast(ModelOutput):
+    r"""
+    loss (`torch.FloatTensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+        Language modeling loss (for next-token prediction).
+    logits (`torch.FloatTensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
+        Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
+    past_key_values (`Cache`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        It is a [`~cache_utils.Cache`] instance. For more details, see our [kv cache guide](https://huggingface.co/docs/transformers/en/kv_cache).
+
+        Contains pre-computed hidden-states (key and values in the self-attention blocks) that can be used (see
+        `past_key_values` input) to speed up sequential decoding.
+    image_hidden_states (`torch.FloatTensor`, *optional*):
+        A `torch.FloatTensor` of size `(batch_size, num_images, sequence_length, hidden_size)`.
+        image_hidden_states of the model produced by the vision encoder and after projecting the last hidden state.
+    """
+
+    loss: torch.FloatTensor | None = None
+    logits: torch.FloatTensor | None = None
+    past_key_values: Cache | None = None
+    hidden_states: tuple[torch.FloatTensor] | None = None
+    attentions: tuple[torch.FloatTensor] | None = None
+    image_hidden_states: torch.FloatTensor | None = None
 
 
 class TinyLlavaPreTrainedModel(PreTrainedModel):
     config_class = TinyLlavaConfig
     base_model_prefix = "model"
+    input_modalities = ["image", "text"]
     supports_gradient_checkpointing = True
-    _no_split_modules = ["LlavaVisionAttention"]
     _skip_keys_device_placement = "past_key_values"
-    _supports_flash_attn_2 = True
 
-    @property
-    def _supports_sdpa(self):
-        # HACK: avoiding attribute error introduced by
-        # https://github.com/huggingface/transformers/pull/39423
-        language_model = getattr(self, "language_model", None)
-        return bool(getattr(language_model, "_supports_sdpa", False))
+    _supports_flash_attn = True
+    _supports_sdpa = True
+
+    _can_compile_fullgraph = True
+    _supports_flex_attn = True
+    _supports_attention_backend = True
 
 
-class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixin):
+class TinyLlavaModel(TinyLlavaPreTrainedModel):
     def __init__(self, config: TinyLlavaConfig):
         super().__init__(config)
 
-        self.language_model = LLMFactory(config.llm_model_name_or_path)[0](
-            config.text_config
-        )
-        self.vision_tower = VisionTowerFactory(config.vision_model_name_or_path)(
-            config.vision_config
-        )
-        self.connector = ConnectorFactory(config.connector_type)(config)
+        self.language_model: PreTrainedModel = AutoLanguageModel.from_config(config.text_config)
+        self.vision_tower: PreTrainedModel = AutoVisionTowerModel.from_config(config.vision_config)
 
-        (Tokenizer, post_load) = LLMFactory(config.llm_model_name_or_path)[1]
-        self.tokenizer = post_load(
-            Tokenizer.from_pretrained(
-                config.tokenizer_name_or_path,
-                cache_dir=config.cache_dir,
-                model_max_length=config.tokenizer_model_max_length,
-                padding_side=config.tokenizer_padding_side,
-                use_fast=config.tokenizer_use_fast,
-            )
-        )
+        self.multi_modal_projector: PreTrainedModel = AutoConnectorModel.from_config(config.connector_config)
+
         self.post_init()
 
     def get_input_embeddings(self):
@@ -58,480 +112,272 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
     def set_input_embeddings(self, value):
         self.language_model.set_input_embeddings(value)
 
-    def get_output_embeddings(self):
-        return self.language_model.get_output_embeddings()
-
-    def set_output_embeddings(self, new_embeddings):
-        self.language_model.set_output_embeddings(new_embeddings)
-
-    def set_decoder(self, decoder):
-        self.language_model.set_decoder(decoder)
-
-    def get_decoder(self):
-        return self.language_model.get_decoder()
-
-    def tie_weights(self,
-        missing_keys: set[str] | None = None,
-        recompute_mapping: bool = True
-    ):
-        return self.language_model.tie_weights(
-            missing_keys=missing_keys,
-            recompute_mapping=recompute_mapping,
-        )
-
-    def resize_token_embeddings(
+    @merge_with_config_defaults
+    @can_return_tuple
+    def get_image_features(
         self,
-        new_num_tokens: int | None = None,
-        pad_to_multiple_of: int | None = None,
-        mean_resizing: bool = True,
-    ) -> nn.Embedding:
-        model_embeds = self.language_model.resize_token_embeddings(
-            new_num_tokens, pad_to_multiple_of, mean_resizing
+        pixel_values: torch.FloatTensor,
+        vision_feature_layer: int | list[int] | None = None,
+        vision_feature_select_strategy: str | None = None,
+        output_hidden_states: bool | None = None,
+        image_sizes: torch.Tensor | None = None,
+        **kwargs: Unpack[TransformersKwargs],
+    ) -> tuple | BaseModelOutputWithPooling:
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        # this is not memory efficient at all (output_hidden_states=True) will save all the hidden states.
+        image_outputs = self.vision_tower(
+            pixel_values,
+            output_hidden_states=True,  # Ignore arg on purpose
+            return_dict=True,
+            **kwargs,
         )
-        # update vocab size
-        self.config.text_config.vocab_size = model_embeds.num_embeddings
-        self.config.vocab_size = model_embeds.num_embeddings
-        self.vocab_size = model_embeds.num_embeddings
-        return model_embeds
 
+        # If we have one vision feature layer, return the corresponding hidden states,
+        # otherwise, select the hidden states of each feature layer and concatenate them
+        if isinstance(vision_feature_layer, int):
+            selected_image_feature = image_outputs.hidden_states[vision_feature_layer]
+            if vision_feature_select_strategy == "default":
+                selected_image_feature = selected_image_feature[:, 1:]
+        else:
+            hs_pool = [image_outputs.hidden_states[layer_idx] for layer_idx in vision_feature_layer]
+            # For default; crop CLS from each hidden state in the hidden state pool
+            if vision_feature_select_strategy == "default":
+                hs_pool = [hs[:, 1:] for hs in hs_pool]
+            selected_image_feature = torch.cat(hs_pool, dim=-1)
+
+        image_features = self.multi_modal_projector(selected_image_feature)
+
+        # If image_sizes is provided, we need to split the image features accordingly,
+        # but only if the image_sizes is not None (the default in this and related architectures)
+        if image_sizes is not None:
+            split_sizes = (
+                (torch.as_tensor(image_sizes, device=image_features.device) // self.vision_tower.patch_size)
+                .prod(dim=-1)
+                .tolist()
+            )
+            image_features = torch.split(image_features.squeeze(0), split_sizes)
+        else:
+            image_features = list(image_features)
+        image_outputs.pooler_output = image_features
+
+        return image_outputs
+
+    def get_placeholder_mask(
+        self, input_ids: torch.LongTensor, inputs_embeds: torch.FloatTensor, image_features: torch.FloatTensor
+    ):
+        """
+        Obtains multimodal placeholder mask from `input_ids` or `inputs_embeds`, and checks that the placeholder token count is
+        equal to the length of multimodal features. If the lengths are different, an error is raised.
+        """
+        if input_ids is None:
+            special_image_mask = inputs_embeds == self.get_input_embeddings()(
+                torch.tensor(self.config.image_token_id, dtype=torch.long, device=inputs_embeds.device)
+            )
+            special_image_mask = special_image_mask.all(-1)
+        else:
+            special_image_mask = input_ids == self.config.image_token_id
+
+        n_image_tokens = special_image_mask.sum()
+        n_image_features = image_features.shape[0] * image_features.shape[1]
+        special_image_mask = special_image_mask.unsqueeze(-1).expand_as(inputs_embeds).to(inputs_embeds.device)
+        torch_compilable_check(
+            inputs_embeds[special_image_mask].numel() == image_features.numel(),
+            f"Image features and image tokens do not match, tokens: {n_image_tokens}, features: {n_image_features}",
+        )
+        return special_image_mask
+
+    @can_return_tuple
     def forward(
         self,
         input_ids: torch.LongTensor | None = None,
+        pixel_values: torch.FloatTensor | None = None,
         attention_mask: torch.Tensor | None = None,
         position_ids: torch.LongTensor | None = None,
-        past_key_values: list[torch.FloatTensor] | None = None,
+        past_key_values: Cache | None = None,
         inputs_embeds: torch.FloatTensor | None = None,
-        labels: torch.LongTensor | None = None,
-        use_cache: bool | None = None,
-        output_attentions: bool | None = None,
-        output_hidden_states: bool | None = None,
-        images: torch.FloatTensor | None = None,
-        image_sizes: list[list[int]] | None = None,
-        is_multimodal: bool | None = None,
-        return_dict: bool | None = None,
-    ) -> tuple | CausalLMOutputWithPast:
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
-        if is_multimodal is True and images is None:
-            warnings.warn(
-                "`is_multimodal=True` but `images` is None; fallback to pure language_model mode.",
-                UserWarning,
-                stacklevel=2,
-            )
-        if is_multimodal is False and images is not None:
-            warnings.warn(
-                "`images` is provided but `is_multimodal=False`; skip image features and use pure language_model mode.",
-                UserWarning,
-                stacklevel=2,
-            )
-        use_multimodal = images is not None if is_multimodal is None else is_multimodal
-        if inputs_embeds is None and use_multimodal:
-            (
-                input_ids,
-                position_ids,
-                attention_mask,
-                past_key_values,
-                inputs_embeds,
-                labels,
-            ) = self.prepare_inputs_labels_for_multimodal(
-                input_ids=input_ids,
-                position_ids=position_ids,
-                attention_mask=attention_mask,
-                past_key_values=past_key_values,
-                labels=labels,
-                images=images,
+        vision_feature_layer: int | list[int] | None = None,
+        vision_feature_select_strategy: str | None = None,
+        image_sizes: torch.Tensor | None = None,
+        **kwargs: Unpack[TransformersKwargs],
+    ) -> tuple | TinyLlavaModelOutputWithPast:
+        if (input_ids is None) ^ (inputs_embeds is not None):
+            raise ValueError("You must specify exactly one of input_ids or inputs_embeds")
+
+        if inputs_embeds is None:
+            inputs_embeds = self.get_input_embeddings()(input_ids)
+
+        if pixel_values is not None:
+            image_features = self.get_image_features(
+                pixel_values=pixel_values,
+                vision_feature_layer=vision_feature_layer,
+                vision_feature_select_strategy=vision_feature_select_strategy,
                 image_sizes=image_sizes,
+                return_dict=True,
+            ).pooler_output
+            image_features = torch.cat(image_features, dim=0).to(inputs_embeds.device, inputs_embeds.dtype)
+            special_image_mask = self.get_placeholder_mask(
+                input_ids, inputs_embeds=inputs_embeds, image_features=image_features
             )
-        return self.language_model.forward(
-            input_ids=input_ids,
+            inputs_embeds = inputs_embeds.masked_scatter(special_image_mask, image_features)
+
+        outputs = self.language_model(
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds,
-            labels=labels,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-
-    @torch.no_grad()
-    def generate(
-        self,
-        inputs: torch.Tensor | None = None,
-        images: torch.Tensor | None = None,
-        image_sizes: torch.Tensor | None = None,
-        **kwargs,
-    ) -> GenerateOutput | torch.LongTensor:
-        position_ids = kwargs.pop("position_ids", None)
-        attention_mask = kwargs.pop("attention_mask", None)
-        is_multimodal = kwargs.pop("is_multimodal", None)
-        if "inputs_embeds" in kwargs:
-            raise NotImplementedError("`inputs_embeds` is not supported")
-
-        if is_multimodal is True and images is None:
-            warnings.warn(
-                "`is_multimodal=True` but `images` is None; fallback to pure language_model mode.",
-                UserWarning,
-                stacklevel=2,
-            )
-        if is_multimodal is False and images is not None:
-            warnings.warn(
-                "`images` is provided but `is_multimodal=False`; skip image features and use pure language_model mode.",
-                UserWarning,
-                stacklevel=2,
-            )
-        use_multimodal = images is not None if is_multimodal is None else is_multimodal
-        if images is not None and use_multimodal:
-            (
-                input_ids,
-                position_ids,
-                attention_mask,
-                _,
-                inputs_embeds,
-                _,
-            ) = self.prepare_inputs_labels_for_multimodal(
-                input_ids=inputs,
-                position_ids=position_ids,
-                attention_mask=attention_mask,
-                past_key_values=None,
-                labels=None,
-                images=images,
-                image_sizes=image_sizes,
-            )
-        else:
-            if inputs is None:
-                raise ValueError(
-                    "`inputs` must be provided when `images` is None or multimodal mode is disabled."
-                )
-            input_ids = inputs
-            inputs_embeds = self.language_model.get_input_embeddings()(inputs)
-
-        return self.language_model.generate(
-            position_ids=position_ids,
-            attention_mask=attention_mask,
-            inputs_embeds=inputs_embeds,
             **kwargs,
         )
 
-    def encode_images(self, images):
-        kwargs = {}
-        kwargs["vision_feature_layer"] = self.config.vision_feature_layer
-        kwargs["vision_feature_select_strategy"] = (
-            self.config.vision_feature_select_strategy
+        return TinyLlavaModelOutputWithPast(
+            last_hidden_state=outputs.last_hidden_state,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            image_hidden_states=image_features if pixel_values is not None else None,
         )
-        images = images.to(device=self.device, dtype=self.dtype)
-        image_features = self.vision_tower(images, **kwargs)
-        image_features = self.connector(image_features)
-        return image_features
+
+
+class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixin):
+    _tied_weights_keys = {"lm_head.weight": "model.language_model.embed_tokens.weight"}
+
+    def __init__(self, config: TinyLlavaConfig):
+        super().__init__(config)
+        self.model = TinyLlavaModel(config)
+        self.lm_head = nn.Linear(config.text_config.hidden_size, config.text_config.vocab_size, bias=False)
+        self.post_init()
+
+    def get_input_embeddings(self):
+        return self.model.get_input_embeddings()
+
+    def set_input_embeddings(self, value):
+        self.model.set_input_embeddings(value)
+
+    def get_output_embeddings(self) -> nn.Module:
+        return self.lm_head
+
+    def get_image_features(
+        self,
+        pixel_values: torch.FloatTensor,
+        vision_feature_layer: int | list[int] | None = None,
+        vision_feature_select_strategy: str | None = None,
+        **kwargs: Unpack[TransformersKwargs],
+    ) -> tuple | BaseModelOutputWithPooling:
+        return self.model.get_image_features(
+            pixel_values=pixel_values,
+            vision_feature_layer=vision_feature_layer,
+            vision_feature_select_strategy=vision_feature_select_strategy,
+            **kwargs,
+        )
+
+    @can_return_tuple
+    def forward(
+        self,
+        input_ids: torch.LongTensor | None = None,
+        pixel_values: torch.FloatTensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        past_key_values: Cache | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
+        vision_feature_layer: int | list[int] | None = None,
+        vision_feature_select_strategy: str | None = None,
+        labels: torch.LongTensor | None = None,
+        logits_to_keep: int | torch.Tensor = 0,
+        image_sizes: torch.Tensor | None = None,
+        **kwargs: Unpack[TransformersKwargs],
+    ) -> tuple | TinyLlavaCausalLMOutputWithPast:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+
+        Example:
+
+        ```python
+        >>> from PIL import Image
+        >>> import httpx
+        >>> from io import BytesIO
+        >>> from transformers import AutoProcessor, LlavaForConditionalGeneration
+
+        >>> model = LlavaForConditionalGeneration.from_pretrained("llava-hf/llava-1.5-7b-hf")
+        >>> processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
+
+        >>> prompt = "USER: <image>\nWhat's the content of the image? ASSISTANT:"
+        >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
+        >>> with httpx.stream("GET", url) as response:
+        ...     image = Image.open(BytesIO(response.read()))
+
+        >>> inputs = processor(images=image, text=prompt, return_tensors="pt")
+
+        >>> # Generate
+        >>> generate_ids = model.generate(**inputs, max_new_tokens=15)
+        >>> processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        "USER:  \nWhat's the content of the image? ASSISTANT: The image features a busy city street with a stop sign prominently displayed"
+        ```"""
+        outputs = self.model(
+            input_ids=input_ids,
+            pixel_values=pixel_values,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            vision_feature_layer=vision_feature_layer,
+            vision_feature_select_strategy=vision_feature_select_strategy,
+            image_sizes=image_sizes,
+            **kwargs,
+        )
+
+        hidden_states = outputs[0]
+        # Only compute necessary logits, and do not upcast them to float if we are not computing the loss
+        slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
+        logits = self.lm_head(hidden_states[:, slice_indices, :])
+
+        loss = None
+        if labels is not None:
+            loss = self.loss_function(
+                logits=logits, labels=labels, vocab_size=self.config.text_config.vocab_size, **kwargs
+            )
+
+        return TinyLlavaCausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            image_hidden_states=outputs.image_hidden_states,
+        )
 
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, inputs_embeds=None, **kwargs
+        self,
+        input_ids,
+        past_key_values=None,
+        inputs_embeds=None,
+        pixel_values=None,
+        attention_mask=None,
+        logits_to_keep=None,
+        is_first_iteration=False,
+        **kwargs,
     ):
-        images = kwargs.pop("images", None)
-        image_sizes = kwargs.pop("image_sizes", None)
-        inputs = self.language_model.prepare_inputs_for_generation(
+        # Overwritten -- in specific circumstances we don't want to forward image inputs to the model
+
+        model_inputs = super().prepare_inputs_for_generation(
             input_ids,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+            logits_to_keep=logits_to_keep,
+            is_first_iteration=is_first_iteration,
             **kwargs,
         )
-        if images is not None:
-            inputs["images"] = images
-        if image_sizes is not None:
-            inputs["image_sizes"] = image_sizes
-        return inputs
 
-    def prepare_inputs_labels_for_multimodal(
-        self,
-        input_ids: torch.LongTensor | None,
-        position_ids: torch.LongTensor | None,
-        attention_mask: torch.Tensor | None,
-        past_key_values: list[torch.FloatTensor] | None,
-        labels: torch.LongTensor | None,
-        images: torch.FloatTensor | None,
-        image_sizes: list[list[int]] | torch.Tensor | None = None,
-    ) -> tuple[
-        torch.LongTensor | None,
-        torch.LongTensor | None,
-        torch.Tensor | None,
-        list[torch.FloatTensor] | None,
-        torch.FloatTensor | None,
-        torch.LongTensor | None,
-    ]:
-        """Prepare multimodal embeddings by interleaving text tokens and image features.
+        if is_first_iteration or not kwargs.get("use_cache", True):
+            # Pixel values are used only in the first iteration if available
+            # In subsequent iterations, they are already merged with text and cached
+            # NOTE: first iteration doesn't have to be prefill, it can be the first
+            # iteration with a question and cached system prompt (continue generate from cache)
+            model_inputs["pixel_values"] = pixel_values
 
-        Example input:
-            "Test <image> describe"
-            -> token ids like [Test, IMAGE_TOKEN_INDEX, describe]
-            -> the placeholder is replaced by image features
-            -> the final sequence becomes text embeddings + image embeddings + text embeddings.
+        return model_inputs
 
-        Returns:
-            tuple:
-                ``(input_ids, position_ids, attention_mask, past_key_values,
-                inputs_embeds, labels)``. In multimodal mode, ``input_ids`` is
-                returned as ``None`` and ``inputs_embeds`` contains the merged
-                text-image embeddings.
 
-        Notes:
-            - If there is no vision tower, no images, or decoding with one token,
-              the function falls back to pure language-mode passthrough.
-            - Mixed batches where some samples have no image tokens while others
-              consume multiple images are currently not fully generalized.
-            - ``image_sizes`` is currently reserved and not consumed here.
-        """
-        # If multimodal input is not needed, keep the original tensors unchanged.
-        if self.vision_tower is None or images is None or input_ids.shape[1] == 1:
-            return (
-                input_ids,
-                position_ids,
-                attention_mask,
-                past_key_values,
-                None,
-                labels,
-            )
-
-        # Encode the image batch into feature blocks for later insertion at each
-        # IMAGE_TOKEN_INDEX position.
-        image_features = self.encode_images(images)
-
-        # TODO: image start / end is not implemented here to support pretraining.
-        if getattr(self.config, "tune_mm_mlp_adapter", False):
-            raise NotImplementedError
-
-        # Normalize optional inputs so the indexing logic below can treat them as
-        # real tensors instead of repeatedly checking for None.
-        _labels = labels
-        _position_ids = position_ids
-        _attention_mask = attention_mask
-        if attention_mask is None:
-            attention_mask = torch.ones_like(input_ids, dtype=torch.bool)
-        else:
-            attention_mask = attention_mask.bool()
-        if position_ids is None:
-            position_ids = torch.arange(
-                0, input_ids.shape[1], dtype=torch.long, device=input_ids.device
-            )
-        if labels is None:
-            labels = torch.full_like(input_ids, IGNORE_INDEX)
-
-        # Remove padding so each sample becomes a compact 1D token stream before
-        # image insertion. For "Test <image> describe", the sample is now the
-        # unpadded sequence of text tokens plus the image placeholder.
-        input_ids = [
-            cur_input_ids[cur_attention_mask]
-            for cur_input_ids, cur_attention_mask in zip(input_ids, attention_mask)
-        ]
-        labels = [
-            cur_labels[cur_attention_mask]
-            for cur_labels, cur_attention_mask in zip(labels, attention_mask)
-        ]
-
-        new_input_embeds = []
-        new_labels = []
-        cur_image_idx = 0
-        for batch_idx, cur_input_ids in enumerate(input_ids):
-            # Count how many image placeholders are present in this sample.
-            num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
-            if num_images == 0:
-                # Text-only sample: embed the tokens directly and keep labels as-is.
-                cur_image_features = image_features[cur_image_idx]
-                cur_input_embeds_1 = self.language_model.get_input_embeddings()(
-                    cur_input_ids
-                )
-                cur_input_embeds = torch.cat(
-                    [cur_input_embeds_1, cur_image_features[0:0]], dim=0
-                )
-                new_input_embeds.append(cur_input_embeds)
-                new_labels.append(labels[batch_idx])
-                cur_image_idx += 1
-                continue
-
-            # Multimodal sample: split the text around each <image> token.
-            # For "Test <image> describe this <image> please", this yields:
-            #   ["Test"], ["describe this"], ["please"]
-            # and one image feature block inserted between them.
-            image_token_indices = (
-                [-1]
-                + torch.where(cur_input_ids == IMAGE_TOKEN_INDEX)[0].tolist()
-                + [cur_input_ids.shape[0]]
-            )  # e.g. [-1, 1, 4, 6] for "Test <image> describe this <image> please" with token ids [Test, IMAGE_TOKEN_INDEX, describe, this, IMAGE_TOKEN_INDEX, please]
-            cur_input_ids_noim = []
-            cur_labels = labels[batch_idx]
-            cur_labels_noim = []
-            for i in range(len(image_token_indices) - 1):
-                cur_input_ids_noim.append(
-                    cur_input_ids[
-                        image_token_indices[i] + 1 : image_token_indices[i + 1]
-                    ]
-                )  # e.g. 1) [0:1] -> [Test], 2) [2:4] -> [describe, this], 3) [5:6] -> [please]
-                # now cur_input_ids_noim = [[Test], [describe, this], [please]]
-                cur_labels_noim.append(
-                    cur_labels[image_token_indices[i] + 1 : image_token_indices[i + 1]]
-                )
-            split_sizes = [x.shape[0] for x in cur_labels_noim]
-            # split_sizes = [1, 2, 1] for the example above
-            # Convert only the text spans to embeddings first.
-            cur_input_embeds = self.language_model.get_input_embeddings()(
-                torch.cat(cur_input_ids_noim)
-            )
-            # Split them back so text chunks and image features can be interleaved.
-            cur_input_embeds_no_im = torch.split(cur_input_embeds, split_sizes, dim=0)
-            cur_new_input_embeds = []
-            cur_new_labels = []
-
-            for i in range(num_images + 1):
-                # Add the text chunk before the next image placeholder.
-                cur_new_input_embeds.append(cur_input_embeds_no_im[i])
-                cur_new_labels.append(cur_labels_noim[i])
-                if i < num_images:
-                    # Insert the corresponding image features at the placeholder.
-                    cur_image_features = image_features[cur_image_idx]
-                    cur_image_idx += 1
-                    cur_new_input_embeds.append(cur_image_features)
-                    # Image tokens should not contribute to the language-model loss.
-                    cur_new_labels.append(
-                        torch.full(
-                            (cur_image_features.shape[0],),
-                            IGNORE_INDEX,
-                            device=cur_labels.device,
-                            dtype=cur_labels.dtype,
-                        )
-                    )
-
-            cur_new_input_embeds = [x.to(self.device) for x in cur_new_input_embeds]
-
-            # Merge the interleaved pieces back into one sample sequence.
-            cur_new_input_embeds = torch.cat(cur_new_input_embeds)
-            cur_new_labels = torch.cat(cur_new_labels)
-
-            new_input_embeds.append(cur_new_input_embeds)
-            new_labels.append(cur_new_labels)
-
-        # Truncate sequences to the configured maximum length because image
-        # embeddings can make the final sequence longer than the tokenizer limit.
-        tokenizer_model_max_length = getattr(
-            self.config, "tokenizer_model_max_length", None
-        )
-        if tokenizer_model_max_length is not None:
-            new_input_embeds = [
-                x[:tokenizer_model_max_length] for x in new_input_embeds
-            ]
-            new_labels = [x[:tokenizer_model_max_length] for x in new_labels]
-
-        # Pad each sample back to a dense batch so the language model can process
-        # it like a normal batched forward pass.
-        max_len = max(x.shape[0] for x in new_input_embeds)
-        batch_size = len(new_input_embeds)
-
-        new_input_embeds_padded = []
-        new_labels_padded = torch.full(
-            (batch_size, max_len),
-            IGNORE_INDEX,
-            dtype=new_labels[0].dtype,
-            device=new_labels[0].device,
-        )
-        attention_mask = torch.zeros(
-            (batch_size, max_len),
-            dtype=attention_mask.dtype,
-            device=attention_mask.device,
-        )
-        position_ids = torch.zeros(
-            (batch_size, max_len), dtype=position_ids.dtype, device=position_ids.device
-        )
-
-        for i, (cur_new_embed, cur_new_labels) in enumerate(
-            zip(new_input_embeds, new_labels)
-        ):
-            cur_len = cur_new_embed.shape[0]
-            if getattr(self.config, "tokenizer_padding_side", "right") == "left":
-                new_input_embeds_padded.append(
-                    torch.cat(
-                        (
-                            torch.zeros(
-                                (max_len - cur_len, cur_new_embed.shape[1]),
-                                dtype=cur_new_embed.dtype,
-                                device=cur_new_embed.device,
-                            ),
-                            cur_new_embed,
-                        ),
-                        dim=0,
-                    )
-                )
-                if cur_len > 0:
-                    new_labels_padded[i, -cur_len:] = cur_new_labels
-                    attention_mask[i, -cur_len:] = True
-                    position_ids[i, -cur_len:] = torch.arange(
-                        0, cur_len, dtype=position_ids.dtype, device=position_ids.device
-                    )
-            else:
-                new_input_embeds_padded.append(
-                    torch.cat(
-                        (
-                            cur_new_embed,
-                            torch.zeros(
-                                (max_len - cur_len, cur_new_embed.shape[1]),
-                                dtype=cur_new_embed.dtype,
-                                device=cur_new_embed.device,
-                            ),
-                        ),
-                        dim=0,
-                    )
-                )
-                if cur_len > 0:
-                    new_labels_padded[i, :cur_len] = cur_new_labels
-                    attention_mask[i, :cur_len] = True
-                    position_ids[i, :cur_len] = torch.arange(
-                        0, cur_len, dtype=position_ids.dtype, device=position_ids.device
-                    )
-
-        # Stack the padded sequences into a single batch tensor.
-        new_input_embeds = torch.stack(new_input_embeds_padded, dim=0)
-
-        # Restore optional outputs to their original None/non-None state.
-        if _labels is None:
-            new_labels = None
-        else:
-            new_labels = new_labels_padded
-
-        if _attention_mask is None:
-            attention_mask = None
-        else:
-            attention_mask = attention_mask.to(dtype=_attention_mask.dtype)
-
-        if _position_ids is None:
-            position_ids = None
-
-        return (
-            None,
-            position_ids,
-            attention_mask,
-            past_key_values,
-            new_input_embeds,
-            new_labels,
-        )
-
-    def load_llm(self, **kwargs):
-        language_model_name = kwargs.pop("model_name_or_path", None)
-        pretrained_llm_path = kwargs.pop("pretrained_llm_path", None)
-        if pretrained_llm_path is not None:
-            language_model_name = pretrained_llm_path
-        if language_model_name is not None:
-            self.language_model = self.language_model.from_pretrained(
-                language_model_name, **kwargs
-            )
-        print("loading language model from ", language_model_name)
-        self.language_model.requires_grad_(False)
-
-        self.config.text_config.torch_dtype = kwargs.get("torch_dtype", None)
-        self.config.pad_token = getattr(self.tokenizer, "pad_token", None)
-        self.config.pad_token_id = getattr(self.tokenizer, "pad_token_id", None)
-        # self.config.tokenizer_padding_side = getattr(self.tokenizer, 'padding_side', None)
-        # self.config.tokenizer_model_max_length =  getattr(self.tokenizer, 'model_max_length', None)
-
-    def load_vision_tower(self, **kwargs):
-        vision_tower_name = kwargs.pop("model_name_or_path", None)
-        self.vision_tower.load_model(vision_tower_name, **kwargs)
-
-    def load_connector(self, **kwargs):
-        self.connector.load_model(**kwargs)
+__all__ = ["TinyLlavaForConditionalGeneration", "TinyLlavaPreTrainedModel", "TinyLlavaModel"]
