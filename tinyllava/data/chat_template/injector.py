@@ -3,25 +3,64 @@ from dataclasses import dataclass
 from typing import Literal
 
 
+# This module intentionally does not try to parse full Jinja syntax.  It is a
+# small adapter for the shapes most HF text-only chat templates use when they
+# print message content.  The goal is to preserve the surrounding template while
+# replacing only the content expression with a TinyLLaVA-aware renderer and,
+# for assistant messages, a generation span.
+#
+# Typical source shapes we support:
+#   {{ message.content }}
+#   {{ message["content"] }}
+#   {{ '<|im_start|>' + message.role + '\n' + message.content + '<|im_end|>' }}
+#   {{ ' ' + message["content"]|trim + eos_token }}
+#   {% set content = message.content %}
+#
+# A full Jinja AST pass would be more general, but much heavier.  These regexes
+# are deliberately narrow so failure modes become "no replacement + warning"
+# rather than silent rewrites of arbitrary template code.
 _GENERATION_RE = re.compile(r"\{\%-?\s*generation\s*-?\%\}")
+
+# Matches a print block that is exactly a content reference:
+#   {{ message.content }}
+#   {{- message['content'] -}}
+# This fast path is safe because the whole expression is just content.
 _CONTENT_EXPR_RE = re.compile(
     r"\{\{\s*-?\s*"
     r"(?P<message>[a-zA-Z_][a-zA-Z0-9_]*)"
     r"(?:\s*\.\s*content|\s*\[\s*['\"]content['\"]\s*\])"
     r"\s*-?\s*\}\}"
 )
+
+# Matches any Jinja print block and captures the inner expression.  We inspect
+# this when content is embedded in a larger expression, for example:
+#   {{ '<|im_start|>' + message.role + '\n' + message.content + '<|im_end|>' }}
 _PRINT_BLOCK_RE = re.compile(r"\{\{\s*-?\s*(?P<expr>.*?)\s*-?\s*\}\}", re.DOTALL)
+
+# Finds a content reference inside a larger expression.  The named "message"
+# group lets us guard generation spans with `message.role == 'assistant'`.
 _MESSAGE_CONTENT_REF_RE = re.compile(
     r"(?P<message>[a-zA-Z_][a-zA-Z0-9_]*)"
     r"(?:\s*\.\s*content|\s*\[\s*['\"]content['\"]\s*\])"
 )
-_CONTENT_VARIABLE_RE = re.compile(r"\bcontent\b")
+
+# Used after a template normalizes content into a temporary variable:
+#   {% set content = message.content %}
+#   {{ content }}
+# This must not match dictionary keys or attributes such as:
+#   messages[0]['content']
+#   message.content
+_CONTENT_VARIABLE_RE = re.compile(r"(?<![.\'\"\[])\bcontent\b(?![\'\"\]])")
 _SET_CONTENT_FROM_MESSAGE_RE = re.compile(
     r"(?P<set>\{\%-?\s*set\s+content\s*=\s*)"
     r"(?P<message>[a-zA-Z_][a-zA-Z0-9_]*)"
     r"(?P<content_ref>(?:\s*\.\s*content|\s*\[\s*['\"]content['\"]\s*\]))"
     r"(?P<end>\s*-?\%\})"
 )
+
+# Fallback for templates that loop directly over message.content instead of
+# printing it as one expression:
+#   {% for item in message.content %}...{% endfor %}
 _CONTENT_LOOP_RE = re.compile(
     r"(?P<loop>"
     r"\{\%-?\s*for\s+[a-zA-Z_][a-zA-Z0-9_]*\s+in\s+"
@@ -72,11 +111,11 @@ def inject_tinyllava_anchors(
             "{%- if "
             + message_name
             + ".role == 'assistant' -%}"
-            "{%- generation -%}"
+            "{% generation %}"
             "{{- "
             + content
             + " -}}"
-            "{%- endgeneration -%}"
+            "{% endgeneration %}"
             "{%- else -%}"
             "{{- "
             + content
@@ -170,30 +209,80 @@ def _inject_into_content_print_blocks(
 
         replacements += 1
         message_name = content_match.group("message")
-        patched_expr = expr
-        if add_content_renderer:
-            patched_expr = _MESSAGE_CONTENT_REF_RE.sub(
-                lambda ref: f"render_tinyllava_content({ref.group(0)})",
-                expr,
-            )
-
-        print_block = "{{ " + patched_expr + " }}"
-        if not add_generation:
-            return print_block
-
-        return (
-            "{%- if "
-            + message_name
-            + ".role == 'assistant' -%}"
-            "{%- generation -%}"
-            + print_block
-            + "{%- endgeneration -%}"
-            "{%- else -%}"
-            + print_block
-            + "{%- endif %}"
+        content_ref = content_match.group(0)
+        rendered_content = (
+            f"render_tinyllava_content({content_ref})"
+            if add_content_renderer
+            else content_ref
         )
+        raw_suffix = expr[content_match.end() :].strip()
+        if raw_suffix.startswith("|"):
+            rendered_content += raw_suffix
+            raw_suffix = ""
+        content_print_block = "{{ " + rendered_content + " }}"
+
+        # Split the original print expression into three parts:
+        #
+        #   {{ '<|im_start|>' + message.role + '\n' + message.content + '<|im_end|>' }}
+        #      ^ prefix                                 ^ content       ^ suffix
+        #
+        # We must keep role/header text outside `{% generation %}` while keeping
+        # the assistant reply terminator inside it.  For Qwen-style templates
+        # this means:
+        #   - do not supervise `<|im_start|>assistant\n`
+        #   - do supervise `assistant text + <|im_end|>\n`
+        #
+        # Filters immediately attached to content stay with content:
+        #   {{ ' ' + message["content"]|trim + eos_token }}
+        # becomes conceptually:
+        #   {{ ' ' }}{% generation %}{{ render(... )|trim + eos_token }}{% endgeneration %}
+        #
+        # This also avoids a previous bug where splitting before `|trim`
+        # produced invalid Jinja like `{{ |trim + eos_token }}`.
+        prefix_expr = _strip_concat_prefix(expr[: content_match.start()])
+        suffix_expr = _strip_concat_suffix(raw_suffix)
+        prefix_print_block = _print_expr(prefix_expr)
+        suffix_print_block = _print_expr(suffix_expr)
+
+        if add_generation:
+            content_print_block = (
+                "{%- if "
+                + message_name
+                + ".role == 'assistant' -%}"
+                "{% generation %}"
+                + content_print_block
+                + suffix_print_block
+                + "{% endgeneration %}"
+                "{%- else -%}"
+                + content_print_block
+                + suffix_print_block
+                + "{%- endif %}"
+            )
+            suffix_print_block = ""
+
+        return prefix_print_block + content_print_block + suffix_print_block
 
     return _PRINT_BLOCK_RE.sub(replace, chat_template), replacements
+
+
+def _print_expr(expr: str) -> str:
+    if not expr:
+        return ""
+    return "{{ " + expr + " }}"
+
+
+def _strip_concat_prefix(expr: str) -> str:
+    expr = expr.strip()
+    if expr.endswith("+"):
+        expr = expr[:-1].strip()
+    return expr
+
+
+def _strip_concat_suffix(expr: str) -> str:
+    expr = expr.strip()
+    if expr.startswith("+"):
+        expr = expr[1:].strip()
+    return expr
 
 
 def _inject_content_variable_assignments(chat_template: str) -> tuple[str, int]:
@@ -230,9 +319,9 @@ def _inject_generation_around_content_variables(chat_template: str) -> tuple[str
         print_block = "{{ " + expr + " }}"
         return (
             "{%- if message.role == 'assistant' -%}"
-            "{%- generation -%}"
+            "{% generation %}"
             + print_block
-            + "{%- endgeneration -%}"
+            + "{% endgeneration %}"
             "{%- else -%}"
             + print_block
             + "{%- endif %}"
@@ -253,9 +342,9 @@ def _inject_generation_around_content_loop(chat_template: str) -> tuple[str, int
             "{%- if "
             + message_name
             + ".role == 'assistant' -%}"
-            "{%- generation -%}"
+            "{% generation %}"
             + loop
-            + "{%- endgeneration -%}"
+            + "{% endgeneration %}"
             "{%- else -%}"
             + loop
             + "{%- endif -%}"
