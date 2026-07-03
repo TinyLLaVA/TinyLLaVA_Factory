@@ -1,24 +1,22 @@
+"""Inject TinyLLaVA anchors into common Hugging Face chat templates.
+
+This module intentionally does not parse full Jinja syntax. It preserves the
+surrounding template while replacing content expressions with a TinyLLaVA-aware
+renderer and assistant generation spans.
+
+Typical source shapes:
+  {{ message.content }}
+  {{ message["content"] }}
+  {{ '<|im_start|>' + message.role + '\n' + message.content + '<|im_end|>' }}
+  {{ ' ' + message["content"]|trim + eos_token }}
+  {% set content = message.content %}
+"""
+
 import re
 from dataclasses import dataclass
 from typing import Literal
 
 
-# This module intentionally does not try to parse full Jinja syntax.  It is a
-# small adapter for the shapes most HF text-only chat templates use when they
-# print message content.  The goal is to preserve the surrounding template while
-# replacing only the content expression with a TinyLLaVA-aware renderer and,
-# for assistant messages, a generation span.
-#
-# Typical source shapes we support:
-#   {{ message.content }}
-#   {{ message["content"] }}
-#   {{ '<|im_start|>' + message.role + '\n' + message.content + '<|im_end|>' }}
-#   {{ ' ' + message["content"]|trim + eos_token }}
-#   {% set content = message.content %}
-#
-# A full Jinja AST pass would be more general, but much heavier.  These regexes
-# are deliberately narrow so failure modes become "no replacement + warning"
-# rather than silent rewrites of arbitrary template code.
 _GENERATION_RE = re.compile(r"\{\%-?\s*generation\s*-?\%\}")
 
 # Matches a print block that is exactly a content reference:

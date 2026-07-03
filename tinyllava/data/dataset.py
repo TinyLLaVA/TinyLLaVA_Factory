@@ -1,141 +1,100 @@
+"""Processor transform over Hugging Face datasets for multimodal SFT."""
+
 import copy
-from dataclasses import dataclass
-import json
-from collections.abc import Sequence
-from PIL import Image, ImageFile
-import os
+from collections.abc import Mapping
+from typing import Any, cast
 
-from .text_preprocess import TextPreprocess
-from .image_preprocess import ImagePreprocess
-from ..utils.arguments import DataArguments
-from ..utils.constants import IGNORE_INDEX
-
-
-import transformers
 import torch
+import transformers
+from datasets import Dataset as HFDataset
+from datasets import load_dataset
 from torch.utils.data import Dataset
 
+from .assistant_mask import build_assistant_mask, squeeze_batch
+from .collator import DataCollatorForMultimodalSFT, build_labels
+from .image_payload import add_image_payloads, collect_sample_image_payloads
+from .message_format import normalize_messages
+from ..utils.arguments import DataArguments
 
-ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-
-class LazySupervisedDataset(Dataset):
-    """Dataset for supervised fine-tuning."""
+class ProcessorSFTDataset(Dataset):
+    """Apply multimodal SFT processing lazily over a Hugging Face dataset."""
 
     def __init__(
         self,
-        data_path: str,
-        tokenizer: transformers.PreTrainedTokenizer,
+        dataset: HFDataset,
+        processor: transformers.ProcessorMixin,
         data_args: DataArguments,
     ):
         super().__init__()
-        list_data_dict = json.load(open(data_path))
-
-        self.tokenizer = tokenizer
-        self.list_data_dict = list_data_dict
+        self.dataset = dataset
+        self.processor = processor
         self.data_args = data_args
-        self.text_preprocess = TextPreprocess(tokenizer, data_args.conv_version)
-        self.image_preprocess = ImagePreprocess(data_args.image_processor, data_args)
 
     def __len__(self):
-        return len(self.list_data_dict)
-
-    @property
-    def lengths(self):
-        length_list = []
-        for sample in self.list_data_dict:
-            img_tokens = 128 if "image" in sample else 0
-            length_list.append(
-                sum(len(conv["value"].split()) for conv in sample["conversations"])
-                + img_tokens
-            )
-        return length_list
-
-    @property
-    def modality_lengths(self):
-        length_list = []
-        for sample in self.list_data_dict:
-            cur_len = sum(
-                len(conv["value"].split()) for conv in sample["conversations"]
-            )
-            cur_len = cur_len if "image" in sample else -cur_len
-            length_list.append(cur_len)
-        return length_list
+        return len(self.dataset)
 
     def __getitem__(self, i) -> dict[str, torch.Tensor]:
-        sources = self.list_data_dict[i]
-        data_dict = self.text_preprocess(copy.deepcopy(sources["conversations"]))
-        if "image" in sources:
-            image_file = self.list_data_dict[i]["image"]
-            image_folder = self.data_args.image_folder
-            image = Image.open(os.path.join(image_folder, image_file)).convert("RGB")
-            image = self.image_preprocess(image)
-            data_dict["image"] = image
-        elif self.data_args.is_multimodal:
-            # image does not exist in the data, but the model is multimodal
-            # print(f'{i}:{sources}')
-            crop_size = getattr(
-                self.data_args.image_processor,
-                "crop_size",
-                getattr(self.data_args.image_processor, "size"),
-            )
-            data_dict["image"] = torch.zeros(3, crop_size["height"], crop_size["width"])
+        sample = copy.deepcopy(dict(self.dataset[i]))
+        messages = normalize_messages(sample)
+        add_image_payloads(messages, self._collect_image_payloads(sample))
+
+        encoded = cast(
+            Mapping[str, Any],
+            self.processor.apply_chat_template(
+                messages,
+                add_generation_prompt=False,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt",
+                return_assistant_tokens_mask=True,
+            ),
+        )
+        data_dict = squeeze_batch(encoded)
+        data_dict["assistant_masks"] = build_assistant_mask(
+            processor=self.processor,
+            messages=messages,
+            data_dict=data_dict,
+        )
+        data_dict["labels"] = build_labels(data_dict)
+        data_dict.pop("assistant_masks", None)
         return data_dict
 
-
-@dataclass
-class DataCollatorForSupervisedDataset:
-    """Collate examples for supervised fine-tuning."""
-
-    tokenizer: transformers.PreTrainedTokenizer
-
-    def __call__(self, instances: Sequence[dict]) -> dict[str, torch.Tensor]:
-        input_ids, labels = tuple(
-            [instance[key] for instance in instances] for key in ("input_ids", "labels")
-        )
-        if self.tokenizer.pad_token_id == self.tokenizer.eos_token_id:
-            for input_id in input_ids:
-                input_id[input_id == self.tokenizer.eos_token_id] = -300
-        input_ids = torch.nn.utils.rnn.pad_sequence(
-            input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
-        )
-        labels = torch.nn.utils.rnn.pad_sequence(
-            labels, batch_first=True, padding_value=IGNORE_INDEX
-        )
-        input_ids = input_ids[:, : self.tokenizer.model_max_length]
-        attention_mask = input_ids.ne(self.tokenizer.pad_token_id)
-        labels = labels[:, : self.tokenizer.model_max_length]
-        # FIXME: This is a hack for handling phi and stablelm, as they have the same eos, pad and unk. We want the model
-        # FIXME: to predict the eos in the input ids, but we also use the id of eos to pad sequence, so we use a temp
-        # FIXME: eos id first, and convert them back.
-        if self.tokenizer.pad_token_id == self.tokenizer.eos_token_id:
-            for input_id in input_ids:
-                input_id[input_id == -300] = self.tokenizer.eos_token_id
-
-        batch = dict(
-            input_ids=input_ids,
-            labels=labels,
-            attention_mask=attention_mask,
+    def _collect_image_payloads(self, sample: Mapping[str, Any]):
+        return collect_sample_image_payloads(
+            sample,
+            image_folder=getattr(self.data_args, "image_folder", None),
         )
 
-        if "image" in instances[0]:
-            images = [instance["image"] for instance in instances]
-            if all(x is not None and x.shape == images[0].shape for x in images):
-                batch["images"] = torch.stack(images)
-            else:
-                batch["images"] = images
 
-        return batch
+def load_training_dataset(data_args: DataArguments) -> HFDataset:
+    """Load training rows with Hugging Face datasets."""
+    if data_args.data_path is None:
+        raise ValueError("`data_path` must be provided for supervised fine-tuning.")
+
+    # TODO: expose the general `datasets.load_dataset` contract here instead of
+    # assuming a local legacy JSON file. Future config should support dataset
+    # path/name, split, data_files, streaming, parquet, and Hub datasets.
+    dataset = load_dataset(
+        "json",
+        data_files=data_args.data_path,
+        split="train",
+    )
+    return cast(HFDataset, dataset)
 
 
 def make_supervised_data_module(
-    tokenizer: transformers.PreTrainedTokenizer, data_args
+    processor: transformers.ProcessorMixin,
+    data_args: DataArguments,
 ) -> dict:
     """Make dataset and collator for supervised fine-tuning."""
-    train_dataset = LazySupervisedDataset(
-        tokenizer=tokenizer, data_path=data_args.data_path, data_args=data_args
+    train_dataset = ProcessorSFTDataset(
+        dataset=load_training_dataset(data_args),
+        processor=processor,
+        data_args=data_args,
     )
-    data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
-    return dict(
-        train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator
-    )
+    data_collator = DataCollatorForMultimodalSFT(processor=processor)
+    return dict(train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator)
+
+
+__all__ = ["ProcessorSFTDataset", "load_training_dataset", "make_supervised_data_module"]

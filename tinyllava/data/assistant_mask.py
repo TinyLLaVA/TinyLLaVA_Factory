@@ -1,16 +1,21 @@
+"""Utilities for aligning HF generation masks with expanded multimodal inputs."""
+
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 import torch
 import transformers
+from transformers.utils.chat_template_utils import ChatType
+
+from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
 
 
-IMAGE_MARKER = "<image>"
-
-
+# TODO: Remove this module once HF fixes the assistant mask expansion issue in their chat templates.  See:
+# https://github.com/huggingface/transformers/issues/44521 and
+# https://github.com/huggingface/transformers/pull/44543
 def build_assistant_mask(
     processor: transformers.ProcessorMixin,
-    messages: list[dict[str, Any]],
+    messages: ChatType,
     data_dict: Mapping[str, torch.Tensor],
 ) -> torch.Tensor:
     """Build assistant labels mask after multimodal placeholder expansion.
@@ -21,7 +26,8 @@ def build_assistant_mask(
     misaligned with the final `input_ids`.
 
     This mirrors the upstream fix direction discussed in:
-    https://github.com/huggingface/transformers/issues/44521
+    https://github.com/huggingface/transformers/issues/44521 and
+    https://github.com/huggingface/transformers/pull/44543
 
     Steps:
       1. Recompute the assistant mask with the tokenizer only, before image
@@ -39,14 +45,17 @@ def build_assistant_mask(
             )
         return assistant_masks
 
-    text_only = processor.tokenizer.apply_chat_template(
-        messages,
-        chat_template=processor.chat_template,
-        add_generation_prompt=False,
-        tokenize=True,
-        return_dict=True,
-        return_tensors="pt",
-        return_assistant_tokens_mask=True,
+    text_only = cast(
+        Mapping[str, Any],
+        processor.tokenizer.apply_chat_template(
+            cast(Any, messages),
+            chat_template=processor.chat_template,
+            add_generation_prompt=False,
+            tokenize=True,
+            return_dict=True,
+            return_tensors="pt",
+            return_assistant_tokens_mask=True,
+        ),
     )
     text_only = squeeze_batch(text_only)
     input_ids = text_only["input_ids"]
@@ -57,7 +66,7 @@ def build_assistant_mask(
         )
 
     image_token_id = processor.tokenizer.convert_tokens_to_ids(
-        getattr(processor, "image_token", IMAGE_MARKER)
+        getattr(processor, "image_token", DEFAULT_IMAGE_TOKEN)
     )
     replacement_counts = image_replacement_counts(processor, data_dict)
 
