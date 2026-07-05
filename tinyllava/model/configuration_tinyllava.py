@@ -81,19 +81,12 @@ class TinyLlavaConfig(PreTrainedConfig):
         if isinstance(self.connector_config, dict):
             self.connector_config["model_type"] = self.connector_config.get("model_type", "mlp__tlf_connector")
             self.connector_config = CONNECTOR_CONFIG_MAPPING[self.connector_config["model_type"]](
-                vision_hidden_size=self.vision_config.hidden_size,
-                text_hidden_size=self.text_config.hidden_size,
-                vision_feature_layer=self.vision_feature_layer,
                 **self.connector_config,
             )
         elif self.connector_config is None:
-            from .connector.mlp.configuration_mlp import MLPConnectorConfig
-            self.connector_config = MLPConnectorConfig(
-                vision_hidden_size=self.vision_config.hidden_size,
-                text_hidden_size=self.text_config.hidden_size,
-                vision_feature_layer=self.vision_feature_layer,
+            self.connector_config = CONNECTOR_CONFIG_MAPPING["mlp__tlf_connector"](
                 bias=self.multimodal_projector_bias,
-                act=self.projector_hidden_act
+                act=self.projector_hidden_act,
             )
 
         super().__post_init__(**kwargs)

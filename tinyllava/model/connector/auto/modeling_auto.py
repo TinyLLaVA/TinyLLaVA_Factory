@@ -18,13 +18,15 @@ class _LazyAutoConnectorModelMapping(_LazyAutoMapping):
     """
 
     def _load_attr_from_module(self, model_type, attr):
-        if model_type.endswith("__tlf_connector"):
-            module_name = model_type.replace("__tlf_connector", "")
-            if module_name not in self._modules:
-                self._modules[module_name] = importlib.import_module(f".{module_name}", "tinyllava.model.connector")
-            return getattr(self._modules[module_name], attr)
+        if not model_type.endswith("__tlf_connector"):
+            raise KeyError(model_type)
 
-        return super()._load_attr_from_module(model_type, attr)
+        module_name = model_type.removesuffix("__tlf_connector")
+        if module_name not in self._modules:
+            self._modules[module_name] = importlib.import_module(
+                f".{module_name}", "tinyllava.model.connector"
+            )
+        return getattr(self._modules[module_name], attr)
 
 
 CONNECTOR_MODEL_MAPPING = _LazyAutoConnectorModelMapping(CONNECTOR_CONFIG_MAPPING_NAMES, CONNECTOR_MODEL_MAPPING_NAMES)

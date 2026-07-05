@@ -85,7 +85,7 @@ class TinyLlavaPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     input_modalities = ["image", "text"]
     supports_gradient_checkpointing = True
-    _skip_keys_device_placement = "past_key_values"
+    _skip_keys_device_placement = ["past_key_values"]
 
     _supports_flash_attn = True
     _supports_sdpa = True
@@ -95,6 +95,15 @@ class TinyLlavaPreTrainedModel(PreTrainedModel):
     _supports_attention_backend = True
 
 
+def build_connector(config: TinyLlavaConfig) -> PreTrainedModel:
+    return AutoConnectorModel.from_config(
+        config.connector_config,
+        vision_hidden_size=config.vision_config.hidden_size,
+        text_hidden_size=config.text_config.hidden_size,
+        vision_feature_layer=config.vision_feature_layer,
+    )
+
+
 class TinyLlavaModel(TinyLlavaPreTrainedModel):
     def __init__(self, config: TinyLlavaConfig):
         super().__init__(config)
@@ -102,7 +111,7 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
         self.language_model: PreTrainedModel = AutoLanguageModel.from_config(config.text_config)
         self.vision_tower: PreTrainedModel = AutoVisionTowerModel.from_config(config.vision_config)
 
-        self.multi_modal_projector: PreTrainedModel = AutoConnectorModel.from_config(config.connector_config)
+        self.multi_modal_projector: PreTrainedModel = build_connector(config)
 
         self.post_init()
 
@@ -380,4 +389,9 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         return model_inputs
 
 
-__all__ = ["TinyLlavaForConditionalGeneration", "TinyLlavaPreTrainedModel", "TinyLlavaModel"]
+__all__ = [
+    "TinyLlavaForConditionalGeneration",
+    "TinyLlavaPreTrainedModel",
+    "TinyLlavaModel",
+    "build_connector",
+]

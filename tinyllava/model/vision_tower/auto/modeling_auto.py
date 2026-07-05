@@ -21,7 +21,7 @@ class _LazyAutoVisionTowerModelMapping(_LazyAutoMapping):
 
     def _load_attr_from_module(self, model_type, attr):
         if model_type.endswith("__tlf_vision_tower"):
-            module_name = model_type.replace("__tlf_vision_tower", "")
+            module_name = model_type.removesuffix("__tlf_vision_tower")
             if module_name not in self._modules:
                 self._modules[module_name] = importlib.import_module(f".{module_name}", "tinyllava.model.vision_tower")
             return getattr(self._modules[module_name], attr)

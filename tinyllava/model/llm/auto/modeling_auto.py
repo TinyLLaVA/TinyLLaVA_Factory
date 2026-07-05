@@ -21,7 +21,7 @@ class _LazyAutoLanguageModelMapping(_LazyAutoMapping):
 
     def _load_attr_from_module(self, model_type, attr):
         if model_type.endswith("__tlf_language_model"):
-            module_name = model_type.replace("__tlf_language_model", "")
+            module_name = model_type.removesuffix("__tlf_language_model")
             if module_name not in self._modules:
                 self._modules[module_name] = importlib.import_module(f".{module_name}", "tinyllava.model.llm")
             return getattr(self._modules[module_name], attr)

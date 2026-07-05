@@ -6,10 +6,8 @@ from transformers import PreTrainedConfig
 logger = logging.getLogger(__name__)
 
 
-class _BaseConnectorConfig(PreTrainedConfig):
-    vision_hidden_size: int = 1024
-    text_hidden_size: int = 4096
-    vision_feature_layer: int | list[int] = -2
+class BaseConnectorConfig(PreTrainedConfig):
+    """Base class for connector configs."""
 
 
-__all__ = ["_BaseConnectorConfig"]
+__all__ = ["BaseConnectorConfig"]
