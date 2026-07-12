@@ -1,61 +1,173 @@
+# Copyright 2025 Optuna, HuggingFace Inc., the LlamaFactory team and the TinyLLaVA team.
+#
+# This code is inspired by the HuggingFace's transformers library.
+# https://github.com/huggingface/transformers/blob/v4.40.0/src/transformers/utils/logging.py
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 import os
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from typing import cast
 
-import torch.distributed as dist
-
-
-root_logger = None
-
-
-def print_rank0(*args):
-    local_rank = dist.get_rank()
-    if local_rank == 0:
-        print(*args)
+from .constants import RUNNING_LOG
+from .typing import Logger
 
 
-def logger_setting(save_dir=None):
-    global root_logger
-    if root_logger is not None:
-        return root_logger
-    else:
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
-        ch = logging.StreamHandler(stream=sys.stdout)
-        ch.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(asctime)s | %(levelname)s: %(message)s")
-        ch.setFormatter(formatter)
-        root_logger.addHandler(ch)
-
-        if save_dir:
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir, exist_ok=True)
-            save_file = os.path.join(save_dir, "log.txt")
-            if not os.path.exists(save_file):
-                os.system(f"touch {save_file}")
-            fh = logging.FileHandler(save_file, mode="a")
-            fh.setLevel(logging.INFO)
-            fh.setFormatter(formatter)
-            root_logger.addHandler(fh)
-            return root_logger
+_thread_lock = threading.RLock()
+_default_handler: logging.Handler | None = None
+_default_log_level = logging.INFO
 
 
-def log(*args):
-    global root_logger
-    local_rank = dist.get_rank()
-    if local_rank == 0:
-        root_logger.info(*args)
+def info_rank0(self: logging.Logger, *args, **kwargs) -> None:
+    if int(os.getenv("LOCAL_RANK", "0")) == 0:
+        self.info(*args, **kwargs)
 
 
-def log_trainable_params(model):
+def debug_rank0(self: logging.Logger, *args, **kwargs) -> None:
+    if int(os.getenv("LOCAL_RANK", "0")) == 0:
+        self.debug(*args, **kwargs)
+
+
+def warning_rank0(self: logging.Logger, *args, **kwargs) -> None:
+    if int(os.getenv("LOCAL_RANK", "0")) == 0:
+        self.warning(*args, **kwargs)
+
+
+@lru_cache(None)
+def warning_rank0_once(self: logging.Logger, *args, **kwargs) -> None:
+    if int(os.getenv("LOCAL_RANK", "0")) == 0:
+        self.warning(*args, **kwargs)
+
+
+setattr(logging.Logger, "info_rank0", info_rank0)
+setattr(logging.Logger, "debug_rank0", debug_rank0)
+setattr(logging.Logger, "warning_rank0", warning_rank0)
+setattr(logging.Logger, "warning_rank0_once", warning_rank0_once)
+
+
+class LoggerHandler(logging.Handler):
+    r"""Redirect the logging output to the logging file for TinyLLaVA Board."""
+
+    def __init__(self, output_dir: str) -> None:
+        super().__init__()
+        self._formatter = logging.Formatter(
+            fmt="[%(levelname)s|%(asctime)s] %(filename)s:%(lineno)s >> %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        self.setLevel(logging.INFO)
+        self.thread_pool = ThreadPoolExecutor(max_workers=1)
+        os.makedirs(output_dir, exist_ok=True)
+        self.running_log = os.path.join(output_dir, RUNNING_LOG)
+        try:
+            os.remove(self.running_log)
+        except OSError:
+            pass
+
+    def _write_log(self, log_entry: str) -> None:
+        with open(self.running_log, "a", encoding="utf-8") as f:
+            f.write(log_entry + "\n")
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if record.name == "httpx":
+            return
+
+        log_entry = self._formatter.format(record)
+        self.thread_pool.submit(self._write_log, log_entry)
+
+    def close(self) -> None:
+        self.thread_pool.shutdown(wait=True)
+        return super().close()
+
+
+def _get_default_logging_level() -> int:
+    r"""Return the default logging level."""
+    env_level_str = os.getenv("TINYLLAVA_VERBOSITY", None)
+    if env_level_str:
+        level = getattr(logging, env_level_str.upper(), None)
+        if isinstance(level, int):
+            return level
+
+        raise ValueError(f"Unknown logging level: {env_level_str}.")
+
+    return _default_log_level
+
+
+def _get_library_name() -> str:
+    return __name__.split(".")[0]
+
+
+def _get_library_root_logger() -> Logger:
+    return cast(Logger, logging.getLogger(_get_library_name()))
+
+
+def _configure_library_root_logger() -> None:
+    r"""Configure root logger using a stdout stream handler with an explicit format."""
+    global _default_handler
+
+    with _thread_lock:
+        if _default_handler:  # already configured
+            return
+
+        formatter = logging.Formatter(
+            fmt="[%(levelname)s|%(asctime)s] %(name)s:%(lineno)s >> %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        _default_handler = logging.StreamHandler(sys.stdout)
+        _default_handler.setFormatter(formatter)
+        library_root_logger = _get_library_root_logger()
+        library_root_logger.addHandler(_default_handler)
+        library_root_logger.setLevel(_get_default_logging_level())
+        library_root_logger.propagate = False
+
+
+def get_logger(name: str | None = None) -> Logger:
+    r"""Return a logger with the specified name. It it not supposed to be accessed externally."""
+    if name is None:
+        name = _get_library_name()
+
+    _configure_library_root_logger()
+    return cast(Logger, logging.getLogger(name))
+
+
+def log(message: str) -> None:
+    get_logger().info_rank0(message)
+
+
+def logger_setting(save_dir: str | None = None) -> Logger:
+    logger = get_logger()
+    if save_dir is not None and not any(isinstance(handler, LoggerHandler) for handler in logger.handlers):
+        add_handler(LoggerHandler(save_dir))
+    return logger
+
+
+def log_trainable_params(model) -> None:
     total_params = sum(p.numel() for p in model.parameters())
-    total_trainable_params = sum(
-        p.numel() for p in model.parameters() if p.requires_grad
-    )
-    log(
-        f"Total Parameters: {total_params}, Total Trainable Parameters: {total_trainable_params}"
-    )
-    log("Trainable Parameters:")
-    for name, param in model.named_parameters():
-        if param.requires_grad:
-            print_rank0(f"{name}: {param.numel()} parameters")
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    ratio = 100 * trainable_params / total_params if total_params else 0
+    log(f"Trainable params: {trainable_params} || all params: {total_params} || trainable%: {ratio:.4f}")
+
+
+def add_handler(handler: logging.Handler) -> None:
+    r"""Add a handler to the root logger."""
+    _configure_library_root_logger()
+    _get_library_root_logger().addHandler(handler)
+
+
+def remove_handler(handler: logging.Handler) -> None:
+    r"""Remove a handler to the root logger."""
+    _configure_library_root_logger()
+    _get_library_root_logger().removeHandler(handler)

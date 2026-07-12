@@ -8,6 +8,7 @@ from transformers.utils.import_utils import (
 
 if TYPE_CHECKING:
     from .auto import *
+    from .registry import *
 else:
     import sys
 

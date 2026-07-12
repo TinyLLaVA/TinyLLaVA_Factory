@@ -1,0 +1,37 @@
+model:
+  model_name_or_path: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+  tokenizer_name_or_path: null
+  vision_model_name_or_path: google/siglip-so400m-patch14-384
+  connector_config: configs/connectors/mlp2x_gelu.yaml
+  vision_feature_layer: -2
+  model_max_length: 2048
+  tokenizer_use_fast: false
+  attn_implementation: null
+
+data:
+  data_path: ${oc.env:TINYLLAVA_PRETRAIN_DATA,data/pretrain.json}
+  image_folder: ${oc.env:TINYLLAVA_PRETRAIN_IMAGE_FOLDER,data}
+
+training:
+  output_dir: output/tinyllava-tinyllama-pretrain
+  run_name: tinyllava-tinyllama-pretrain
+  precision: auto
+  training_strategy: common
+  tune_type_llm: frozen
+  tune_type_vision_tower: frozen
+  tune_type_connector: full
+  per_device_train_batch_size: 32
+  gradient_accumulation_steps: 2
+  learning_rate: 1e-3
+  num_train_epochs: 1
+  save_strategy: steps
+  save_steps: 24000
+  save_total_limit: 1
+  eval_strategy: "no"
+  remove_unused_columns: false
+  gradient_checkpointing: true
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  logging_steps: 1
+  dataloader_num_workers: 8
+  report_to: tensorboard

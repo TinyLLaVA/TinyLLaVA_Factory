@@ -1,0 +1,4 @@
+model_type: mlp__tlf_connector
+depth: 2
+act: gelu
+bias: true
