@@ -1,4 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+"""VQA answer normalization and TextVQA soft accuracy helpers."""
+
 import re
 
 from tqdm import tqdm
@@ -255,80 +257,3 @@ class TextVQAAccuracyEvaluator:
 
         accuracy = sum(pred_scores) / len(pred_scores)
         return accuracy
-
-
-class STVQAAccuracyEvaluator:
-    def __init__(self):
-        self.answer_processor = EvalAIAnswerProcessor()
-
-    def eval_pred_list(self, pred_list):
-        pred_scores = []
-        for entry in pred_list:
-            pred_answer = self.answer_processor(entry["pred_answer"])
-            gts = [self.answer_processor(a) for a in entry["gt_answers"]]
-            score = 1.0 if pred_answer in gts else 0.0
-            pred_scores.append(score)
-
-        accuracy = sum(pred_scores) / len(pred_scores)
-        return accuracy
-
-
-class STVQAANLSEvaluator:
-    def __init__(self):
-        import editdistance  # install with `pip install editdistance`
-
-        self.get_edit_distance = editdistance.eval
-
-    def get_anls(self, s1, s2):
-        s1 = s1.lower().strip()
-        s2 = s2.lower().strip()
-        iou = 1 - self.get_edit_distance(s1, s2) / max(len(s1), len(s2))
-        anls = iou if iou >= 0.5 else 0.0
-        return anls
-
-    def eval_pred_list(self, pred_list):
-        pred_scores = []
-        for entry in pred_list:
-            anls = max(
-                self.get_anls(entry["pred_answer"], gt) for gt in entry["gt_answers"]
-            )
-            pred_scores.append(anls)
-
-        accuracy = sum(pred_scores) / len(pred_scores)
-        return accuracy
-
-
-class TextCapsBleu4Evaluator:
-    def __init__(self):
-        # The following script requires Java 1.8.0 and pycocotools installed.
-        # The pycocoevalcap can be installed with pip as
-        # pip install git+https://github.com/ronghanghu/coco-caption.git@python23
-        # Original pycocoevalcap code is at https://github.com/tylin/coco-caption
-        # but has no python3 support yet.
-        try:
-            from pycocoevalcap.bleu.bleu import Bleu
-            from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-        except ModuleNotFoundError:
-            print(
-                "Please install pycocoevalcap module using "
-                "pip install git+https://github.com/ronghanghu/coco-caption.git@python23"  # noqa
-            )
-            raise
-
-        self.tokenizer = PTBTokenizer()
-        self.scorer = Bleu(4)
-
-    def eval_pred_list(self, pred_list):
-        # Create reference and hypotheses captions.
-        gts = {}
-        res = {}
-        for idx, entry in enumerate(pred_list):
-            gts[idx] = [{"caption": a} for a in entry["gt_answers"]]
-            res[idx] = [{"caption": entry["pred_answer"]}]
-
-        gts = self.tokenizer.tokenize(gts)
-        res = self.tokenizer.tokenize(res)
-        score, _ = self.scorer.compute_score(gts, res)
-
-        bleu4 = score[3]  # score is (Bleu-1, Bleu-2, Bleu-3, Bleu-4)
-        return bleu4
