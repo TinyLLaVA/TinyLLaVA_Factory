@@ -1,15 +1,5 @@
-from typing import TYPE_CHECKING
-
-from transformers.utils.import_utils import (
-    _LazyModule,
-    define_import_structure,
-)
+from .auto import AutoProcessor
+from .creation import create_tinyllava_processor, ensure_image_token
 
 
-if TYPE_CHECKING:
-    from .auto import *
-else:
-    import sys
-
-    _file = globals()["__file__"]
-    sys.modules[__name__] = _LazyModule(__name__, _file, define_import_structure(_file), module_spec=__spec__)
+__all__ = ["AutoProcessor", "create_tinyllava_processor", "ensure_image_token"]

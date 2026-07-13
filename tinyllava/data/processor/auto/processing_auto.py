@@ -7,7 +7,10 @@ from transformers.models.auto.processing_auto import (
     PROCESSOR_MAPPING_NAMES as TRANSFORMERS_PROCESSOR_MAPPING_NAMES,
     AutoProcessor,
 )
+from transformers import LlavaProcessor
 from transformers.models.auto import processing_auto as transformers_processing_auto
+
+from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 
 from .auto_mappings import CUSTOM_PROCESSOR_MAPPING_NAMES
 
@@ -24,6 +27,8 @@ def _load_custom_processor_attr_from_module(self, model_type, attr):
 
 def _register_custom_processor_mappings() -> None:
     """Inject TinyLLaVA processor names into Transformers' global auto mapping."""
+    AutoProcessor.register(TinyLlavaConfig, LlavaProcessor, exist_ok=True)
+
     TRANSFORMERS_PROCESSOR_MAPPING_NAMES.update(CUSTOM_PROCESSOR_MAPPING_NAMES)
 
     processor_mapping = transformers_processing_auto.PROCESSOR_MAPPING

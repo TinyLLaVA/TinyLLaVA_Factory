@@ -12,7 +12,11 @@ from torch.utils.data import Dataset
 
 from .assistant_mask import build_assistant_mask, squeeze_batch
 from .collator import DataCollatorForMultimodalSFT, build_labels
-from .image_payload import add_image_payloads, collect_sample_image_payloads
+from .image_payload import (
+    add_image_payloads,
+    collect_sample_image_payloads,
+    resolve_message_image_payloads,
+)
 from .message_format import normalize_messages
 from ..utils.arguments import DataArguments
 
@@ -37,6 +41,10 @@ class ProcessorSFTDataset(Dataset):
     def __getitem__(self, i) -> dict[str, torch.Tensor]:
         sample = copy.deepcopy(dict(self.dataset[i]))
         messages = normalize_messages(sample)
+        resolve_message_image_payloads(
+            messages,
+            image_folder=getattr(self.data_args, "image_folder", None),
+        )
         add_image_payloads(messages, self._collect_image_payloads(sample))
 
         encoded = cast(

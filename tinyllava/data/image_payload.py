@@ -7,8 +7,9 @@ the HF processor.
 """
 
 import os
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any
+from urllib.parse import urlparse
 
 from transformers.utils.chat_template_utils import ChatType
 
@@ -30,7 +31,7 @@ def resolve_image_payload(image: Any, image_folder: str | None = None) -> Any:
         return image
 
     image_path = os.fspath(image)
-    if os.path.isabs(image_path) or image_folder is None:
+    if os.path.isabs(image_path) or _is_remote_url(image_path) or image_folder is None:
         return image_path
     return os.path.join(image_folder, image_path)
 
@@ -52,4 +53,30 @@ def add_image_payloads(messages: ChatType, images: Sequence[Any]) -> None:
                     break
 
 
-__all__ = ["add_image_payloads", "collect_sample_image_payloads", "resolve_image_payload"]
+def resolve_message_image_payloads(
+    messages: ChatType, image_folder: str | None = None
+) -> None:
+    """Resolve existing path-like payloads inside HF image content blocks."""
+    for message in messages:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for item in content:
+            if not isinstance(item, MutableMapping) or item.get("type") != "image":
+                continue
+            for key in ("image", "path"):
+                if key in item:
+                    item[key] = resolve_image_payload(item[key], image_folder=image_folder)
+
+
+def _is_remote_url(path: str) -> bool:
+    parsed = urlparse(path)
+    return parsed.scheme in {"http", "https"}
+
+
+__all__ = [
+    "add_image_payloads",
+    "collect_sample_image_payloads",
+    "resolve_image_payload",
+    "resolve_message_image_payloads",
+]
