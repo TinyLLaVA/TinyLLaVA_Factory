@@ -1,0 +1,22 @@
+model:
+  model_path: ${oc.env:MODEL_PATH,output/tinyllava}
+  model_id: ${oc.env:MODEL_NAME,null}
+
+data:
+  adapter: vqa
+  question_file: ${oc.env:EVAL_DIR,./eval}/vqav2/llava_vqav2_mscoco_test-dev2015.jsonl
+  image_folder: ${oc.env:EVAL_DIR,./eval}/vqav2/test2015
+
+generation:
+  temperature: 0.0
+  top_p: null
+  num_beams: 1
+  max_new_tokens: 128
+
+runtime:
+  device: null
+  num_chunks: 1
+  chunk_idx: 0
+
+output:
+  answers_file: ${oc.env:EVAL_DIR,./eval}/vqav2/answers/llava_vqav2_mscoco_test-dev2015/${oc.env:MODEL_NAME,model}/prediction.jsonl

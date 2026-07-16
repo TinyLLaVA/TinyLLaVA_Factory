@@ -1,0 +1,22 @@
+model:
+  model_path: ${oc.env:MODEL_PATH,output/tinyllava}
+  model_id: ${oc.env:MODEL_NAME,null}
+
+data:
+  adapter: vqa
+  question_file: ${oc.env:EVAL_DIR,./eval}/textvqa/llava_textvqa_val_v051_ocr.jsonl
+  image_folder: ${oc.env:EVAL_DIR,./eval}/textvqa/train_images
+
+generation:
+  temperature: 0.0
+  top_p: null
+  num_beams: 1
+  max_new_tokens: 128
+
+runtime:
+  device: null
+  num_chunks: 1
+  chunk_idx: 0
+
+output:
+  answers_file: ${oc.env:EVAL_DIR,./eval}/textvqa/answers/${oc.env:MODEL_NAME,model}.jsonl

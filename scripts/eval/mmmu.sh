@@ -2,19 +2,16 @@
 set -euo pipefail
 
 : "${MODEL_PATH:?Set MODEL_PATH to a TinyLLaVA checkpoint path or HF repo id.}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MODEL_NAME="${MODEL_NAME:-$(basename "$MODEL_PATH")}"
-EVAL_DIR="${EVAL_DIR:-./eval}"
+EVAL_DIR="${EVAL_DIR:-$REPO_ROOT/eval}"
+CONFIG_PATH="${EVAL_CONFIG:-$REPO_ROOT/configs/eval/mmmu.yaml}"
+export MODEL_PATH MODEL_NAME EVAL_DIR
 
 python -m tinyllava.eval.batch_generation \
-    --adapter mmmu \
-    --model-path "$MODEL_PATH" \
-    --question-file "$EVAL_DIR/MMMU/anns_for_eval.json" \
-    --image-folder "$EVAL_DIR/MMMU/all_images" \
-    --answers-file "$EVAL_DIR/MMMU/answers/$MODEL_NAME.jsonl" \
-    --max-new-tokens 1024 \
-    --temperature 0
+    --config "$CONFIG_PATH"
 
-python -m tinyllava.eval.dataset_adapters.auto.evaluation_auto mmmu \
+python -m tinyllava.eval.tasks.auto.evaluation_auto mmmu \
     --prediction-file "$EVAL_DIR/MMMU/answers/$MODEL_NAME.jsonl" \
     --output-file "$EVAL_DIR/MMMU/answers/${MODEL_NAME}_output.json"
 

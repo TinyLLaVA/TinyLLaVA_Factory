@@ -1,0 +1,22 @@
+model:
+  model_path: ${oc.env:MODEL_PATH,output/tinyllava}
+  model_id: ${oc.env:MODEL_NAME,null}
+
+data:
+  adapter: mmmu
+  question_file: ${oc.env:EVAL_DIR,./eval}/MMMU/anns_for_eval.json
+  image_folder: ${oc.env:EVAL_DIR,./eval}/MMMU/all_images
+
+generation:
+  temperature: 0.0
+  top_p: null
+  num_beams: 1
+  max_new_tokens: 1024
+
+runtime:
+  device: null
+  num_chunks: 1
+  chunk_idx: 0
+
+output:
+  answers_file: ${oc.env:EVAL_DIR,./eval}/MMMU/answers/${oc.env:MODEL_NAME,model}.jsonl

@@ -128,7 +128,31 @@ Global Batch Size = num of GPUs * `per_device_train_batch_size` * `gradient_accu
 
 #### 3. Evaluation
 
-Please refer to the [Evaluation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html) section in our [Documenation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html).
+Evaluation generation is configured with the YAML files in `configs/eval/`.
+Set the shared paths through environment variables and select a benchmark config:
+
+```bash
+export MODEL_PATH="$PWD/output/tinyllava-qwen2-instruct-finetune"
+export MODEL_NAME="tinyllava-qwen2-instruct-finetune"
+export EVAL_DIR="/path/to/llava_data/eval"
+
+python -m tinyllava.eval.batch_generation \
+    --config configs/eval/mmmu.yaml
+```
+
+YAML values can be changed for one run with OmegaConf dotlist overrides:
+
+```bash
+python -m tinyllava.eval.batch_generation \
+    --config configs/eval/mmmu.yaml \
+    generation.max_new_tokens=512 runtime.device=cuda:0
+```
+
+The scripts in `scripts/eval/` use the same YAML configs and also run each
+benchmark's conversion or scoring step. Set `EVAL_CONFIG` to use a custom
+config with one of those scripts. Please refer to the
+[Evaluation documentation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html)
+for dataset preparation.
 
 ## Model Zoo
 

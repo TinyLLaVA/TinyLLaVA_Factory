@@ -1,0 +1,23 @@
+model:
+  model_path: ${oc.env:MODEL_PATH,output/tinyllava}
+  model_id: ${oc.env:MODEL_NAME,null}
+
+data:
+  adapter: scienceqa
+  question_file: ${oc.env:EVAL_DIR,./eval}/scienceqa/llava_test_CQM-A.json
+  image_folder: ${oc.env:EVAL_DIR,./eval}/scienceqa/images/test
+  single_pred_prompt: true
+
+generation:
+  temperature: 0.0
+  top_p: null
+  num_beams: 1
+  max_new_tokens: 1024
+
+runtime:
+  device: null
+  num_chunks: 1
+  chunk_idx: 0
+
+output:
+  answers_file: ${oc.env:EVAL_DIR,./eval}/scienceqa/answers/${oc.env:MODEL_NAME,model}.jsonl
