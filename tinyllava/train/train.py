@@ -5,12 +5,11 @@ from transformers import Trainer
 from tinyllava.data.dataset import make_supervised_data_module
 from tinyllava.data.processor.creation import create_tinyllava_processor
 from tinyllava.utils.model_loading import (
-    load_model_components,
     load_model_config,
+    load_training_model,
     load_tokenizer,
     resolve_component_paths,
 )
-from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
 from tinyllava.model.vision_tower.registry import load_image_processor
 from tinyllava.train.strategy import get_training_strategy
 from tinyllava.utils.config import parse_train_config
@@ -28,19 +27,14 @@ def train():
     training_strategy = get_training_strategy(training_args.training_strategy)(
         training_args
     )
-    model = TinyLlavaForConditionalGeneration(model_config)
-    tokenizer = load_tokenizer(model_args, paths)
-    load_model_components(
-        model,
+    language_model_loading_kwargs = training_strategy.language_model_loading_kwargs()
+    model = load_training_model(
         model_args,
         paths,
-        language_model_loading_kwargs=training_strategy.language_model_loading_kwargs(),
+        model_config,
+        language_model_loading_kwargs=language_model_loading_kwargs,
     )
-
-    model = training_strategy(model)
-    original_use_cache = getattr(model.config, "use_cache", None)
-    if training_args.gradient_checkpointing and original_use_cache is not None:
-        model.config.use_cache = False
+    tokenizer = load_tokenizer(model_args, paths)
     model.tokenizer = tokenizer
 
     image_processor = load_image_processor(
@@ -52,6 +46,14 @@ def train():
         image_processor=image_processor,
         model=model,
     )
+
+    # Processor creation can resize embeddings and the output head. Apply the
+    # tuning policy after all model mutations are done.
+    model = training_strategy(model)
+    original_use_cache = getattr(model.config, "use_cache", None)
+    if training_args.gradient_checkpointing and original_use_cache is not None:
+        model.config.use_cache = False
+
     data_module = make_supervised_data_module(processor=processor, data_args=data_args)
 
     log_trainable_params(model)

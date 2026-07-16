@@ -1,9 +1,10 @@
 model:
-  model_name_or_path: Qwen/Qwen2-0.5B-Instruct
+  language_model_name_or_path: Qwen/Qwen2-0.5B-Instruct
   tokenizer_name_or_path: null
   vision_model_name_or_path: google/siglip-so400m-patch14-384
   connector_config: configs/connectors/mlp2x_gelu.yaml
   vision_feature_layer: -2
+  vision_feature_select_strategy: full
   model_max_length: 2048
   tokenizer_use_fast: false
   attn_implementation: null

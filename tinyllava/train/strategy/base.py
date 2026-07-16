@@ -46,8 +46,10 @@ class BaseTrainingStrategy:
         )
         if tune_type == "full":
             model.model.language_model.requires_grad_(True)
+            model.lm_head.requires_grad_(True)
         elif tune_type == "frozen":
             model.model.language_model.requires_grad_(False)
+            model.lm_head.requires_grad_(False)
         return model
 
     def _set_vision_tower_tuning(

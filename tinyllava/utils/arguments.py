@@ -8,13 +8,24 @@ import transformers
 class ModelArguments:
     """Component paths and model assembly options."""
 
-    model_name_or_path: str | None = field(
+    pretrained_model_name_or_path: str | None = field(
+        default=None,
+        metadata={
+            "help": (
+                "Complete TinyLLaVA checkpoint path. When set, load the composite "
+                "model instead of assembling language and vision components."
+            )
+        },
+    )
+    language_model_name_or_path: str | None = field(
         default="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         metadata={"help": "Language model name or path."},
     )
     tokenizer_name_or_path: str | None = field(
         default=None,
-        metadata={"help": "Tokenizer name or path. Defaults to model_name_or_path."},
+        metadata={
+            "help": "Tokenizer name or path. Defaults to language_model_name_or_path."
+        },
     )
     vision_model_name_or_path: str | None = field(
         default=None,

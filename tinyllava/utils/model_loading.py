@@ -9,12 +9,7 @@ from transformers import AutoConfig, AutoTokenizer
 
 from tinyllava.data.processor.creation import create_tinyllava_processor
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
-from tinyllava.model.llm import AutoLanguageModel
-from tinyllava.model.modeling_tinyllava import (
-    TinyLlavaForConditionalGeneration,
-    build_connector,
-)
-from tinyllava.model.vision_tower import AutoVisionTowerModel
+from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
 from tinyllava.model.vision_tower.registry import load_image_processor
 from tinyllava.utils.arguments import ModelArguments
 from tinyllava.utils.config import load_connector_config
@@ -28,6 +23,7 @@ logger = get_logger(__name__)
 class ComponentPaths:
     """Resolved component paths for TinyLLaVA loading."""
 
+    pretrained_model: str | None
     language_model: str
     tokenizer: str
     vision_model: str
@@ -55,9 +51,45 @@ class TinyLlavaModelBundle:
 
 
 def resolve_component_paths(model_args: ModelArguments) -> ComponentPaths:
-    """Resolve the base components used to assemble a fresh TinyLLaVA model."""
+    """Resolve either a complete checkpoint or fresh-model components."""
+    if model_args.pretrained_model_name_or_path:
+        checkpoint_path = model_args.pretrained_model_name_or_path
+        tokenizer_path = model_args.tokenizer_name_or_path or checkpoint_path
+        paths = ComponentPaths(
+            pretrained_model=checkpoint_path,
+            language_model=checkpoint_path,
+            tokenizer=tokenizer_path,
+            vision_model=checkpoint_path,
+            image_processor=checkpoint_path,
+        )
+        _log_component_paths(
+            [
+                ComponentPathSource(
+                    "model",
+                    checkpoint_path,
+                    "model_args.pretrained_model_name_or_path",
+                ),
+                ComponentPathSource(
+                    "tokenizer",
+                    tokenizer_path,
+                    (
+                        "model_args.tokenizer_name_or_path"
+                        if model_args.tokenizer_name_or_path
+                        else "TinyLLaVA checkpoint"
+                    ),
+                ),
+                ComponentPathSource(
+                    "image_processor",
+                    checkpoint_path,
+                    "TinyLLaVA checkpoint",
+                ),
+            ]
+        )
+        return paths
+
     language_model_path = _required_path(
-        model_args.model_name_or_path, "model_name_or_path"
+        model_args.language_model_name_or_path,
+        "language_model_name_or_path",
     )
     vision_model_path = _required_path(
         model_args.vision_model_name_or_path, "vision_model_name_or_path"
@@ -66,10 +98,11 @@ def resolve_component_paths(model_args: ModelArguments) -> ComponentPaths:
     tokenizer_source = (
         "model_args.tokenizer_name_or_path"
         if model_args.tokenizer_name_or_path
-        else "fallback to model_args.model_name_or_path"
+        else "fallback to model_args.language_model_name_or_path"
     )
 
     paths = ComponentPaths(
+        pretrained_model=None,
         language_model=language_model_path,
         tokenizer=tokenizer_path,
         vision_model=vision_model_path,
@@ -80,7 +113,7 @@ def resolve_component_paths(model_args: ModelArguments) -> ComponentPaths:
             ComponentPathSource(
                 "language_model",
                 paths.language_model,
-                "model_args.model_name_or_path",
+                "model_args.language_model_name_or_path",
             ),
             ComponentPathSource("tokenizer", paths.tokenizer, tokenizer_source),
             ComponentPathSource(
@@ -108,6 +141,12 @@ def load_model_config(
     paths: ComponentPaths,
 ) -> TinyLlavaConfig:
     """Load TinyLLaVA composite config from resolved component paths."""
+    if paths.pretrained_model is not None:
+        return TinyLlavaConfig.from_pretrained(
+            paths.pretrained_model,
+            cache_dir=model_args.cache_dir,
+        )
+
     text_config = AutoConfig.from_pretrained(
         paths.language_model,
         cache_dir=model_args.cache_dir,
@@ -116,6 +155,7 @@ def load_model_config(
         paths.vision_model,
         cache_dir=model_args.cache_dir,
     )
+    vision_config = getattr(vision_config, "vision_config", vision_config)
     return TinyLlavaConfig(
         text_config=text_config,
         vision_config=vision_config,
@@ -139,26 +179,37 @@ def load_tokenizer(
     )
 
 
-def load_model_components(
-    model: TinyLlavaForConditionalGeneration,
+def load_training_model(
     model_args: ModelArguments,
     paths: ComponentPaths,
+    model_config: TinyLlavaConfig,
+    *,
     language_model_loading_kwargs: dict[str, Any] | None = None,
-) -> None:
-    """Load language, vision, and connector weights into a TinyLLaVA shell."""
-    language_model_loading_kwargs = language_model_loading_kwargs or {}
-    model.model.language_model = AutoLanguageModel.from_pretrained(
-        paths.language_model,
-        cache_dir=model_args.cache_dir,
-        attn_implementation=model_args.attn_implementation,
-        **language_model_loading_kwargs,
+) -> TinyLlavaForConditionalGeneration:
+    """Load a complete checkpoint or assemble pretrained base components."""
+    loading_kwargs = dict(language_model_loading_kwargs or {})
+    loading_kwargs.setdefault("cache_dir", model_args.cache_dir)
+    loading_kwargs.setdefault(
+        "attn_implementation", model_args.attn_implementation
     )
-    model.model.vision_tower = AutoVisionTowerModel.from_pretrained(
-        paths.vision_model,
-        cache_dir=model_args.cache_dir,
-    )
-    model.model.multi_modal_projector = build_connector(
-        model.config
+
+    if paths.pretrained_model is not None:
+        logger.info_rank0(
+            "Loading complete TinyLLaVA checkpoint from %s.",
+            paths.pretrained_model,
+        )
+        return TinyLlavaForConditionalGeneration.from_pretrained(
+            paths.pretrained_model,
+            config=model_config,
+            **loading_kwargs,
+        )
+
+    return TinyLlavaForConditionalGeneration.from_pretrained_components(
+        model_config,
+        language_model_name_or_path=paths.language_model,
+        vision_model_name_or_path=paths.vision_model,
+        language_model_loading_kwargs=loading_kwargs,
+        vision_model_loading_kwargs={"cache_dir": model_args.cache_dir},
     )
 
 
@@ -170,14 +221,13 @@ def load_tinyllava_model_bundle(
 ) -> TinyLlavaModelBundle:
     """Assemble model, tokenizer, image processor, and processor from base components."""
     paths = resolve_component_paths(model_args)
-    model = TinyLlavaForConditionalGeneration(load_model_config(model_args, paths))
-    tokenizer = load_tokenizer(model_args, paths)
-    load_model_components(
-        model,
+    model = load_training_model(
         model_args,
         paths,
+        load_model_config(model_args, paths),
         language_model_loading_kwargs=language_model_loading_kwargs,
     )
+    tokenizer = load_tokenizer(model_args, paths)
     model.tokenizer = tokenizer
     image_processor = load_image_processor(
         paths.image_processor,
@@ -227,6 +277,7 @@ def load_tinyllava_checkpoint_bundle(
     if device is not None:
         model = model.to(device)
     paths = ComponentPaths(
+        pretrained_model=model_path,
         language_model=model_path,
         tokenizer=model_path,
         vision_model=model_path,
@@ -273,8 +324,8 @@ __all__ = [
     "ComponentPathSource",
     "ComponentPaths",
     "TinyLlavaModelBundle",
-    "load_model_components",
     "load_model_config",
+    "load_training_model",
     "load_tinyllava_checkpoint_bundle",
     "load_tinyllava_model_bundle",
     "load_tokenizer",

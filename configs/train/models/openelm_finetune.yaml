@@ -1,5 +1,5 @@
 model:
-  model_name_or_path: apple/OpenELM-270M-Instruct
+  language_model_name_or_path: apple/OpenELM-270M-Instruct
   tokenizer_name_or_path: meta-llama/Llama-2-7b-hf
   vision_model_name_or_path: google/siglip-so400m-patch14-384
   connector_config: configs/connectors/mlp2x_gelu.yaml

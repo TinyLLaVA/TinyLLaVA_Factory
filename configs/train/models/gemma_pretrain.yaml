@@ -1,5 +1,5 @@
 model:
-  model_name_or_path: google/gemma-2b-it
+  language_model_name_or_path: google/gemma-2b-it
   tokenizer_name_or_path: null
   vision_model_name_or_path: google/siglip-so400m-patch14-384
   connector_config: configs/connectors/mlp2x_gelu.yaml

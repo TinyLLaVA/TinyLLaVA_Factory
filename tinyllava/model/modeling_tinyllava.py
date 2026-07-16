@@ -14,11 +14,13 @@
 """PyTorch TinyLlava model."""
 
 from dataclasses import dataclass
+from typing import Any
 
 import torch
 from torch import nn
 
 from transformers import (
+    AutoModelForCausalLM,
     PreTrainedModel,
     GenerationMixin,
     Cache,
@@ -105,13 +107,31 @@ def build_connector(config: TinyLlavaConfig) -> PreTrainedModel:
 
 
 class TinyLlavaModel(TinyLlavaPreTrainedModel):
-    def __init__(self, config: TinyLlavaConfig):
+    def __init__(
+        self,
+        config: TinyLlavaConfig,
+        *,
+        language_model: PreTrainedModel | None = None,
+        vision_tower: PreTrainedModel | None = None,
+        multi_modal_projector: PreTrainedModel | None = None,
+    ):
         super().__init__(config)
 
-        self.language_model: PreTrainedModel = AutoLanguageModel.from_config(config.text_config)
-        self.vision_tower: PreTrainedModel = AutoVisionTowerModel.from_config(config.vision_config)
-
-        self.multi_modal_projector: PreTrainedModel = build_connector(config)
+        self.language_model = (
+            language_model
+            if language_model is not None
+            else AutoLanguageModel.from_config(config.text_config)
+        )
+        self.vision_tower = (
+            vision_tower
+            if vision_tower is not None
+            else AutoVisionTowerModel.from_config(config.vision_config)
+        )
+        self.multi_modal_projector = (
+            multi_modal_projector
+            if multi_modal_projector is not None
+            else build_connector(config)
+        )
 
         self.post_init()
 
@@ -249,11 +269,73 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
 class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixin):
     _tied_weights_keys = {"lm_head.weight": "model.language_model.embed_tokens.weight"}
 
-    def __init__(self, config: TinyLlavaConfig):
+    def __init__(
+        self,
+        config: TinyLlavaConfig,
+        *,
+        language_model: PreTrainedModel | None = None,
+        vision_tower: PreTrainedModel | None = None,
+        multi_modal_projector: PreTrainedModel | None = None,
+        lm_head: nn.Module | None = None,
+    ):
         super().__init__(config)
-        self.model = TinyLlavaModel(config)
-        self.lm_head = nn.Linear(config.text_config.hidden_size, config.text_config.vocab_size, bias=False)
+        self.model = TinyLlavaModel(
+            config,
+            language_model=language_model,
+            vision_tower=vision_tower,
+            multi_modal_projector=multi_modal_projector,
+        )
+        self.lm_head = (
+            lm_head
+            if lm_head is not None
+            else nn.Linear(
+                config.text_config.hidden_size,
+                config.text_config.vocab_size,
+                bias=False,
+            )
+        )
         self.post_init()
+
+    @classmethod
+    def from_pretrained_components(
+        cls,
+        config: TinyLlavaConfig,
+        *,
+        language_model_name_or_path: str,
+        vision_model_name_or_path: str,
+        language_model_loading_kwargs: dict[str, Any] | None = None,
+        vision_model_loading_kwargs: dict[str, Any] | None = None,
+    ) -> "TinyLlavaForConditionalGeneration":
+        """Assemble a new TinyLLaVA model from pretrained base components."""
+        language_model_loading_kwargs = dict(language_model_loading_kwargs or {})
+        vision_model_loading_kwargs = dict(vision_model_loading_kwargs or {})
+
+        causal_lm = AutoModelForCausalLM.from_pretrained(
+            language_model_name_or_path,
+            config=config.text_config,
+            **language_model_loading_kwargs,
+        )
+        language_model = causal_lm.base_model
+        lm_head = causal_lm.get_output_embeddings()
+        if language_model is causal_lm or lm_head is None:
+            raise ValueError(
+                f"{type(causal_lm).__name__} must expose a base model and output "
+                "embeddings to initialize TinyLLaVA."
+            )
+
+        vision_tower = AutoVisionTowerModel.from_pretrained(
+            vision_model_name_or_path,
+            config=config.vision_config,
+            **vision_model_loading_kwargs,
+        )
+        model = cls(
+            config,
+            language_model=language_model,
+            vision_tower=vision_tower,
+            lm_head=lm_head,
+        )
+        model.generation_config = causal_lm.generation_config
+        return model
 
     def get_input_embeddings(self):
         return self.model.get_input_embeddings()

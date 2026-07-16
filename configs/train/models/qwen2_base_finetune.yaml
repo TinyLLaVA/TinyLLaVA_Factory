@@ -1,5 +1,5 @@
 model:
-  model_name_or_path: Qwen/Qwen2-0.5B
+  language_model_name_or_path: Qwen/Qwen2-0.5B
   tokenizer_name_or_path: null
   vision_model_name_or_path: google/siglip-so400m-patch14-384
   connector_config: configs/connectors/mlp2x_gelu.yaml
