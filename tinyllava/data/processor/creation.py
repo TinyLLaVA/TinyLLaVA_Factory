@@ -27,6 +27,14 @@ def create_tinyllava_processor(
 
     config = getattr(model, "config", None)
     vision_config = getattr(config, "vision_config", None)
+    vision_feature_select_strategy = _get_attr(
+        config, "vision_feature_select_strategy", default="default"
+    )
+    num_additional_image_tokens = _get_num_additional_image_tokens(vision_config)
+    _validate_image_feature_configuration(
+        num_additional_image_tokens=num_additional_image_tokens,
+        vision_feature_select_strategy=vision_feature_select_strategy,
+    )
 
     auto_config = config if config is not None and type(config) in PROCESSOR_MAPPING else TinyLlavaConfig()
     processor_cls = PROCESSOR_MAPPING[type(auto_config)]
@@ -34,8 +42,8 @@ def create_tinyllava_processor(
         image_processor=image_processor,
         tokenizer=tokenizer,
         patch_size=_get_attr(vision_config, "patch_size", default=14),
-        vision_feature_select_strategy=_get_attr(config, "vision_feature_select_strategy", default="default"),
-        num_additional_image_tokens=_get_attr(vision_config, "num_additional_image_tokens", default=1),
+        vision_feature_select_strategy=vision_feature_select_strategy,
+        num_additional_image_tokens=num_additional_image_tokens,
         chat_template=template,
         image_token=DEFAULT_IMAGE_TOKEN,
     )
@@ -81,6 +89,45 @@ def _get_attr(obj: Any, name: str, default: Any) -> Any:
     if obj is None:
         return default
     return getattr(obj, name, default)
+
+
+def _get_num_additional_image_tokens(vision_config: Any) -> int:
+    value = _get_attr(vision_config, "num_additional_image_tokens", default=None)
+    if value is not None:
+        return value
+
+    model_type = _get_attr(vision_config, "model_type", default="")
+    if "siglip" in model_type:
+        return 0
+    return 1
+
+
+def _validate_image_feature_configuration(
+    *,
+    num_additional_image_tokens: int,
+    vision_feature_select_strategy: str,
+) -> None:
+    if vision_feature_select_strategy not in {"default", "full"}:
+        raise ValueError(
+            "vision_feature_select_strategy must be either 'default' or 'full', "
+            f"got {vision_feature_select_strategy!r}."
+        )
+    if (
+        isinstance(num_additional_image_tokens, bool)
+        or not isinstance(num_additional_image_tokens, int)
+        or num_additional_image_tokens < 0
+    ):
+        raise ValueError(
+            "num_additional_image_tokens must be a non-negative integer, "
+            f"got {num_additional_image_tokens!r}."
+        )
+    if vision_feature_select_strategy == "default" and num_additional_image_tokens == 0:
+        raise ValueError(
+            "Invalid image feature configuration: vision_feature_select_strategy='default' "
+            "drops the first vision feature, but num_additional_image_tokens=0 means the "
+            "vision tower has no CLS/additional token to drop. Use "
+            "vision_feature_select_strategy='full' for patch-only backbones such as SigLIP."
+        )
 
 
 __all__ = ["create_tinyllava_processor", "ensure_image_token"]

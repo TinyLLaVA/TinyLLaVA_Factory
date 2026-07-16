@@ -11,6 +11,7 @@ model:
 data:
   data_path: ${oc.env:TINYLLAVA_FINETUNE_DATA,data/finetune.json}
   image_folder: ${oc.env:TINYLLAVA_FINETUNE_IMAGE_FOLDER,data}
+  dataset_adapter: llava_legacy
 
 training:
   output_dir: output/tinyllava-tinyllama-finetune

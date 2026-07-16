@@ -77,6 +77,15 @@ class DataArguments:
         default=None,
         metadata={"help": "Root directory for relative image paths."},
     )
+    dataset_adapter: str = field(
+        default="auto",
+        metadata={
+            "help": (
+                "Training sample adapter name. 'auto' detects known legacy "
+                "formats; use 'llava_legacy' for LLaVA conversation JSON."
+            )
+        },
+    )
 
 
 @dataclass

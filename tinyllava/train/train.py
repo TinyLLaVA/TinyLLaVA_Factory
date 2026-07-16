@@ -54,7 +54,14 @@ def train():
     if training_args.gradient_checkpointing and original_use_cache is not None:
         model.config.use_cache = False
 
-    data_module = make_supervised_data_module(processor=processor, data_args=data_args)
+    # Only the local main process builds a missing Arrow cache. Other workers
+    # wait here and then open the completed cache instead of contending for the
+    # same datasets file lock.
+    with training_args.main_process_first(desc="build the training dataset cache"):
+        data_module = make_supervised_data_module(
+            processor=processor,
+            data_args=data_args,
+        )
 
     log_trainable_params(model)
     trainer = Trainer(

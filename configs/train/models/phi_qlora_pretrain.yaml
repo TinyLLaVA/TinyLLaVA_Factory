@@ -11,6 +11,7 @@ model:
 data:
   data_path: ${oc.env:TINYLLAVA_PRETRAIN_DATA,data/pretrain.json}
   image_folder: ${oc.env:TINYLLAVA_PRETRAIN_IMAGE_FOLDER,data}
+  dataset_adapter: llava_legacy
 
 training:
   output_dir: output/tinyllava-phi-qlora-pretrain
