@@ -3,6 +3,8 @@ from typing import Any, Literal
 
 import transformers
 
+from tinyllava.utils.precision import resolve_precision_flags
+
 
 @dataclass
 class ModelArguments:
@@ -147,3 +149,9 @@ class TrainingArguments(transformers.TrainingArguments):
             )
         },
     )
+
+    def __post_init__(self) -> None:
+        # HF resolves DeepSpeed values set to "auto" in its own __post_init__.
+        # Resolve TinyLLaVA's policy first so both configurations use one dtype.
+        self.bf16, self.fp16 = resolve_precision_flags(self.precision)
+        super().__post_init__()

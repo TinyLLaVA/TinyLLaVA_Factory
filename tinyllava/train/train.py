@@ -13,13 +13,21 @@ from tinyllava.utils.model_loading import (
 from tinyllava.model.vision_tower.registry import load_image_processor
 from tinyllava.train.strategy import get_training_strategy
 from tinyllava.utils.config import parse_train_config
+from tinyllava.utils.checkpoint import resolve_resume_checkpoint
+from tinyllava.utils.deepspeed import (
+    configure_zero3_gradient_checkpointing,
+)
 from tinyllava.utils.logging import logger_setting, log_trainable_params
-from tinyllava.utils.precision import resolve_training_precision
+from tinyllava.utils.precision import (
+    cast_model_to_training_dtype,
+    resolve_training_precision,
+)
 
 
 def train():
     model_args, data_args, training_args = parse_train_config()
     logger_setting(getattr(training_args, "output_dir", None))
+    configure_zero3_gradient_checkpointing(training_args)
 
     paths = resolve_component_paths(model_args)
     model_config = load_model_config(model_args, paths)
@@ -48,8 +56,9 @@ def train():
     )
 
     # Processor creation can resize embeddings and the output head. Apply the
-    # tuning policy after all model mutations are done.
+    # tuning policy and dtype normalization after all model mutations are done.
     model = training_strategy(model)
+    model = cast_model_to_training_dtype(model, training_args)
     original_use_cache = getattr(model.config, "use_cache", None)
     if training_args.gradient_checkpointing and original_use_cache is not None:
         model.config.use_cache = False
@@ -70,9 +79,10 @@ def train():
         args=training_args,
         **data_module,
     )
+    resume_checkpoint = resolve_resume_checkpoint(training_args)
 
     try:
-        trainer.train()
+        trainer.train(resume_from_checkpoint=resume_checkpoint)
     finally:
         if original_use_cache is not None:
             model.config.use_cache = original_use_cache

@@ -17,6 +17,7 @@
         "stage": 2,
         "overlap_comm": true,
         "contiguous_gradients": true,
+        "ignore_unused_parameters": true,
         "sub_group_size": 1e9,
         "reduce_bucket_size": "auto"
     }

@@ -2,7 +2,6 @@ from typing import Any
 
 import torch
 
-from tinyllava.utils.arguments import TrainingArguments
 from tinyllava.utils.logging import get_logger
 
 
@@ -10,7 +9,7 @@ logger = get_logger(__name__)
 
 
 def resolve_training_precision(
-    training_args: TrainingArguments,
+    training_args: Any,
     model_config: Any,
 ) -> None:
     """Resolve TinyLLaVA's dtype policy into HF mixed-precision flags.
@@ -29,7 +28,7 @@ def resolve_training_precision(
     _warn_if_model_dtype_differs(training_args, model_config)
 
 
-def training_torch_dtype(training_args: TrainingArguments) -> torch.dtype:
+def training_torch_dtype(training_args: Any) -> torch.dtype:
     if training_args.bf16:
         return torch.bfloat16
     if training_args.fp16:
@@ -37,32 +36,54 @@ def training_torch_dtype(training_args: TrainingArguments) -> torch.dtype:
     return torch.float32
 
 
-def _apply_precision(training_args: TrainingArguments, precision: str) -> None:
+def cast_model_to_training_dtype(
+    model: torch.nn.Module,
+    training_args: Any,
+) -> torch.nn.Module:
+    """Cast floating-point model state to the resolved training dtype."""
+    dtype = training_torch_dtype(training_args)
+    if _is_quantized_model(model):
+        for parameter in model.parameters():
+            if parameter.requires_grad and parameter.is_floating_point():
+                parameter.data = parameter.data.to(dtype=dtype)
+    else:
+        model.to(dtype=dtype)
+    logger.info_rank0("Cast model parameters and buffers to dtype=%s.", dtype)
+    return model
+
+
+def _is_quantized_model(model: torch.nn.Module) -> bool:
+    return any(
+        bool(getattr(model, attribute, False))
+        for attribute in ("is_quantized", "is_loaded_in_4bit", "is_loaded_in_8bit")
+    )
+
+
+def resolve_precision_flags(precision: str) -> tuple[bool, bool]:
+    """Return ``(bf16, fp16)`` before HF processes DeepSpeed auto values."""
     match precision:
         case "auto":
-            _apply_auto_precision(training_args)
+            if not torch.cuda.is_available():
+                return False, False
+            bf16 = torch.cuda.is_bf16_supported()
+            return bf16, not bf16
         case "fp32":
-            _set_hf_mixed_precision_flags(training_args, bf16=False, fp16=False)
+            return False, False
         case "fp16":
-            _set_hf_mixed_precision_flags(training_args, bf16=False, fp16=True)
+            return False, True
         case "bf16":
-            _set_hf_mixed_precision_flags(training_args, bf16=True, fp16=False)
+            return True, False
         case _:
             raise ValueError("precision must be one of: auto, fp32, fp16, bf16")
 
 
-def _apply_auto_precision(training_args: TrainingArguments) -> None:
-    if torch.cuda.is_available():
-        if torch.cuda.is_bf16_supported():
-            _set_hf_mixed_precision_flags(training_args, bf16=True, fp16=False)
-            return
-        _set_hf_mixed_precision_flags(training_args, bf16=False, fp16=True)
-        return
-    _set_hf_mixed_precision_flags(training_args, bf16=False, fp16=False)
+def _apply_precision(training_args: Any, precision: str) -> None:
+    bf16, fp16 = resolve_precision_flags(precision)
+    _set_hf_mixed_precision_flags(training_args, bf16=bf16, fp16=fp16)
 
 
 def _set_hf_mixed_precision_flags(
-    training_args: TrainingArguments,
+    training_args: Any,
     *,
     bf16: bool,
     fp16: bool,
@@ -71,7 +92,7 @@ def _set_hf_mixed_precision_flags(
     training_args.fp16 = fp16
 
 
-def _log_resolved_precision(training_args: TrainingArguments, precision: str) -> None:
+def _log_resolved_precision(training_args: Any, precision: str) -> None:
     logger.info_rank0(
         "Resolved precision policy %r to dtype=%s, bf16=%s, fp16=%s, tf32=%s.",
         precision,
@@ -83,7 +104,7 @@ def _log_resolved_precision(training_args: TrainingArguments, precision: str) ->
 
 
 def _warn_if_model_dtype_differs(
-    training_args: TrainingArguments,
+    training_args: Any,
     model_config: Any,
 ) -> None:
     model_dtype = _model_torch_dtype(model_config)
@@ -130,4 +151,9 @@ def _normalize_torch_dtype(dtype: Any) -> torch.dtype | None:
     return None
 
 
-__all__ = ["resolve_training_precision", "training_torch_dtype"]
+__all__ = [
+    "cast_model_to_training_dtype",
+    "resolve_precision_flags",
+    "resolve_training_precision",
+    "training_torch_dtype",
+]

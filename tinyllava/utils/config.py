@@ -25,6 +25,11 @@ def parse_train_config(
     config = _load_config_mapping(parsed_args.config)
     if parsed_args.overrides:
         config = _merge_overrides(config, parsed_args.overrides)
+    config = _merge_launcher_arguments(
+        config,
+        deepspeed=parsed_args.deepspeed,
+        local_rank=parsed_args.local_rank,
+    )
     return build_train_arguments(config)
 
 
@@ -80,6 +85,20 @@ def _parse_config_args(args: list[str]):
         help="Path to the root train YAML config.",
     )
     parser.add_argument(
+        "--deepspeed",
+        help=(
+            "DeepSpeed config path. This is equivalent to the "
+            "training.deepspeed YAML field."
+        ),
+    )
+    parser.add_argument(
+        "--local_rank",
+        "--local-rank",
+        type=int,
+        default=None,
+        help="Process-local rank injected by distributed launchers.",
+    )
+    parser.add_argument(
         "overrides",
         nargs="*",
         help="OmegaConf dotlist overrides, for example training.output_dir=out.",
@@ -95,6 +114,29 @@ def _load_config_mapping(path: str) -> dict[str, Any]:
 def _merge_overrides(config: dict[str, Any], overrides: list[str]) -> dict[str, Any]:
     merged = OmegaConf.merge(config, OmegaConf.from_dotlist(overrides))
     return _to_plain_container(merged)
+
+
+def _merge_launcher_arguments(
+    config: dict[str, Any],
+    *,
+    deepspeed: str | None,
+    local_rank: int | None,
+) -> dict[str, Any]:
+    """Merge compatibility arguments supplied by distributed launchers."""
+    if deepspeed is None and local_rank is None:
+        return config
+
+    training_config = config.get("training") or {}
+    _require_mapping("training", training_config)
+    training_config = dict(training_config)
+    if deepspeed is not None:
+        training_config["deepspeed"] = deepspeed
+    if local_rank is not None:
+        training_config["local_rank"] = local_rank
+
+    config = dict(config)
+    config["training"] = training_config
+    return config
 
 
 def _to_plain_container(config) -> dict[str, Any]:

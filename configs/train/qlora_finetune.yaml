@@ -26,8 +26,10 @@ training:
   learning_rate: 2e-4
   num_train_epochs: 1
   save_strategy: steps
-  save_steps: 50000
-  save_total_limit: 1
+  save_steps: 500
+  save_total_limit: 2
+  save_only_model: false
+  resume_from_checkpoint: auto
   eval_strategy: "no"
   remove_unused_columns: false
   gradient_checkpointing: true
