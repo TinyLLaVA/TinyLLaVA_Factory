@@ -58,7 +58,7 @@ class MOFProcessor(ProcessorMixin):
         self,
         images: ImageInput | None = None,
         text: TextInput | PreTokenizedInput | list[TextInput] | list[PreTokenizedInput] = None,
-        **kwargs: Unpack[LlavaProcessorKwargs],
+        **kwargs: Unpack[MOFProcessorKwargs],
     ) -> BatchFeature:
         r"""
         Returns:
@@ -74,7 +74,7 @@ class MOFProcessor(ProcessorMixin):
             raise ValueError("You have to specify at least one of `images` or `text`.")
 
         output_kwargs = self._merge_kwargs(
-            LlavaProcessorKwargs,
+            MOFProcessorKwargs,
             tokenizer_init_kwargs=self.tokenizer.init_kwargs,
             **kwargs,
         )
@@ -129,7 +129,7 @@ class MOFProcessor(ProcessorMixin):
 
         vision_data = {}
         if image_sizes is not None:
-            images_kwargs = LlavaProcessorKwargs._defaults.get("images_kwargs", {})
+            images_kwargs = MOFProcessorKwargs._defaults.get("images_kwargs", {})
             images_kwargs.update(kwargs)
             crop_size = images_kwargs.get("crop_size", None) or self.image_processor.crop_size
             resized_height, resized_width = crop_size["height"], crop_size["width"]
