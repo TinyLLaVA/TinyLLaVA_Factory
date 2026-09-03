@@ -1,8 +1,5 @@
 model:
-  language_model_name_or_path: TinyLlama/TinyLlama-1.1B-Chat-v1.0
-  tokenizer_name_or_path: null
-  vision_model_name_or_path: google/siglip-so400m-patch14-384
-  connector_config: configs/connectors/mlp2x_gelu.yaml
+  pretrained_model_name_or_path: output/tinyllava-tinyllama-pretrain
   vision_feature_layer: -2
   model_max_length: 2048
   tokenizer_use_fast: false

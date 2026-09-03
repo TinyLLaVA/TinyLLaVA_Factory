@@ -1,8 +1,5 @@
 model:
-  language_model_name_or_path: TinyLlama/TinyLlama-1.1B-Chat-v1.0
-  tokenizer_name_or_path: null
-  vision_model_name_or_path: openai/clip-vit-large-patch14-336
-  connector_config: configs/connectors/mlp2x_gelu.yaml
+  pretrained_model_name_or_path: ${oc.env:TINYLLAVA_PRETRAINED_MODEL,output/tinyllava-pretrain}
   vision_feature_layer: -2
   model_max_length: 2048
   tokenizer_use_fast: false

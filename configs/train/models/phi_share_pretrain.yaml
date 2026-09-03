@@ -1,8 +1,5 @@
 model:
-  language_model_name_or_path: microsoft/phi-2
-  tokenizer_name_or_path: null
-  vision_model_name_or_path: google/siglip-so400m-patch14-384
-  connector_config: configs/connectors/mlp2x_gelu.yaml
+  pretrained_model_name_or_path: output/tinyllava-phi-share-base-pretrain
   vision_feature_layer: -2
   model_max_length: 3072
   tokenizer_use_fast: false

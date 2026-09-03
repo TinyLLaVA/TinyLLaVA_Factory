@@ -1,6 +1,17 @@
+from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+from omegaconf import OmegaConf
+
 from tinyllava.utils.config import build_train_arguments, parse_train_config
+
+
+ROOT = Path(__file__).parents[2]
+FINETUNE_CONFIGS = sorted((ROOT / "configs" / "train").glob("*finetune.yaml"))
+FINETUNE_CONFIGS += sorted(
+    (ROOT / "configs" / "train" / "models").glob("*finetune.yaml")
+)
 
 
 def test_parse_train_config_accepts_deepspeed_launcher_arguments(tmp_path):
@@ -77,3 +88,34 @@ def test_precision_is_resolved_before_deepspeed_auto_values(tmp_path):
     config = training_args.hf_deepspeed_config.config
     assert config["bf16"]["enabled"] is True
     assert config["fp16"]["enabled"] is False
+
+
+@pytest.mark.parametrize(
+    "config_path",
+    FINETUNE_CONFIGS,
+    ids=lambda path: path.stem,
+)
+def test_finetune_configs_load_composite_pretraining_checkpoints(config_path):
+    config = OmegaConf.to_container(
+        OmegaConf.load(config_path),
+        resolve=False,
+    )
+    model = config["model"]
+
+    assert model["pretrained_model_name_or_path"]
+    assert "language_model_name_or_path" not in model
+    assert "vision_model_name_or_path" not in model
+    assert "connector_config" not in model
+
+
+def test_share_second_pretraining_stage_loads_base_checkpoint():
+    config = OmegaConf.to_container(
+        OmegaConf.load(
+            ROOT / "configs" / "train" / "models" / "phi_share_pretrain.yaml"
+        ),
+        resolve=False,
+    )
+
+    assert config["model"]["pretrained_model_name_or_path"] == (
+        "output/tinyllava-phi-share-base-pretrain"
+    )
