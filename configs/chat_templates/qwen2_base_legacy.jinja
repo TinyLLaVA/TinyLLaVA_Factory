@@ -1,0 +1,26 @@
+{%- for message in messages -%}
+    {%- if loop.first -%}
+        {{- "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. " -}}
+    {%- endif -%}
+    {%- if message['role'] == 'user' -%}
+        {{- 'USER: ' -}}
+        {%- for item in message['content'] | selectattr('type', 'equalto', 'image') -%}
+            {{- '<image>\n' -}}
+        {%- endfor -%}
+        {%- for item in message['content'] | selectattr('type', 'equalto', 'text') -%}
+            {{- item['text'] | trim -}}
+        {%- endfor -%}
+        {{- ' ' -}}
+    {%- elif message['role'] == 'assistant' -%}
+        {{- 'ASSISTANT: ' -}}
+        {%- generation -%}
+            {%- for item in message['content'] | selectattr('type', 'equalto', 'text') -%}
+                {{- item['text'] -}}
+            {%- endfor -%}
+            {{- '<|endoftext|>' -}}
+        {%- endgeneration -%}
+    {%- endif -%}
+{%- endfor -%}
+{%- if add_generation_prompt -%}
+    {{- 'ASSISTANT:' -}}
+{%- endif -%}

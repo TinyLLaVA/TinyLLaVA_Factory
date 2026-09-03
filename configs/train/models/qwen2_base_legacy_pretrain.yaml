@@ -1,0 +1,47 @@
+# Legacy paper prompt with four-GPU defaults (global batch 256).
+# The launcher adjusts gradient accumulation for other GPU counts.
+model:
+  language_model_name_or_path: Qwen/Qwen2-0.5B
+  tokenizer_name_or_path: null
+  vision_model_name_or_path: google/siglip-so400m-patch14-384
+  connector_config: configs/connectors/mlp2x_gelu.yaml
+  chat_template_path: configs/chat_templates/pretrain_legacy.jinja
+  vision_feature_layer: -2
+  vision_feature_select_strategy: full
+  model_max_length: 2048
+  tokenizer_use_fast: false
+  attn_implementation: null
+
+data:
+  data_path: ${oc.env:TINYLLAVA_PRETRAIN_DATA,/data/vlm/llava_data/text_files/blip_laion_cc_sbu_558k.json}
+  image_folder: ${oc.env:TINYLLAVA_PRETRAIN_IMAGE_FOLDER,/data/vlm/llava_data/llava/llava_pretrain/images}
+  dataset_adapter: llava_legacy
+
+training:
+  output_dir: ${oc.env:TINYLLAVA_PRETRAIN_OUTPUT,output/tinyllava-qwen2-base-legacy-pretrain}
+  run_name: tinyllava-qwen2-base-legacy-pretrain
+  precision: bf16
+  deepspeed: scripts/zero3.json
+  training_strategy: common
+  tune_type_llm: frozen
+  tune_type_vision_tower: frozen
+  tune_type_connector: full
+  per_device_train_batch_size: 16
+  gradient_accumulation_steps: 4
+  learning_rate: 1e-3
+  weight_decay: 0.0
+  num_train_epochs: 1
+  save_strategy: steps
+  save_steps: 500
+  save_total_limit: 2
+  save_only_model: false
+  resume_from_checkpoint: auto
+  eval_strategy: "no"
+  remove_unused_columns: false
+  gradient_checkpointing: true
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  logging_steps: 1
+  dataloader_num_workers: 8
+  tf32: false
+  report_to: tensorboard

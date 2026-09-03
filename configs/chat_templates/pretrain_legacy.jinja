@@ -1,0 +1,14 @@
+{%- for message in messages -%}
+    {%- if message['role'] == 'user' -%}
+        {%- for item in message['content'] | selectattr('type', 'equalto', 'image') -%}
+            {{- '<image>' -}}
+        {%- endfor -%}
+    {%- elif message['role'] == 'assistant' -%}
+        {%- generation -%}
+            {%- for item in message['content'] | selectattr('type', 'equalto', 'text') -%}
+                {{- item['text'] -}}
+            {%- endfor -%}
+            {{- '\n' -}}
+        {%- endgeneration -%}
+    {%- endif -%}
+{%- endfor -%}
