@@ -1,5 +1,9 @@
 # TinyLLaVA Visualizer
 
+> **v1 only:** this research visualizer depends on the legacy model internals
+> and preprocessing stack. It is not a v2 runtime entrypoint. Check out the
+> `legacy/v1` branch before using the examples below.
+
 TinyLLaVA Visualizer is a specialized visualization tool designed to work with the TinyLLaVA model, a multimodal large model. This tool enables users to visualize the relationships between generated words, their connections to the input image, and the probability distributions of these words during the model's inference process.
 
 ## Features

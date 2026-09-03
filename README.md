@@ -6,7 +6,7 @@
 
 ## &#x1F389; News
 * **[2025.01]**  Our new work [TinyLLaVA-Video](https://github.com/ZhangXJ199/TinyLLaVA-Video) is released.
-* **[2024.08.13]**  A simple [visualizaiton tool](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/main/tinyllava_visualizer) for interpreting the prediction of TinyLLaVA is added.
+* **[2024.08.13]**  A simple visualization tool was added for the v1 runtime; use it from the `legacy/v1` branch.
 * **[2024.05.21]**  Our paper: [TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models](https://arxiv.org/abs/2405.11788) is released!
 * **[2024.05.15]** [TinyLLaVA Factory](https://github.com/TinyLLaVA/TinyLLaVA_Factory), our new codebase, is released!  **Note that the old codebase, TinyLLaVABench, is moved to the [tinyllava_bench](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/tinyllava_bench) branch.**
 * **[2024.05.04]**  [TinyLLaVA Demo](http://8843843nmph5.vicp.fun/#/) is released! (The password to access our demo is '1234'.)
@@ -96,35 +96,37 @@ Please refer to the [Data Preparation](https://tinyllava-factory.readthedocs.io/
 
 #### 2. Train
 
-Here's an example for training a LMM using Phi-2.
-
-- Replace data paths with yours in `scripts/train/train_phi.sh`
-- Replace `output_dir` with yours in `scripts/train/pretrain.sh`
-- Replace `pretrained_model_path` and `output_dir` with yours in `scripts/train/finetune.sh`
-- Adjust your GPU ids (localhost) and `per_device_train_batch_size` in `scripts/train/pretrain.sh` and `scripts/train/finetune.sh`
+Training is configured with YAML files under `configs/train/`. Run one
+configuration directly and use OmegaConf dotlist overrides for local paths or
+one-off changes:
 
 ```bash
-bash scripts/train/train_phi.sh
+python tinyllava/train/train.py \
+    --config configs/train/models/phi_pretrain.yaml \
+    data.data_path=/path/to/pretrain.json \
+    data.image_folder=/path/to/images
 ```
 
-Important hyperparameters used in pretraining and finetuning are provided below.
+Use `torchrun` for distributed jobs. The effective global batch is:
+`num_gpus * per_device_train_batch_size * gradient_accumulation_steps`.
 
-| Training Stage | Global Batch Size | Learning rate | conv_version |
-| -------------- | :---------------: | :-----------: | :----------: |
-| Pretraining    | 256               | 1e-3          | pretrain     |
-| Finetuning     | 128               | 2e-5          | phi          |
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+python -m torch.distributed.run --nproc_per_node=4 \
+    tinyllava/train/train.py \
+    --config configs/train/models/phi_pretrain.yaml
+```
 
-**Tips:** 
+For the Qwen2-0.5B paper-compatible prompt, use the dedicated launcher. It
+derives gradient accumulation from the visible GPU count and keeps the
+pretraining and fine-tuning global batches at 256 and 128 respectively:
 
-Global Batch Size = num of GPUs * `per_device_train_batch_size` * `gradient_accumulation_steps`, we recommand you always keep global batch size and learning rate as above except for lora tuning your model.
-
-`conv_version` is a hyperparameter used for choosing different chat templates for different LLMs. In the pretraining stage, `conv_version` is the same for all LLMs, using `pretrain`. In the finetuning stage, we use
-
-`phi` for Phi-2, StableLM, Qwen-1.5
-
-`llama` for TinyLlama, OpenELM
-
-`gemma` for Gemma
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+    scripts/train/qwen2/train_qwen2_base_legacy.sh check
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+    scripts/train/qwen2/train_qwen2_base_legacy.sh all
+```
 
 #### 3. Evaluation
 
@@ -195,43 +197,10 @@ which are trained using the old codebase TinyLLaVABench.
 - [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
 - [tiny-llava-hf](https://huggingface.co/bczhou/tiny-llava-v1-hf)
 
-If you have models trained by our old codebase TinyLLaVABench and you still want to use them, we provide an example of [TinyLLaVA-3.1B](https://huggingface.co/bczhou/TinyLLaVA-3.1B) for how to use legacy models.
-
-<details>
-<summary>Example of using legacy models</summary>
-
-
-```Python
-from tinyllava.eval.run_tiny_llava import eval_model
-from tinyllava.model.convert_legecy_weights_to_tinyllavafactory import *
-
-model = convert_legecy_weights_to_tinyllavafactory('bczhou/TinyLLaVA-3.1B')
-
-prompt = "What are the things I should be cautious about when I visit here?"
-image_file = "https://llava-vl.github.io/static/images/view.jpg"
-
-args = type('Args', (), {
-    "model_path": None,
-    "model": model,
-    "query": prompt,
-    "conv_mode": "phi", # the same as conv_version in the training stage. Different LLMs have different conv_mode/conv_version, please replace it
-    "image_file": image_file,
-    "sep": ",",
-    "temperature": 0,
-    "top_p": None,
-    "num_beams": 1,
-    "max_new_tokens": 512
-})()
-
-eval_model(args)
-
-"""
-Output: 
-When visiting this serene lakeside location with a wooden dock, there are a few things to be cautious about. First, ensure that the dock is stable and secure before stepping onto it, as it might be slippery or wet, especially if it's a wooden structure. Second, be mindful of the surrounding water, as it can be deep or have hidden obstacles, such as rocks or debris, that could pose a risk. Additionally, be aware of the weather conditions, as sudden changes in weather can make the area more dangerous. Lastly, respect the natural environment and wildlife, and avoid littering or disturbing the ecosystem.
-"""
-```
-
-</details>
+These checkpoints target the v1 runtime. The v2 branch intentionally does not
+retain the removed factory, template, or ad-hoc conversion APIs. Use the
+`legacy/v1` branch for an original v1 checkpoint, or convert it to the v2
+Hugging Face composite checkpoint layout before using the current loaders.
 
 
 
@@ -245,174 +214,45 @@ python tinyllava/serve/app.py --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B
 ### CLI Inference
 We also support running inference with CLI. To use our model, run:
 ```bash
-python -m tinyllava.serve.cli \
-   --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B \
-   --image-file "./tinyllava/serve/examples/extreme_ironing.jpg" 
+python -m tinyllava.eval.single_turn \
+    --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B \
+    --image-file ./tinyllava/serve/examples/extreme_ironing.jpg \
+    --query "What is unusual about this image?"
 ```
 ### Quick Inference Scripts
-If you want to launch the model trained by yourself or us locally, here's an example.
-<details>
-<summary>Run inference with the model trained by yourself or downloaded from HuggingFace</summary>
+The same canonical runner can be called from Python:
 
-```Python
-from tinyllava.eval.run_tiny_llava import eval_model
+```python
+from tinyllava.eval.single_turn import run_single_turn
 
-model_path = "/absolute/path/to/your/model/"
-prompt = "What are the things I should be cautious about when I visit here?"
-image_file = "https://llava-vl.github.io/static/images/view.jpg"
-conv_mode = "phi" # or llama, gemma, etc
-
-args = type('Args', (), {
-    "model_path": model_path,
-    "model": None,
-    "query": prompt,
-    "conv_mode": conv_mode,
-    "image_file": image_file,
-    "sep": ",",
-    "temperature": 0,
-    "top_p": None,
-    "num_beams": 1,
-    "max_new_tokens": 512
-})()
-
-eval_model(args)
+run_single_turn(
+    model_path="/absolute/path/to/a/v2-checkpoint",
+    image_files=["https://llava-vl.github.io/static/images/view.jpg"],
+    query="What should I be cautious about when visiting here?",
+    device="cuda",
+    temperature=0.0,
+)
 ```
-</details>
-
-<details>
-<summary>Run inference with the model trained by us using huggingface transformers</summary>
-
-```Python
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
-hf_path = 'tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B'
-model = AutoModelForCausalLM.from_pretrained(hf_path, trust_remote_code=True)
-model.cuda()
-config = model.config
-tokenizer = AutoTokenizer.from_pretrained(hf_path, use_fast=False, model_max_length = config.tokenizer_model_max_length,padding_side = config.tokenizer_padding_side)
-prompt="What are these?"
-image_url="http://images.cocodataset.org/val2017/000000039769.jpg"
-output_text, genertaion_time = model.chat(prompt=prompt, image=image_url, tokenizer=tokenizer)
-
-print('model output:', output_text)
-print('runing time:', genertaion_time)
-```
-</details>
 
 ## Custom Finetune
 If you want to finetune TinyLLaVA with your custom datasets, please refer to [here](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/main/CUSTOM_FINETUNE.md).
 
-## Customize Your Own Large Multimodel Models
+## Extend TinyLLaVA v2
 
-### LLM
+The v2 architecture uses Hugging Face-native extension points:
 
-If you want to add a new LLM by yourself, you need to create two files: one for chat template and the other for language model, under the folders `tinyllava/data/template/` and `tinyllava/model/llm/`.
+- Use a Transformers-supported causal LM directly. Add a language mapping under
+  `tinyllava/model/llm/auto/` only for a model type Transformers does not
+  already resolve.
+- Add vision and connector `PreTrainedConfig` / `PreTrainedModel`
+  implementations through their canonical auto-mapping modules.
+- Define conversation formats as Hugging Face Jinja templates. Do not add
+  Python formatter/template registries.
+- Put runtime choices in structured YAML and keep loading logic in
+  `tinyllava/utils/model_loading.py`.
 
-Here is an example of adding the Gemma model.
-
-Firstly, create `tinyllava/data/template/gemma_template.py`, which will be used for the finetuning stage.
-
-```python
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
-from packaging import version
-
-from .formatter import EmptyFormatter, StringFormatter
-from .base import Template
-from .formatter import Formatter
-from . import register_template
-from ...utils.constants import *
-
-from transformers import PreTrainedTokenizer
-import torch
-import tokenizers
-
-
-system = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
-
-@register_template('gemma') # Enable the TemplateFactory to obtain the added template by this string ('gemma').
-@dataclass
-class GemmaTemplate(Template):
-    format_image_token: Formatter = field(default_factory=lambda: StringFormatter(slot="<image>\n{{content}}"))
-    format_user: Formatter = field(default_factory=lambda: StringFormatter(slot="USER" + ": " + "{{content}}" + " "))
-    format_assistant: Formatter = field(default_factory=lambda: StringFormatter(
-        slot="ASSISTANT" + ": " + "{{content}}" + "<eos>"
-    ))
-    system: Formatter = field(default_factory=lambda: EmptyFormatter(slot=system + " "))
-    separator: Formatter = field(default_factory=lambda: EmptyFormatter(slot=[" ASSISTANT: ", "<eos>"]))
-
-    def _make_masks(self, labels, tokenizer, sep, eos_token_length, rounds):
-        # your code here
-        return labels, cur_len
-```
-**Tips:**
-
-Please ensure that the `labels` (returned by the `_make_masks` function) follows this format: answers and the eos token id are not masked, and the other tokens are masked with `-100`.
-
-Secondly, create `tinyllava/model/llm/gemma.py`.
-
-```python
-from transformers import GemmaForCausalLM, AutoTokenizer
-# The LLM you want to add along with its corresponding tokenizer.
-
-from . import register_llm
-
-# Add GemmaForCausalLM along with its corresponding tokenizer and handle special tokens.
-@register_llm('gemma') # Enable the LLMFactory to obtain the added LLM by this string ('gemma').
-def return_gemmaclass(): 
-    def tokenizer_and_post_load(tokenizer):
-        tokenizer.pad_token = tokenizer.unk_token
-        return tokenizer
-    return (GemmaForCausalLM, (AutoTokenizer, tokenizer_and_post_load))
-```
-
-Finally, create `scripts/train/train_gemma.sh` with the corresponding `LLM_VERSION` and `CONV_VERSION`.
-
-### Vision Tower
-
-If you want to add a new vision tower, you need to implement a new vision tower class that should be inherited from the base class `VisionTower`. Here's an example of the MoF vision tower.
-
-First, create `tinyllava/model/vision_tower/mof.py`
-
-```python
-@register_vision_tower('mof')      
-class MoFVisionTower(VisionTower):
-    def __init__(self, cfg):
-        super().__init__(cfg)
-
-        self._vision_tower = MoF(cfg)
-        self._image_processor = # your image processor
-  
-    def _load_model(self, vision_tower_name, **kwargs):
-        # your code here, make sure your model can be correctly loaded from pretrained parameters either by huggingface or pytorch loading
-
-    def forward(self, x, **kwargs):
-        # your code here
-```
-
-Then, modify your training scripts with the corresponding `VT_VERSION`.
-
-### Connector
-
-If you want to add a new connector, you need to implement a new connector class that should be inherited from the base class `Connector`. Here's an example of the Linear connector.
-
-First, create `tinyllava/model/connector/linear.py`
-
-
-```python
-import torch.nn as nn
-
-from . import register_connector
-from .base import Connector
-    
-@register_connector('linear') #Enable the ConnectorMFactory to obtain the added connector by this string ('linear').     
-class LinearConnector(Connector):
-    def __init__(self, config):
-        super().__init__()
-        self._connector =  nn.Linear(config.vision_hidden_size, config.hidden_size) # define your connector model
-```
-
-Then, modify your training scripts with the corresponding `CN_VERSION`.
+See [the v2 architecture guide](docs/architecture.md) for component boundaries
+and migration notes.
 
 ## Acknowledgement
 We give special thanks to Lei Zhao, Luche Wang, Kaijun Luo, and Junchen Wang for building the [Demo](http://8843843nmph5.vicp.fun/#/).
