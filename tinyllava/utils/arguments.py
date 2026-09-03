@@ -57,6 +57,14 @@ class ModelArguments:
         default="right",
         metadata={"help": "Tokenizer padding side."},
     )
+    chat_template: str | None = field(
+        default=None,
+        metadata={"help": "Inline Hugging Face/Jinja chat template override."},
+    )
+    chat_template_path: str | None = field(
+        default=None,
+        metadata={"help": "Path to a Hugging Face/Jinja chat template override."},
+    )
     vision_feature_layer: int | list[int] = field(
         default=-2,
         metadata={"help": "Vision layer(s) used by the connector."},
@@ -215,6 +223,15 @@ class TrainingArguments(transformers.TrainingArguments):
     tune_type_connector: str = field(
         default="full",
         metadata={"help": "Connector/projector tuning strategy: 'frozen', 'full', or 'lora'."},
+    )
+    group_by_modality_length: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Group multimodal and text-only samples by approximate length, "
+                "matching the legacy TinyLLaVA fine-tuning sampler."
+            )
+        },
     )
     peft_config: dict[str, Any] = field(
         default_factory=dict,

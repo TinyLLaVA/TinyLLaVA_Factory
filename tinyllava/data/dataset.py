@@ -3,6 +3,7 @@
 import copy
 import hashlib
 from collections.abc import Mapping
+from functools import cached_property
 from pathlib import Path
 from typing import Any, cast
 
@@ -45,6 +46,20 @@ class ProcessorSFTDataset(Dataset):
 
     def __len__(self):
         return len(self.dataset)
+
+    @cached_property
+    def modality_lengths(self) -> list[int]:
+        """Approximate legacy lengths; image samples are positive, text-only negative."""
+
+        lengths = []
+        for sample in self.dataset:
+            word_count = sum(
+                len(str(message.get("content", "")).split())
+                for message in sample.get("messages", [])
+            )
+            word_count = max(word_count, 1)
+            lengths.append(word_count if sample.get("image") else -word_count)
+        return lengths
 
     def __getitem__(self, i) -> dict[str, torch.Tensor]:
         sample = copy.deepcopy(dict(self.dataset[i]))

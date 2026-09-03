@@ -75,7 +75,7 @@ def test_training_model_uses_standard_from_pretrained_for_checkpoint():
         config=config,
         torch_dtype="dtype",
         cache_dir="cache",
-        attn_implementation="sdpa",
+        attn_implementation={"text_config": "sdpa"},
     )
 
 

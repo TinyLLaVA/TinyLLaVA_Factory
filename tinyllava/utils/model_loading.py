@@ -7,6 +7,7 @@ from typing import Any
 
 from transformers import AutoConfig, AutoTokenizer
 
+from tinyllava.data.chat_template.loading import resolve_chat_template
 from tinyllava.data.processor.creation import create_tinyllava_processor
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
@@ -194,6 +195,14 @@ def load_training_model(
     )
 
     if paths.pretrained_model is not None:
+        # Transformers recursively applies a string implementation to every
+        # sub-config in a composite checkpoint. Scope it to the causal LM so
+        # connector models without attention are left untouched.
+        attn_implementation = loading_kwargs.get("attn_implementation")
+        if isinstance(attn_implementation, str):
+            loading_kwargs["attn_implementation"] = {
+                "text_config": attn_implementation
+            }
         logger.info_rank0(
             "Loading complete TinyLLaVA checkpoint from %s.",
             paths.pretrained_model,
@@ -237,6 +246,10 @@ def load_tinyllava_model_bundle(
         tokenizer=tokenizer,
         image_processor=image_processor,
         model=model,
+        chat_template=resolve_chat_template(
+            chat_template=model_args.chat_template,
+            chat_template_path=model_args.chat_template_path,
+        ),
     )
     model.processor = processor
     if device is not None:

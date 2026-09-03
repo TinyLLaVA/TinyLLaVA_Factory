@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from transformers import Trainer
-
+from tinyllava.data.chat_template.loading import resolve_chat_template
 from tinyllava.data.dataset import make_supervised_data_module
 from tinyllava.data.processor.creation import create_tinyllava_processor
 from tinyllava.utils.model_loading import (
@@ -12,6 +11,7 @@ from tinyllava.utils.model_loading import (
 )
 from tinyllava.model.vision_tower.registry import load_image_processor
 from tinyllava.train.strategy import get_training_strategy
+from tinyllava.train.modality_trainer import TinyLlavaTrainer
 from tinyllava.utils.config import parse_train_config
 from tinyllava.utils.checkpoint import resolve_resume_checkpoint
 from tinyllava.utils.deepspeed import (
@@ -53,6 +53,10 @@ def train():
         tokenizer=tokenizer,
         image_processor=image_processor,
         model=model,
+        chat_template=resolve_chat_template(
+            chat_template=model_args.chat_template,
+            chat_template_path=model_args.chat_template_path,
+        ),
     )
 
     # Processor creation can resize embeddings and the output head. Apply the
@@ -73,7 +77,7 @@ def train():
         )
 
     log_trainable_params(model)
-    trainer = Trainer(
+    trainer = TinyLlavaTrainer(
         model=model,
         processing_class=processor,
         args=training_args,
