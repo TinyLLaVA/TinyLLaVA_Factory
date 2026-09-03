@@ -62,11 +62,15 @@ def load_images(image_files: Sequence[str]) -> list[Image.Image]:
 
 def prepare_generation_inputs(
     processor: Any,
-    messages: list[dict[str, Any]],
+    messages: list[dict[str, Any]] | list[list[dict[str, Any]]],
     *,
     device: torch.device | str,
     chat_template: str | None = None,
+    padding: bool = False,
 ) -> dict[str, torch.Tensor]:
+    template_kwargs = {}
+    if padding:
+        template_kwargs["processor_kwargs"] = {"text_kwargs": {"padding": True}}
     inputs = processor.apply_chat_template(
         messages,
         chat_template=chat_template,
@@ -74,6 +78,7 @@ def prepare_generation_inputs(
         tokenize=True,
         return_dict=True,
         return_tensors="pt",
+        **template_kwargs,
     )
     return move_to_device(dict(inputs), device=device)
 
@@ -101,17 +106,45 @@ def generate_response(
     streamer: Any | None = None,
     **generate_kwargs,
 ) -> str:
+    return generate_responses(
+        model=model,
+        processor=processor,
+        messages_batch=[messages],
+        chat_template=chat_template,
+        temperature=temperature,
+        top_p=top_p,
+        num_beams=num_beams,
+        max_new_tokens=max_new_tokens,
+        streamer=streamer,
+        **generate_kwargs,
+    )[0]
+
+
+def generate_responses(
+    *,
+    model: Any,
+    processor: Any,
+    messages_batch: list[list[dict[str, Any]]],
+    chat_template: str | None = None,
+    temperature: float = 0.2,
+    top_p: float | None = None,
+    num_beams: int = 1,
+    max_new_tokens: int = 512,
+    streamer: Any | None = None,
+    **generate_kwargs,
+) -> list[str]:
     device = getattr(model, "device", None)
     if device is None:
         device = next(model.parameters()).device
 
     inputs = prepare_generation_inputs(
         processor,
-        messages,
+        messages_batch,
         device=device,
         chat_template=chat_template,
+        padding=len(messages_batch) > 1,
     )
-    prompt_length = inputs["input_ids"].shape[-1]
+    prompt_width = inputs["input_ids"].shape[-1]
 
     with torch.inference_mode():
         output_ids = model.generate(
@@ -127,17 +160,22 @@ def generate_response(
             **generate_kwargs,
         )
 
-    response_ids = output_ids[:, prompt_length:]
-    return processor.tokenizer.batch_decode(
-        response_ids,
-        skip_special_tokens=True,
-        clean_up_tokenization_spaces=False,
-    )[0].strip()
+    responses = []
+    for row_idx in range(len(messages_batch)):
+        response_ids = output_ids[row_idx, prompt_width:]
+        response = processor.tokenizer.decode(
+            response_ids,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )
+        responses.append(response.strip())
+    return responses
 
 
 __all__ = [
     "build_processor_from_model",
     "generate_response",
+    "generate_responses",
     "load_images",
     "make_user_message",
     "normalize_image_files",

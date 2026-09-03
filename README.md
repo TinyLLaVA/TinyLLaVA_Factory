@@ -145,6 +145,7 @@ YAML values can be changed for one run with OmegaConf dotlist overrides:
 ```bash
 python -m tinyllava.eval.batch_generation \
     --config configs/eval/mmmu.yaml \
+    model.model_name_or_path=output/my-checkpoint \
     generation.max_new_tokens=512 runtime.device=cuda:0
 ```
 

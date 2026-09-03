@@ -4,10 +4,21 @@ from typing import Any
 
 from omegaconf import OmegaConf
 
-from tinyllava.utils.arguments import DataArguments, ModelArguments, TrainingArguments
+from tinyllava.utils.arguments import (
+    DataArguments,
+    EvalArguments,
+    EvalDataArguments,
+    EvalGenerationArguments,
+    EvalModelArguments,
+    EvalOutputArguments,
+    EvalRuntimeArguments,
+    ModelArguments,
+    TrainingArguments,
+)
 
 
 TRAIN_CONFIG_SECTIONS = ("model", "data", "training", "peft")
+EVAL_CONFIG_SECTIONS = ("model", "data", "generation", "runtime", "output")
 
 
 def parse_train_config(
@@ -63,6 +74,38 @@ def build_train_arguments(
     )
 
 
+def parse_eval_config(args: Sequence[str] | None = None) -> EvalArguments:
+    """Parse TinyLLaVA evaluation config."""
+
+    cli_args = list(sys.argv[1:] if args is None else args)
+    parsed_args = _parse_eval_config_args(cli_args)
+
+    config = _load_config_mapping(parsed_args.config)
+    if parsed_args.overrides:
+        config = _merge_overrides(config, parsed_args.overrides)
+    return build_eval_arguments(config)
+
+
+def build_eval_arguments(config: dict[str, Any]) -> EvalArguments:
+    unknown_sections = sorted(set(config) - set(EVAL_CONFIG_SECTIONS))
+    if unknown_sections:
+        raise ValueError(f"Unknown eval config section(s): {unknown_sections}")
+
+    sections = {name: config.get(name) or {} for name in EVAL_CONFIG_SECTIONS}
+    for name, section in sections.items():
+        _require_mapping(name, section, config_kind="Eval")
+
+    result = EvalArguments(
+        model=EvalModelArguments(**sections["model"]),
+        data=EvalDataArguments(**sections["data"]),
+        generation=EvalGenerationArguments(**sections["generation"]),
+        runtime=EvalRuntimeArguments(**sections["runtime"]),
+        output=EvalOutputArguments(**sections["output"]),
+    )
+    _validate_eval_arguments(result)
+    return result
+
+
 def load_connector_config(path: str | None) -> dict[str, Any] | None:
     if path is None:
         return None
@@ -102,6 +145,28 @@ def _parse_config_args(args: list[str]):
         "overrides",
         nargs="*",
         help="OmegaConf dotlist overrides, for example training.output_dir=out.",
+    )
+    return parser.parse_args(args)
+
+
+def _parse_eval_config_args(args: list[str]):
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Evaluate TinyLLaVA from a structured YAML config."
+    )
+    parser.add_argument(
+        "--config",
+        required=True,
+        help="Path to the root eval YAML config.",
+    )
+    parser.add_argument(
+        "overrides",
+        nargs="*",
+        help=(
+            "OmegaConf dotlist overrides, for example "
+            "runtime.chunk_idx=1 model.model_name_or_path=output/model."
+        ),
     )
     return parser.parse_args(args)
 
@@ -146,13 +211,34 @@ def _to_plain_container(config) -> dict[str, Any]:
     return plain
 
 
-def _require_mapping(section_name: str, section: Any) -> None:
+def _validate_eval_arguments(config: EvalArguments) -> None:
+    if config.runtime.batch_size <= 0:
+        raise ValueError("runtime.batch_size must be positive")
+    if config.runtime.num_chunks <= 0:
+        raise ValueError("runtime.num_chunks must be positive")
+    if not 0 <= config.runtime.chunk_idx < config.runtime.num_chunks:
+        raise ValueError("runtime.chunk_idx must be in [0, runtime.num_chunks)")
+    if config.generation.max_new_tokens <= 0:
+        raise ValueError("generation.max_new_tokens must be positive")
+    if config.generation.num_beams <= 0:
+        raise ValueError("generation.num_beams must be positive")
+
+
+def _require_mapping(
+    section_name: str,
+    section: Any,
+    *,
+    config_kind: str = "Train",
+) -> None:
     if not isinstance(section, dict):
-        raise ValueError(f"Train config section '{section_name}' must be a mapping.")
+        raise ValueError(f"{config_kind} config section '{section_name}' must be a mapping.")
 
 
 __all__ = [
+    "EVAL_CONFIG_SECTIONS",
     "build_train_arguments",
+    "build_eval_arguments",
     "load_connector_config",
+    "parse_eval_config",
     "parse_train_config",
 ]

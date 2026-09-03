@@ -91,6 +91,82 @@ class DataArguments:
 
 
 @dataclass
+class EvalModelArguments:
+    """Evaluation model inputs following Hugging Face path naming."""
+
+    model_name_or_path: str = field(
+        default="output/tinyllava",
+        metadata={"help": "TinyLLaVA checkpoint path or Hugging Face repo id."},
+    )
+    model_id: str | None = field(
+        default=None,
+        metadata={"help": "Optional model id written to benchmark answer files."},
+    )
+
+
+@dataclass
+class EvalDataArguments:
+    """Evaluation dataset inputs."""
+
+    adapter: str = field(
+        default="vqa",
+        metadata={"help": "Evaluation dataset loader adapter name."},
+    )
+    question_file: str = field(
+        default="tables/question.jsonl",
+        metadata={"help": "Benchmark question/annotation file."},
+    )
+    image_folder: str = field(
+        default="",
+        metadata={"help": "Root directory for benchmark images."},
+    )
+    single_pred_prompt: bool = field(
+        default=False,
+        metadata={"help": "Whether to append single-choice prompting for ScienceQA."},
+    )
+
+
+@dataclass
+class EvalGenerationArguments:
+    """Generation options shared by evaluation benchmarks."""
+
+    temperature: float = 0.2
+    top_p: float | None = None
+    num_beams: int = 1
+    max_new_tokens: int = 128
+    chat_template: str | None = None
+    chat_template_path: str | None = None
+
+
+@dataclass
+class EvalRuntimeArguments:
+    """Evaluation runtime and chunking options."""
+
+    device: str | None = None
+    batch_size: int = 1
+    num_chunks: int = 1
+    chunk_idx: int = 0
+
+
+@dataclass
+class EvalOutputArguments:
+    """Evaluation output paths."""
+
+    answers_file: str = "answer.jsonl"
+
+
+@dataclass
+class EvalArguments:
+    """Structured evaluation arguments."""
+
+    model: EvalModelArguments
+    data: EvalDataArguments
+    generation: EvalGenerationArguments
+    runtime: EvalRuntimeArguments
+    output: EvalOutputArguments
+
+
+@dataclass
 class TrainingArguments(transformers.TrainingArguments):
     """HF TrainingArguments plus TinyLLaVA strategy options."""
 

@@ -1,5 +1,5 @@
 model:
-  model_path: ${oc.env:MODEL_PATH,output/tinyllava}
+  model_name_or_path: ${oc.env:MODEL_PATH,output/tinyllava}
   model_id: ${oc.env:MODEL_NAME,null}
 
 data:
@@ -12,9 +12,11 @@ generation:
   top_p: null
   num_beams: 1
   max_new_tokens: 1024
+  chat_template_path: ${oc.env:EVAL_CHAT_TEMPLATE_PATH,null}
 
 runtime:
   device: null
+  batch_size: 1
   num_chunks: 1
   chunk_idx: 0
 
