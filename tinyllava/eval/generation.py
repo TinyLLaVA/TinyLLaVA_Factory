@@ -26,6 +26,18 @@ def build_processor_from_model(model: Any, tokenizer: Any | None = None, image_p
 
 
 def make_user_message(text: str, images: Sequence[Image.Image] = ()) -> dict[str, Any]:
+    """Build a user message with ordered image blocks followed by text.
+
+    Args:
+        text: Prompt text. Inline `<image>` markers are removed before encoding.
+        images: Images to attach in the order expected by the prompt.
+
+    Returns:
+        A Hugging Face multimodal message with `role` and `content` keys.
+
+    Raises:
+        ValueError: The prompt contains an image marker but no images are supplied.
+    """
     if DEFAULT_IMAGE_TOKEN in text and not images:
         raise ValueError(
             "Eval prompt contains a legacy `<image>` marker, but no image payload was provided."
@@ -68,6 +80,18 @@ def prepare_generation_inputs(
     chat_template: str | None = None,
     padding: bool = False,
 ) -> dict[str, torch.Tensor]:
+    """Encode conversations with a generation prompt and move tensors to a device.
+
+    Args:
+        processor: Multimodal processor with a configured chat template.
+        messages: One conversation or a batch of conversations in HF message format.
+        device: Target device for model input tensors.
+        chat_template: Optional Jinja template override.
+        padding: Pad conversations to a common token length for batch generation.
+
+    Returns:
+        Token IDs, attention masks, and processor-specific image inputs on `device`.
+    """
     template_kwargs = {}
     if padding:
         template_kwargs["processor_kwargs"] = {"text_kwargs": {"padding": True}}
@@ -106,6 +130,24 @@ def generate_response(
     streamer: Any | None = None,
     **generate_kwargs,
 ) -> str:
+    """Generate one answer from a multimodal conversation.
+
+    Args:
+        model: Loaded model supporting `generate`; set it to evaluation mode first.
+        processor: Processor matching the model's tokenizer and vision settings.
+        messages: Conversation history ending with the user's request.
+        chat_template: Optional Jinja template override.
+        temperature: Sampling temperature; nonpositive values disable sampling.
+        top_p: Nucleus-sampling probability cutoff.
+        num_beams: Beam count passed to generation.
+        max_new_tokens: Maximum number of tokens to generate beyond the prompt.
+        streamer: Optional Transformers streamer receiving generated tokens.
+        **generate_kwargs (Any): Additional `model.generate` options that do not duplicate
+            options supplied by this helper, such as `use_cache` or `pad_token_id`.
+
+    Returns:
+        Decoded answer with prompt tokens, special tokens, and outer whitespace removed.
+    """
     return generate_responses(
         model=model,
         processor=processor,
@@ -133,6 +175,29 @@ def generate_responses(
     streamer: Any | None = None,
     **generate_kwargs,
 ) -> list[str]:
+    """Generate one decoded answer per conversation in a batch.
+
+    Use a processor configured for left padding with decoder-only models. Prompt
+    tokens are removed using the padded input width before answers are decoded.
+
+    Args:
+        model: Loaded model supporting `generate`; set it to evaluation mode first.
+        processor: Processor matching the model and configured for batch padding.
+        messages_batch: Nonempty batch of conversations in HF message format.
+        chat_template: Optional Jinja template override.
+        temperature: Sampling temperature; nonpositive values disable sampling.
+        top_p: Nucleus-sampling probability cutoff.
+        num_beams: Beam count passed to generation.
+        max_new_tokens: Maximum number of new tokens per answer.
+        streamer: Optional Transformers streamer; its batch-size limits apply.
+        **generate_kwargs (Any): Additional `model.generate` options. Keep
+            `num_return_sequences=1` and tensor output; do not repeat options
+            already supplied by this helper.
+
+    Returns:
+        Answer strings in the same order as `messages_batch`, with special tokens
+        and outer whitespace removed.
+    """
     device = getattr(model, "device", None)
     if device is None:
         device = next(model.parameters()).device

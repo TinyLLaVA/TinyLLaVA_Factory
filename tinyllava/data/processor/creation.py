@@ -17,7 +17,25 @@ def create_tinyllava_processor(
     model: Any | None = None,
     chat_template: str | None = None,
 ) -> Any:
-    """Create the HF Auto-selected processor used by TinyLLaVA."""
+    """Build the registered multimodal processor and synchronize its image token.
+
+    The tokenizer is updated in place with the image token and template anchors.
+    When a model is supplied, its image-token ID and embedding size are synchronized.
+
+    Args:
+        tokenizer: Tokenizer used to encode conversations.
+        image_processor: Image preprocessor matching the vision tower.
+        model: Model providing vision settings and processor registration. Without
+            a model, use the default TinyLLaVA configuration.
+        chat_template: Jinja template override; otherwise use the tokenizer template.
+
+    Returns:
+        A registered processor combining the tokenizer and image processor.
+
+    Raises:
+        ValueError: The image token cannot be encoded as one token, or the vision
+            feature selection conflicts with the backbone's additional tokens.
+    """
     ensure_image_token(tokenizer, model=model)
 
     template = chat_template or getattr(tokenizer, "chat_template", None)

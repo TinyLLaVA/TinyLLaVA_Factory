@@ -12,7 +12,14 @@ from tinyllava.utils.constants import IGNORE_INDEX
 
 @dataclass
 class DataCollatorForMultimodalSFT:
-    """Collate text and multimodal processor outputs for SFT."""
+    """Pad token sequences and concatenate images into a multimodal SFT batch.
+
+    Text is right-padded and truncated to the tokenizer's `model_max_length`.
+    Padding labels use `IGNORE_INDEX`; image tensors are concatenated across samples.
+
+    Attributes:
+        processor: Processor whose tokenizer supplies padding and length settings.
+    """
 
     processor: transformers.ProcessorMixin
 
@@ -22,7 +29,16 @@ class DataCollatorForMultimodalSFT:
         return self.processor.tokenizer
 
     def __call__(self, instances: Sequence[dict]) -> dict[str, torch.Tensor]:
-        """Pad text fields and merge optional multimodal fields."""
+        """Build a batch from individually encoded samples.
+
+        Args:
+            instances: Nonempty sequence with `input_ids` and `labels` per sample,
+                plus optional attention masks, image tensors, and image metadata.
+
+        Returns:
+            Padded `input_ids`, `labels`, and boolean `attention_mask` of shape
+            `(batch_size, sequence_length)`, together with merged multimodal fields.
+        """
         max_length = getattr(self.tokenizer, "model_max_length", None)
         batch: dict[str, Any] = {
             "input_ids": self._pad_1d(
@@ -72,6 +88,15 @@ def build_labels(data_dict: Mapping[str, torch.Tensor]) -> torch.Tensor:
 
     Tokens outside assistant generation spans are set to `IGNORE_INDEX`, so they
     do not contribute to the loss.
+
+    Args:
+        data_dict: Encoded tokens with equally shaped `input_ids` and `assistant_masks`.
+
+    Returns:
+        A copy of `input_ids` with non-assistant positions masked out.
+
+    Raises:
+        ValueError: `assistant_masks` is missing or `None`.
     """
     input_ids = data_dict["input_ids"]
     assistant_masks = data_dict.get("assistant_masks")

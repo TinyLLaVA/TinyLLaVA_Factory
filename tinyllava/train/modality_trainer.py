@@ -101,6 +101,17 @@ def get_modality_length_grouped_indices(
 
 
 class ModalityLengthGroupedSampler(Sampler[int]):
+    """Order samples by modality and approximate length before distributed sharding.
+
+    Args:
+        batch_size: Samples per local training batch.
+        world_size: Number of balancing chunks. The Trainer supplies process count
+            multiplied by gradient-accumulation steps.
+        lengths: Nonzero signed lengths: positive for image samples, negative for
+            text-only samples. Absolute values estimate processing cost.
+        generator: Random generator to use directly, overriding epoch-based seeding.
+        seed: Base seed; without a generator, each epoch uses `seed + epoch`.
+    """
     def __init__(
         self,
         *,
@@ -121,6 +132,11 @@ class ModalityLengthGroupedSampler(Sampler[int]):
         return len(self.lengths)
 
     def set_epoch(self, epoch: int) -> None:
+        """Set the epoch used to seed the next iteration.
+
+        Args:
+            epoch: Epoch index added to the base seed when no generator is supplied.
+        """
         self.epoch = epoch
 
     def __iter__(self) -> Iterator[int]:
@@ -139,7 +155,12 @@ class ModalityLengthGroupedSampler(Sampler[int]):
 
 
 class TinyLlavaTrainer(Trainer):
-    """HF Trainer with the sampler used by the paper's fine-tuning recipe."""
+    """Hugging Face Trainer with optional modality-and-length grouping.
+
+    Enable `group_by_modality_length` in the training arguments and provide a
+    dataset exposing `modality_lengths` to use `ModalityLengthGroupedSampler`.
+    Other sampling behavior follows the upstream Trainer.
+    """
 
     def _get_train_sampler(self, train_dataset=None):
         if train_dataset is None:

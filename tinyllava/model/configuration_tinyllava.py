@@ -29,6 +29,26 @@ from .connector import CONNECTOR_CONFIG_MAPPING
 
 @strict
 class TinyLlavaConfig(PreTrainedConfig):
+    """Describe the language model, vision tower, and multimodal connector.
+
+    Component dictionaries are resolved through their registered `model_type`.
+    Missing components use the default Llama, CLIP vision, and MLP configurations.
+
+    Attributes:
+        text_config: Language-model configuration or configuration dictionary.
+        vision_config: Vision-tower configuration or configuration dictionary.
+        connector_config: Connector configuration or configuration dictionary.
+        image_token_index: Token ID replaced by projected image features.
+        image_seq_length: Image sequence-length metadata stored with the model.
+        projector_hidden_act: Activation used when creating the default connector config.
+        vision_feature_select_strategy: `default` removes the first vision token;
+            `full` keeps all tokens, including for patch-only backbones.
+        vision_feature_layer: Hidden-state layer index or indices selected for projection.
+        multimodal_projector_bias: Bias setting for the default connector config.
+        tie_word_embeddings: Share input and output token embeddings; also enabled
+            when the text configuration requests tied embeddings.
+    """
+
     model_type = "tinyllava"
     attribute_map = {
         "image_token_id": "image_token_index",

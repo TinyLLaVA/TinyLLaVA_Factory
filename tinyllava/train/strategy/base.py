@@ -7,6 +7,17 @@ from tinyllava.utils.precision import training_torch_dtype
 
 
 class BaseTrainingStrategy:
+    """Apply component-tuning policies and save through the Hugging Face Trainer.
+
+    Args:
+        training_arguments: Precision, component policies, and output settings.
+
+    Attributes:
+        supported_llm_tune_types (tuple[str, ...]): Supported language-model policies.
+        supported_vision_tower_tune_types (tuple[str, ...]): Supported vision policies.
+        supported_connector_tune_types (tuple[str, ...]): Supported connector policies.
+    """
+
     supported_llm_tune_types = ("frozen", "full")
     supported_vision_tower_tune_types = ("frozen", "full", "partially-tune")
     supported_connector_tune_types = ("frozen", "full")
@@ -15,6 +26,7 @@ class BaseTrainingStrategy:
         self.training_arguments = training_arguments
 
     def language_model_loading_kwargs(self) -> dict:
+        """Return model-loading options using the resolved training precision."""
         return {"torch_dtype": training_torch_dtype(self.training_arguments)}
 
     def __call__(
@@ -29,6 +41,17 @@ class BaseTrainingStrategy:
         self,
         model: TinyLlavaForConditionalGeneration,
     ) -> TinyLlavaForConditionalGeneration:
+        """Set trainable parameters for the language model, vision tower, and connector.
+
+        Args:
+            model: Model to update in place.
+
+        Returns:
+            The model with component-specific `requires_grad` settings.
+
+        Raises:
+            ValueError: A policy is unsupported or partial vision tuning lacks a start layer.
+        """
         model = self._set_llm_tuning(model)
         model = self._set_vision_tower_tuning(model)
         model = self._set_connector_tuning(model)
@@ -105,6 +128,14 @@ class BaseTrainingStrategy:
         self,
         model: TinyLlavaForConditionalGeneration,
     ) -> TinyLlavaForConditionalGeneration:
+        """Prepare a model before applying component policies.
+
+        Args:
+            model: Model to prepare. Subclasses can add adapters or quantization setup.
+
+        Returns:
+            The unchanged model in the base strategy.
+        """
         return model
 
     def _require_tune_type(
@@ -126,5 +157,11 @@ class BaseTrainingStrategy:
         model: TinyLlavaForConditionalGeneration,
         trainer: Trainer,
     ) -> None:
+        """Save Trainer state and model artifacts to the configured output directory.
+
+        Args:
+            model: Strategy model; saving is delegated to the supplied Trainer.
+            trainer: Trainer responsible for distributed state and model serialization.
+        """
         trainer.save_state()
         trainer.save_model(self.training_arguments.output_dir)

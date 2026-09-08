@@ -1,0 +1,61 @@
+[project]
+site_name = "TinyLLaVA Factory"
+site_description = "Train, evaluate, and extend small multimodal models with Hugging Face native interfaces."
+repo_url = "https://github.com/TinyLLaVA/TinyLLaVA_Factory"
+edit_uri = "edit/develop/docs/en/"
+docs_dir = "docs/en"
+site_dir = "site"
+watch = ["tinyllava"]
+nav = [
+  { "Home" = "index.md" },
+  { "Guides" = [
+    { "Installation" = "guides/installation.md" },
+    { "Training data" = "guides/data.md" },
+    { "Training" = "guides/training.md" },
+    { "Evaluation" = "guides/evaluation.md" },
+    { "Inference" = "guides/inference.md" },
+    { "Extending" = "guides/extending.md" },
+  ] },
+  { "Architecture" = "architecture.md" },
+  { "API reference" = [
+    { "Configuration" = "reference/configuration.md" },
+    { "Model and loading" = "reference/model.md" },
+    { "Data and processors" = "reference/data.md" },
+    { "Training" = "reference/training.md" },
+    { "Evaluation" = "reference/evaluation.md" },
+  ] },
+  { "Migration" = "migration.md" },
+  { "Contributing to docs" = "contributing.md" },
+]
+
+[project.theme]
+language = "en"
+features = ["navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "content.action.edit"]
+
+[project.extra]
+alternate = [
+  { name = "English", link = "/", lang = "en" },
+  { name = "简体中文", link = "/zh/", lang = "zh" },
+]
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["."]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+allow_inspection = true
+docstring_style = "google"
+show_source = true
+show_signature_annotations = true
+show_root_heading = true
+members_order = "source"
+inherited_members = false
+show_if_no_docstring = true
+docstring_section_style = "list"
+merge_init_into_class = true
+parameter_headings = true
+separate_signature = true
+show_root_full_path = false
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+signature_crossrefs = true
+summary = true

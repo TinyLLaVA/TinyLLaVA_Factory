@@ -1,0 +1,61 @@
+[project]
+site_name = "TinyLLaVA Factory"
+site_description = "使用 Hugging Face 原生接口训练、评测和扩展小型多模态模型。"
+repo_url = "https://github.com/TinyLLaVA/TinyLLaVA_Factory"
+edit_uri = "edit/develop/docs/zh/"
+docs_dir = "docs/zh"
+site_dir = "site/zh"
+watch = ["tinyllava"]
+nav = [
+  { "首页" = "index.md" },
+  { "使用指南" = [
+    { "安装" = "guides/installation.md" },
+    { "训练数据" = "guides/data.md" },
+    { "训练" = "guides/training.md" },
+    { "评测" = "guides/evaluation.md" },
+    { "推理" = "guides/inference.md" },
+    { "扩展" = "guides/extending.md" },
+  ] },
+  { "架构" = "architecture.md" },
+  { "API 参考" = [
+    { "配置" = "reference/configuration.md" },
+    { "模型与加载" = "reference/model.md" },
+    { "数据与 processor" = "reference/data.md" },
+    { "训练" = "reference/training.md" },
+    { "评测" = "reference/evaluation.md" },
+  ] },
+  { "迁移" = "migration.md" },
+  { "维护文档" = "contributing.md" },
+]
+
+[project.theme]
+language = "zh"
+features = ["navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "content.action.edit"]
+
+[project.extra]
+alternate = [
+  { name = "English", link = "/", lang = "en" },
+  { name = "简体中文", link = "/zh/", lang = "zh" },
+]
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["."]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+allow_inspection = true
+docstring_style = "google"
+show_source = true
+show_signature_annotations = true
+show_root_heading = true
+members_order = "source"
+inherited_members = false
+show_if_no_docstring = true
+docstring_section_style = "list"
+merge_init_into_class = true
+parameter_headings = true
+separate_signature = true
+show_root_full_path = false
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+signature_crossrefs = true
+summary = true

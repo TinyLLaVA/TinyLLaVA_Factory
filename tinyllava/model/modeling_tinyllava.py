@@ -267,6 +267,17 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
 
 
 class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixin):
+    """Generate text from token sequences containing projected image features.
+
+    Args:
+        config: Composite language, vision, and connector configuration.
+        language_model: Optional pretrained language backbone without its LM head.
+        vision_tower: Optional pretrained vision backbone.
+        multi_modal_projector: Optional connector mapping vision to text hidden size.
+        lm_head: Optional pretrained output projection. Missing components are
+            initialized from `config`.
+    """
+
     _tied_weights_keys = {"lm_head.weight": "model.language_model.embed_tokens.weight"}
 
     def __init__(
@@ -306,7 +317,22 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         language_model_loading_kwargs: dict[str, Any] | None = None,
         vision_model_loading_kwargs: dict[str, Any] | None = None,
     ) -> "TinyLlavaForConditionalGeneration":
-        """Assemble a new TinyLLaVA model from pretrained base components."""
+        """Load language and vision weights and initialize a new connector.
+
+        Args:
+            config: Composite configuration matching the pretrained components.
+            language_model_name_or_path: Hugging Face ID or local causal-LM directory.
+            vision_model_name_or_path: Hugging Face ID or local vision-tower directory.
+            language_model_loading_kwargs: Options forwarded to the causal-LM loader.
+            vision_model_loading_kwargs: Options forwarded to the vision-tower loader.
+
+        Returns:
+            A composite model reusing the causal LM's backbone, output head, and
+            generation configuration, with a newly initialized connector.
+
+        Raises:
+            ValueError: The causal LM does not expose a separate backbone and output head.
+        """
         language_model_loading_kwargs = dict(language_model_loading_kwargs or {})
         vision_model_loading_kwargs = dict(vision_model_loading_kwargs or {})
 
@@ -353,6 +379,20 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         vision_feature_select_strategy: str | None = None,
         **kwargs: Unpack[TransformersKwargs],
     ) -> tuple | BaseModelOutputWithPooling:
+        """Encode images and project the selected features into text hidden space.
+
+        Args:
+            pixel_values: Preprocessed images of shape `(num_images, channels, height, width)`.
+            vision_feature_layer: Hidden-state layer indices; `None` uses the model config.
+            vision_feature_select_strategy: `default` drops the first token; `full`
+                keeps all tokens. `None` uses the model config.
+            **kwargs: Options forwarded to the vision-feature implementation,
+                including `image_sizes` and `return_dict`.
+
+        Returns:
+            Vision output with projected per-image sequences in `pooler_output`,
+            each shaped `(image_tokens, text_hidden_size)`, or its tuple form.
+        """
         return self.model.get_image_features(
             pixel_values=pixel_values,
             vision_feature_layer=vision_feature_layer,
@@ -376,35 +416,33 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         image_sizes: torch.Tensor | None = None,
         **kwargs: Unpack[TransformersKwargs],
     ) -> tuple | TinyLlavaCausalLMOutputWithPast:
-        r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+        """Compute causal-LM logits and optional assistant-token loss.
 
-        Example:
+        Args:
+            input_ids: Token IDs of shape `(batch_size, sequence_length)`, including
+                image placeholders expanded by the processor.
+            pixel_values: Preprocessed images, or `None` for text-only/cached decoding.
+            attention_mask: Token attention mask; zero marks padding positions.
+            position_ids: Token positions passed to the language backbone.
+            past_key_values: Cached attention keys and values for incremental decoding.
+            inputs_embeds: Input embeddings supplied instead of `input_ids`.
+            vision_feature_layer: Selected vision layers; `None` uses the model config.
+            vision_feature_select_strategy: Vision-token selection; `None` uses the config.
+            labels: Next-token targets of shape `(batch_size, sequence_length)`.
+                Use `-100` for ignored positions and vocabulary IDs elsewhere.
+            logits_to_keep: Number of trailing positions to project, or explicit
+                position indices. Zero keeps all positions.
+            image_sizes: Optional image-size metadata passed to feature extraction.
+            **kwargs: Transformers options forwarded to the backbone and loss function.
 
-        ```python
-        >>> from PIL import Image
-        >>> import httpx
-        >>> from io import BytesIO
-        >>> from transformers import AutoProcessor, LlavaForConditionalGeneration
+        Returns:
+            Logits shaped `(batch_size, selected_positions, vocabulary_size)`,
+            optional loss, attention cache, and requested hidden states. Set
+            `return_dict=False` for tuple output.
 
-        >>> model = LlavaForConditionalGeneration.from_pretrained("llava-hf/llava-1.5-7b-hf")
-        >>> processor = AutoProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
-
-        >>> prompt = "USER: <image>\nWhat's the content of the image? ASSISTANT:"
-        >>> url = "https://www.ilankelman.org/stopsigns/australia.jpg"
-        >>> with httpx.stream("GET", url) as response:
-        ...     image = Image.open(BytesIO(response.read()))
-
-        >>> inputs = processor(images=image, text=prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(**inputs, max_new_tokens=15)
-        >>> processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "USER:  \nWhat's the content of the image? ASSISTANT: The image features a busy city street with a stop sign prominently displayed"
-        ```"""
+        Raises:
+            ValueError: Both or neither of `input_ids` and `inputs_embeds` are supplied.
+        """
         outputs = self.model(
             input_ids=input_ids,
             pixel_values=pixel_values,
@@ -449,6 +487,22 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         is_first_iteration=False,
         **kwargs,
     ):
+        """Prepare a decoding step, retaining images only when features are needed.
+
+        Args:
+            input_ids (torch.LongTensor): Current token IDs.
+            past_key_values (Cache | None): Attention cache from previous decoding steps.
+            inputs_embeds (torch.FloatTensor | None): Optional prompt embeddings.
+            pixel_values (torch.FloatTensor | None): Preprocessed images for the prompt.
+            attention_mask (torch.Tensor | None): Token attention mask.
+            logits_to_keep (int | torch.Tensor | None): Logit positions requested by generation.
+            is_first_iteration (bool): Include images on the first generation iteration.
+            **kwargs (Any): Upstream generation options. With `use_cache=False`,
+                image inputs are included at every step.
+
+        Returns:
+            (dict[str, Any]): Inputs for the next forward call.
+        """
         # Overwritten -- in specific circumstances we don't want to forward image inputs to the model
 
         model_inputs = super().prepare_inputs_for_generation(

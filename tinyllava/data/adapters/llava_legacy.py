@@ -27,6 +27,20 @@ class LlavaLegacyDatasetAdapter:
     )
 
     def adapt(self, sample: Mapping[str, Any]) -> dict[str, Any]:
+        """Convert a LLaVA record into canonical conversation fields.
+
+        Args:
+            sample: Record with `conversations` and optional `id` and `image` fields.
+                Conversation items use `from`/`value` or `role`/`content` keys.
+
+        Returns:
+            A mapping with string `id`, optional image path, and `messages` containing
+            canonical roles and text. Unrelated source metadata is dropped.
+
+        Raises:
+            TypeError: Conversations, message contents, or the image path have invalid types.
+            KeyError: A message has neither a `from` nor a `role` field.
+        """
         conversations = sample.get("conversations")
         if not isinstance(conversations, Sequence) or isinstance(conversations, str):
             raise TypeError("LLaVA legacy samples must contain a `conversations` list.")

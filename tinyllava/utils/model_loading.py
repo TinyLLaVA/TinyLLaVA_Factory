@@ -22,7 +22,15 @@ logger = get_logger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class ComponentPaths:
-    """Resolved component paths for TinyLLaVA loading."""
+    """Resolved Hugging Face repository IDs or local component paths.
+
+    Attributes:
+        pretrained_model: Composite checkpoint, or `None` when assembling components.
+        language_model: Language-model source, or the composite checkpoint.
+        tokenizer: Tokenizer source, including any explicit override.
+        vision_model: Vision-tower source, or the composite checkpoint.
+        image_processor: Image-preprocessing assets matching the vision tower.
+    """
 
     pretrained_model: str | None
     language_model: str
@@ -42,7 +50,15 @@ class ComponentPathSource:
 
 @dataclass(frozen=True, slots=True)
 class TinyLlavaModelBundle:
-    """Loaded TinyLLaVA runtime objects shared by training and inference."""
+    """Model and preprocessing objects loaded from matching component sources.
+
+    Attributes:
+        model: Composite TinyLLaVA model.
+        tokenizer: Tokenizer shared with the multimodal processor.
+        image_processor: Image preprocessor shared with the multimodal processor.
+        processor: Combined processor used for training and generation.
+        paths: Resolved sources for the loaded components.
+    """
 
     model: TinyLlavaForConditionalGeneration
     tokenizer: Any
@@ -52,7 +68,18 @@ class TinyLlavaModelBundle:
 
 
 def resolve_component_paths(model_args: ModelArguments) -> ComponentPaths:
-    """Resolve either a complete checkpoint or fresh-model components."""
+    """Resolve model and preprocessing sources without loading their weights.
+
+    Args:
+        model_args: A composite checkpoint path or separate base-component paths.
+            An explicit tokenizer path overrides either mode's default.
+
+    Returns:
+        Paths for the model, tokenizer, vision tower, and image processor.
+
+    Raises:
+        ValueError: Component assembly is requested without a language or vision path.
+    """
     if model_args.pretrained_model_name_or_path:
         checkpoint_path = model_args.pretrained_model_name_or_path
         tokenizer_path = model_args.tokenizer_name_or_path or checkpoint_path
@@ -187,7 +214,18 @@ def load_training_model(
     *,
     language_model_loading_kwargs: dict[str, Any] | None = None,
 ) -> TinyLlavaForConditionalGeneration:
-    """Load a complete checkpoint or assemble pretrained base components."""
+    """Load composite weights or assemble pretrained language and vision components.
+
+    Args:
+        model_args: Model cache and attention-backend settings.
+        paths: Component sources returned by `resolve_component_paths`.
+        model_config: Composite configuration matching those sources.
+        language_model_loading_kwargs: Loading overrides such as dtype or quantization.
+            Applied to the composite loader when loading a complete checkpoint.
+
+    Returns:
+        A model with loaded weights. Component assembly initializes a new connector.
+    """
     loading_kwargs = dict(language_model_loading_kwargs or {})
     loading_kwargs.setdefault("cache_dir", model_args.cache_dir)
     loading_kwargs.setdefault(
@@ -228,7 +266,17 @@ def load_tinyllava_model_bundle(
     language_model_loading_kwargs: dict[str, Any] | None = None,
     device: str | None = None,
 ) -> TinyLlavaModelBundle:
-    """Assemble model, tokenizer, image processor, and processor from base components."""
+    """Load a model and its processors from a checkpoint or separate components.
+
+    Args:
+        model_args: Component paths, tokenizer settings, and optional chat template.
+        language_model_loading_kwargs: Model-loading options such as dtype or quantization.
+        device: Optional device for the loaded model; `None` keeps the loader placement.
+
+    Returns:
+        A bundle with matching model and preprocessing objects. The tokenizer and
+        processor are also attached to the model.
+    """
     paths = resolve_component_paths(model_args)
     model = load_training_model(
         model_args,
@@ -269,7 +317,18 @@ def load_tinyllava_checkpoint_bundle(
     device: str | None = None,
     **from_pretrained_kwargs: Any,
 ) -> TinyLlavaModelBundle:
-    """Load a TinyLLaVA checkpoint saved by the standard Hugging Face flow."""
+    """Load a composite checkpoint together with its saved preprocessing assets.
+
+    Args:
+        model_path: Local directory or Hugging Face repository containing model,
+            tokenizer, and image-processor files.
+        device: Optional target device; `None` keeps the loader's placement.
+        **from_pretrained_kwargs: Options forwarded to the model's `from_pretrained`
+            call, such as dtype. Tokenizer and image-processor loading use `model_path`.
+
+    Returns:
+        Matching model, tokenizer, image processor, combined processor, and source paths.
+    """
     logger.debug_rank0("Loading TinyLLaVA checkpoint from %s", model_path)
     model = TinyLlavaForConditionalGeneration.from_pretrained(
         model_path,

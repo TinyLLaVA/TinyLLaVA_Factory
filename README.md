@@ -6,7 +6,7 @@
 
 ## &#x1F389; News
 * **[2025.01]**  Our new work [TinyLLaVA-Video](https://github.com/ZhangXJ199/TinyLLaVA-Video) is released.
-* **[2024.08.13]**  A simple visualization tool was added for the v1 runtime; use it from the `legacy/v1` branch.
+* **[2024.08.13]** A simple visualization tool was added for the original runtime. See the [migration guide](docs/en/migration.md) for archived tools.
 * **[2024.05.21]**  Our paper: [TinyLLaVA Factory: A Modularized Codebase for Small-scale Large Multimodal Models](https://arxiv.org/abs/2405.11788) is released!
 * **[2024.05.15]** [TinyLLaVA Factory](https://github.com/TinyLLaVA/TinyLLaVA_Factory), our new codebase, is released!  **Note that the old codebase, TinyLLaVABench, is moved to the [tinyllava_bench](https://github.com/TinyLLaVA/TinyLLaVA_Factory/tree/tinyllava_bench) branch.**
 * **[2024.05.04]**  [TinyLLaVA Demo](http://8843843nmph5.vicp.fun/#/) is released! (The password to access our demo is '1234'.)
@@ -30,6 +30,10 @@
   - Training Recipe currently supports **Frozen/Fully/Partially tuning** and **LoRA/QLoRA tuning**.
 
 ## Contents
+
+The documentation ([English](docs/en/index.md), [简体中文](docs/zh/index.md)) covers
+installation, training, evaluation, inference, and the [API](docs/en/reference/model.md).
+See the [migration guide](docs/en/migration.md) to update existing experiments.
 
 - [🎉 News](#-news)
 - [🔥 Takeaways](#-takeaways)
@@ -92,7 +96,7 @@ pip install -e .
 
 #### 1. Data Preparation
 
-Please refer to the [Data Preparation](https://tinyllava-factory.readthedocs.io/en/latest/Prepare%20Datasets.html) section in our [Documenation](https://tinyllava-factory.readthedocs.io/en/latest/).
+Please refer to the [training data guide](docs/en/guides/data.md).
 
 #### 2. Train
 
@@ -154,7 +158,7 @@ python -m tinyllava.eval.batch_generation \
 The scripts in `scripts/eval/` use the same YAML configs and also run each
 benchmark's conversion or scoring step. Set `EVAL_CONFIG` to use a custom
 config with one of those scripts. Please refer to the
-[Evaluation documentation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html)
+[Evaluation documentation](docs/en/guides/evaluation.md)
 for dataset preparation.
 
 ## Model Zoo
@@ -197,10 +201,8 @@ which are trained using the old codebase TinyLLaVABench.
 - [TinyLLaVA-1.5B](https://huggingface.co/bczhou/TinyLLaVA-1.5B)
 - [tiny-llava-hf](https://huggingface.co/bczhou/tiny-llava-v1-hf)
 
-These checkpoints target the v1 runtime. The v2 branch intentionally does not
-retain the removed factory, template, or ad-hoc conversion APIs. Use the
-`legacy/v1` branch for an original v1 checkpoint, or convert it to the v2
-Hugging Face composite checkpoint layout before using the current loaders.
+See the [migration guide](docs/en/migration.md) for loading these checkpoints
+and adapting them to the current model interfaces.
 
 
 
@@ -226,7 +228,7 @@ The same canonical runner can be called from Python:
 from tinyllava.eval.single_turn import run_single_turn
 
 run_single_turn(
-    model_path="/absolute/path/to/a/v2-checkpoint",
+    model_path="/absolute/path/to/a/checkpoint",
     image_files=["https://llava-vl.github.io/static/images/view.jpg"],
     query="What should I be cautious about when visiting here?",
     device="cuda",
@@ -237,9 +239,9 @@ run_single_turn(
 ## Custom Finetune
 If you want to finetune TinyLLaVA with your custom datasets, please refer to [here](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/main/CUSTOM_FINETUNE.md).
 
-## Extend TinyLLaVA v2
+## Extend TinyLLaVA
 
-The v2 architecture uses Hugging Face-native extension points:
+TinyLLaVA uses Hugging Face-native extension points:
 
 - Use a Transformers-supported causal LM directly. Add a language mapping under
   `tinyllava/model/llm/auto/` only for a model type Transformers does not
@@ -251,7 +253,7 @@ The v2 architecture uses Hugging Face-native extension points:
 - Put runtime choices in structured YAML and keep loading logic in
   `tinyllava/utils/model_loading.py`.
 
-See [the v2 architecture guide](docs/architecture.md) for component boundaries
+See [the architecture guide](docs/en/architecture.md) for component boundaries
 and migration notes.
 
 ## Acknowledgement

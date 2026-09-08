@@ -29,7 +29,19 @@ def find_last_complete_checkpoint(
     *,
     deepspeed: bool = False,
 ) -> str | None:
-    """Return the highest numbered complete checkpoint in an output directory."""
+    """Find the highest-numbered checkpoint with the required resume markers.
+
+    A candidate must contain `trainer_state.json`. With DeepSpeed, it must also
+    contain a nonempty `latest` file pointing to an existing state directory.
+    These checks verify resume markers, not the integrity of every weight shard.
+
+    Args:
+        output_dir: Directory containing `checkpoint-<step>` subdirectories.
+        deepspeed: Require the DeepSpeed state markers in addition to Trainer state.
+
+    Returns:
+        The selected checkpoint path, or `None` if no candidate passes the checks.
+    """
     root = Path(output_dir).expanduser()
     if not root.is_dir():
         return None
@@ -47,7 +59,21 @@ def find_last_complete_checkpoint(
 
 
 def resolve_resume_checkpoint(training_args: TrainingArguments) -> str | None:
-    """Resolve explicit paths and the TinyLLaVA `auto` resume policy."""
+    """Resolve a resume request to a checkpoint path.
+
+    Args:
+        training_args: Trainer settings containing the resume request, output
+            directory, and DeepSpeed configuration. `auto` and `latest` select the
+            newest valid candidate; `None` and `False` disable resume.
+
+    Returns:
+        A checkpoint path, or `None` to start a new run. Automatic discovery falls
+        back to a new run when no candidate exists.
+
+    Raises:
+        ValueError: An explicit path fails the resume-marker checks, or the request
+            is `True` and automatic discovery finds no checkpoint.
+    """
     requested = training_args.resume_from_checkpoint
     if requested in (None, False):
         return None

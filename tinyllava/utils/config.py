@@ -24,10 +24,23 @@ EVAL_CONFIG_SECTIONS = ("model", "data", "generation", "runtime", "output")
 def parse_train_config(
     args: Sequence[str] | None = None,
 ) -> tuple[ModelArguments, DataArguments, TrainingArguments]:
-    """Parse TinyLLaVA training config.
+    """Load training YAML and apply command-line overrides.
 
-    Usage:
-        tinyllava/train/train.py --config configs/train/foo.yaml training.output_dir=...
+    Args:
+        args: Arguments including `--config PATH` and optional OmegaConf dotlist
+            overrides. `None` reads `sys.argv[1:]`. Distributed launcher arguments
+            `--deepspeed` and `--local_rank` override the corresponding YAML fields.
+
+    Returns:
+        Model, data, and training argument objects, in that order.
+
+    Examples:
+        ```python
+        model_args, data_args, training_args = parse_train_config([
+            "--config", "configs/train/models/qwen2_base_pretrain.yaml",
+            "training.output_dir=output/example",
+        ])
+        ```
     """
 
     cli_args = list(sys.argv[1:] if args is None else args)
@@ -47,6 +60,20 @@ def parse_train_config(
 def build_train_arguments(
     config: dict[str, Any],
 ) -> tuple[ModelArguments, DataArguments, TrainingArguments]:
+    """Validate training sections and construct typed arguments.
+
+    Args:
+        config: Mapping with `model`, `data`, `training`, and optional `peft` sections.
+            Top-level `peft` is passed to the training arguments as `peft_config`.
+
+    Returns:
+        Model, data, and training argument objects, in that order.
+
+    Raises:
+        ValueError: Sections are unknown or not mappings, PEFT settings are specified
+            twice, or argument validation fails.
+        TypeError: A section contains an unsupported argument name.
+    """
     unknown_sections = sorted(set(config) - set(TRAIN_CONFIG_SECTIONS))
     if unknown_sections:
         raise ValueError(f"Unknown train config section(s): {unknown_sections}")
@@ -75,7 +102,15 @@ def build_train_arguments(
 
 
 def parse_eval_config(args: Sequence[str] | None = None) -> EvalArguments:
-    """Parse TinyLLaVA evaluation config."""
+    """Load evaluation YAML and apply OmegaConf dotlist overrides.
+
+    Args:
+        args: Arguments including `--config PATH` and optional overrides.
+            `None` reads `sys.argv[1:]`.
+
+    Returns:
+        Validated model, data, generation, runtime, and output settings.
+    """
 
     cli_args = list(sys.argv[1:] if args is None else args)
     parsed_args = _parse_eval_config_args(cli_args)
@@ -87,6 +122,20 @@ def parse_eval_config(args: Sequence[str] | None = None) -> EvalArguments:
 
 
 def build_eval_arguments(config: dict[str, Any]) -> EvalArguments:
+    """Construct evaluation arguments and validate batching and generation limits.
+
+    Args:
+        config: Mapping with `model`, `data`, `generation`, `runtime`, and `output`
+            sections. Missing sections use their dataclass defaults.
+
+    Returns:
+        The grouped evaluation settings.
+
+    Raises:
+        ValueError: A section is unknown or not a mapping, a size is nonpositive,
+            or the shard index is outside the configured range.
+        TypeError: A section contains an unsupported argument name.
+    """
     unknown_sections = sorted(set(config) - set(EVAL_CONFIG_SECTIONS))
     if unknown_sections:
         raise ValueError(f"Unknown eval config section(s): {unknown_sections}")
@@ -107,6 +156,17 @@ def build_eval_arguments(config: dict[str, Any]) -> EvalArguments:
 
 
 def load_connector_config(path: str | None) -> dict[str, Any] | None:
+    """Read a connector YAML configuration with a registered model-type key.
+
+    Args:
+        path: Connector YAML file, or `None` to use the model's default connector.
+
+    Returns:
+        The resolved configuration mapping, or `None` when no path is supplied.
+
+    Raises:
+        ValueError: The file is not a mapping or lacks `model_type`.
+    """
     if path is None:
         return None
 

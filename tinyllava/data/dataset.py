@@ -31,7 +31,17 @@ logger = get_logger(__name__)
 
 
 class ProcessorSFTDataset(Dataset):
-    """Apply multimodal SFT processing lazily over a Hugging Face dataset."""
+    """Encode training conversations lazily and supervise assistant tokens.
+
+    Each indexed row is normalized, encoded with the processor's chat template,
+    and returned with causal-LM labels. Tokens outside assistant spans receive
+    `IGNORE_INDEX`.
+
+    Args:
+        dataset: Rows containing conversations and optional image payloads.
+        processor: Multimodal processor with an assistant-aware chat template.
+        data_args: Data settings, including the root for relative image paths.
+    """
 
     def __init__(
         self,
@@ -121,7 +131,20 @@ def _json_array_fingerprint(path: Path, adapter_name: str, cache_version: str) -
 
 
 def load_training_dataset(data_args: DataArguments) -> HFDataset:
-    """Load training rows with Hugging Face datasets."""
+    """Load local JSON training data and normalize rows with a dataset adapter.
+
+    Top-level JSON arrays are read incrementally into an Arrow cache. Other
+    supported JSON files use the Hugging Face JSON loader.
+
+    Args:
+        data_args: Source path and adapter selection for the training data.
+
+    Returns:
+        A Hugging Face dataset of normalized training rows.
+
+    Raises:
+        ValueError: The source path is missing or a JSON-array adapter cannot be resolved.
+    """
     if data_args.data_path is None:
         raise ValueError("`data_path` must be provided for supervised fine-tuning.")
 
@@ -189,7 +212,15 @@ def make_supervised_data_module(
     processor: transformers.ProcessorMixin,
     data_args: DataArguments,
 ) -> dict:
-    """Make dataset and collator for supervised fine-tuning."""
+    """Create the data arguments passed to the Trainer for supervised fine-tuning.
+
+    Args:
+        processor: Processor used for conversation encoding and batch padding.
+        data_args: Training data path, adapter, and image-root settings.
+
+    Returns:
+        A mapping containing `train_dataset`, `data_collator`, and `eval_dataset=None`.
+    """
     train_dataset = ProcessorSFTDataset(
         dataset=load_training_dataset(data_args),
         processor=processor,
