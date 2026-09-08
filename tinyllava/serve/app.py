@@ -22,14 +22,14 @@ def add_turn(
     model: Any,
     processor: Any,
     messages: Sequence[dict[str, Any]] | None,
-    history: Sequence[tuple[str, str]] | None,
+    history: Sequence[dict[str, Any]] | None,
     text: str,
     image: Any | None,
     chat_template: str | None,
     temperature: float,
     top_p: float | None,
     max_new_tokens: int,
-) -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Generate one response and append it to HF and Gradio histories."""
 
     text = text.strip()
@@ -58,7 +58,12 @@ def add_turn(
     )
     current_history = list(history or [])
     display_text = text if image is None else f"[image] {text}".strip()
-    current_history.append((display_text, response))
+    current_history.extend(
+        [
+            {"role": "user", "content": display_text},
+            {"role": "assistant", "content": response},
+        ]
+    )
     return current_messages, current_history
 
 
