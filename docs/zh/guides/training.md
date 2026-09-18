@@ -5,7 +5,7 @@
 ```bash
 python -m tinyllava.train.train \
   --config configs/train/models/qwen2_base_pretrain.yaml \
-  data.data_path=/path/to/blip_laion_cc_sbu_558k.json \
+  data.dataset_name_or_path=/path/to/blip_laion_cc_sbu_558k.json \
   data.image_folder=/path/to/pretrain/images
 ```
 
@@ -15,7 +15,7 @@ python -m tinyllava.train.train \
 python -m tinyllava.train.train \
   --config configs/train/models/qwen2_base_finetune.yaml \
   model.pretrained_model_name_or_path=output/tinyllava-qwen2-base-pretrain \
-  data.data_path=/path/to/llava_v1_5_mix665k.json \
+  data.dataset_name_or_path=/path/to/llava_v1_5_mix665k.json \
   data.image_folder=/path/to/dataset
 ```
 
@@ -29,7 +29,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 \
   --config configs/train/models/qwen2_base_finetune.yaml \
   training.per_device_train_batch_size=4 \
   training.gradient_accumulation_steps=8 \
-  data.data_path=/path/to/llava_v1_5_mix665k.json \
+  data.dataset_name_or_path=/path/to/llava_v1_5_mix665k.json \
   data.image_folder=/path/to/dataset
 ```
 

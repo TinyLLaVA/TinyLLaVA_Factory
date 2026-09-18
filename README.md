@@ -107,7 +107,7 @@ one-off changes:
 ```bash
 python tinyllava/train/train.py \
     --config configs/train/models/phi_pretrain.yaml \
-    data.data_path=/path/to/pretrain.json \
+    data.dataset_name_or_path=/path/to/pretrain.json \
     data.image_folder=/path/to/images
 ```
 

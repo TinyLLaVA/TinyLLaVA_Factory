@@ -12,7 +12,6 @@ class LlavaLegacyDatasetAdapter:
     """Drop source metadata and canonicalize `from`/`value` conversations."""
 
     name = "llava_legacy"
-    cache_version = "1"
     features = Features(
         {
             "id": Value("string"),

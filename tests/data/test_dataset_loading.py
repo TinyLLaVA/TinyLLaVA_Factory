@@ -30,7 +30,7 @@ def test_load_training_dataset_streams_top_level_array(tmp_path, monkeypatch):
     path.write_text(json.dumps(samples), encoding="utf-8")
     monkeypatch.setattr(datasets.config, "HF_DATASETS_CACHE", str(tmp_path / "cache"))
 
-    dataset = load_training_dataset(DataArguments(data_path=str(path)))
+    dataset = load_training_dataset(DataArguments(dataset_name_or_path=str(path)))
 
     assert dataset.to_list() == [
         {
@@ -72,7 +72,7 @@ def test_load_training_dataset_fills_columns_missing_from_some_rows(
     path.write_text(json.dumps(samples), encoding="utf-8")
     monkeypatch.setattr(datasets.config, "HF_DATASETS_CACHE", str(tmp_path / "cache"))
 
-    dataset = load_training_dataset(DataArguments(data_path=str(path)))
+    dataset = load_training_dataset(DataArguments(dataset_name_or_path=str(path)))
 
     assert dataset.column_names == ["id", "image", "messages"]
     assert dataset[1]["image"] is None
@@ -106,7 +106,7 @@ def test_llava_adapter_also_applies_to_json_lines(tmp_path, monkeypatch):
     monkeypatch.setattr(datasets.config, "HF_DATASETS_CACHE", str(tmp_path / "cache"))
 
     dataset = load_training_dataset(
-        DataArguments(data_path=str(path), dataset_adapter="llava_legacy")
+        DataArguments(dataset_name_or_path=str(path), dataset_adapter="llava_legacy")
     )
 
     assert dataset.to_list() == [

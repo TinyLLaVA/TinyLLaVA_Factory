@@ -18,6 +18,7 @@ dependencies = [
     "datasets>=5.0.0",
     "deepspeed>=0.19.2",
     "huggingface-hub>=1.23.0",
+    "ijson>=3.4.0",
     "peft>=0.19.1",
     "torch>=2.13.0",
     "torchvision>=0.28.0",

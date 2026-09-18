@@ -10,7 +10,7 @@ model:
   attn_implementation: sdpa
 
 data:
-  data_path: ${oc.env:TINYLLAVA_FINETUNE_DATA,/data/vlm/llava_data/text_files/llava_v1_5_mix665k.json}
+  dataset_name_or_path: ${oc.env:TINYLLAVA_FINETUNE_DATA,/data/vlm/llava_data/text_files/llava_v1_5_mix665k.json}
   image_folder: ${oc.env:TINYLLAVA_FINETUNE_IMAGE_FOLDER,/data/vlm/llava_data}
   dataset_adapter: llava_legacy
 

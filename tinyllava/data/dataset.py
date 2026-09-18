@@ -1,19 +1,22 @@
 """Processor transform over Hugging Face datasets for multimodal SFT."""
 
 import copy
-import hashlib
+import inspect
 from collections.abc import Mapping
 from functools import cached_property
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any, cast
 
 import torch
 import transformers
 from datasets import Dataset as HFDataset
-from datasets import load_dataset
+from datasets import ReadInstruction, concatenate_datasets, load_dataset
+from datasets.fingerprint import Hasher
 from torch.utils.data import Dataset
 
 from .adapters import resolve_dataset_adapter
+from .adapters.base import TrainingDatasetAdapter
 from .assistant_mask import build_assistant_mask, squeeze_batch
 from .collator import DataCollatorForMultimodalSFT, build_labels
 from .image_payload import (
@@ -23,6 +26,7 @@ from .image_payload import (
 )
 from .message_format import normalize_messages
 from .readers import is_json_array, iter_json_array, read_first_json_array_item
+from .readers import json_array as json_array_reader
 from ..utils.arguments import DataArguments
 from ..utils.logging import get_logger
 
@@ -63,12 +67,19 @@ class ProcessorSFTDataset(Dataset):
 
         lengths = []
         for sample in self.dataset:
+            messages = normalize_messages(sample)
             word_count = sum(
-                len(str(message.get("content", "")).split())
-                for message in sample.get("messages", [])
+                len(str(block.get("text", "")).split())
+                for message in messages
+                for block in message["content"]
             )
             word_count = max(word_count, 1)
-            lengths.append(word_count if sample.get("image") else -word_count)
+            has_image = bool(sample.get("images") or sample.get("image")) or any(
+                block.get("type") == "image"
+                for message in messages
+                for block in message["content"]
+            )
+            lengths.append(word_count if has_image else -word_count)
         return lengths
 
     def __getitem__(self, i) -> dict[str, torch.Tensor]:
@@ -108,104 +119,122 @@ class ProcessorSFTDataset(Dataset):
         )
 
 
-def _iter_adapted_json_array(path: str, adapter_name: str):
-    first_sample = read_first_json_array_item(path)
-    adapter = resolve_dataset_adapter(adapter_name, first_sample)
-    if adapter is None:
-        raise ValueError(
-            "Top-level JSON arrays require a registered training dataset "
-            "adapter. Set `data.dataset_adapter` explicitly."
-        )
+def _iter_adapted_json_array(path: str, adapter: TrainingDatasetAdapter | None):
     for sample in iter_json_array(path):
-        yield adapter.adapt(sample)
+        yield adapter.adapt(sample) if adapter is not None else sample
 
 
-def _json_array_fingerprint(path: Path, adapter_name: str, cache_version: str) -> str:
-    """Fingerprint a local source without rereading a potentially huge file."""
+def _json_array_fingerprint(path: Path, adapter: TrainingDatasetAdapter | None) -> str:
+    """Invalidate caches on source, reader, dependency, or adapter changes.
+
+    Source identity uses file size and nanosecond mtime to avoid an extra full
+    scan of large annotations. Implementation hashes replace manual versions.
+    """
     stat = path.stat()
-    identity = (
-        f"json-array-v5\0{adapter_name}\0{cache_version}\0{path.resolve()}\0"
-        f"{stat.st_size}\0{stat.st_mtime_ns}"
+    return Hasher.hash(
+        (
+            str(path.resolve()),
+            stat.st_size,
+            stat.st_mtime_ns,
+            inspect.getsource(json_array_reader),
+            inspect.getsource(_iter_adapted_json_array),
+            version("ijson"),
+            adapter,
+            inspect.getsource(type(adapter)) if adapter is not None else None,
+        )
     )
-    return hashlib.sha256(identity.encode()).hexdigest()
+
+
+def _load_json_array(path: Path, data_args: DataArguments) -> HFDataset:
+    first_sample = read_first_json_array_item(str(path))
+    adapter = resolve_dataset_adapter(data_args.dataset_adapter, first_sample)
+    logger.info_rank0("Building the Arrow cache incrementally from %s", path)
+    dataset = HFDataset.from_generator(
+        _iter_adapted_json_array,
+        features=adapter.features if adapter is not None else None,
+        gen_kwargs={"path": str(path), "adapter": adapter},
+        cache_dir=data_args.cache_dir,
+        fingerprint=_json_array_fingerprint(path, adapter),
+    )
+    # A single annotation file defines the train split. Use upstream slicing
+    # semantics rather than silently ignoring split expressions for arrays.
+    instructions = ReadInstruction.from_spec(data_args.split).to_absolute(
+        {"train": len(dataset)}
+    )
+    parts = [
+        dataset.select(
+            range(item.from_ or 0, item.to if item.to is not None else len(dataset))
+        )
+        for item in instructions
+    ]
+    return parts[0] if len(parts) == 1 else concatenate_datasets(parts)
 
 
 def load_training_dataset(data_args: DataArguments) -> HFDataset:
-    """Load local JSON training data and normalize rows with a dataset adapter.
+    """Load a Hub dataset, local directory/file, or HF builder into Arrow.
 
-    Top-level JSON arrays are read incrementally into an Arrow cache. Other
-    supported JSON files use the Hugging Face JSON loader.
-
-    Args:
-        data_args: Source path and adapter selection for the training data.
-
-    Returns:
-        A Hugging Face dataset of normalized training rows.
-
-    Raises:
-        ValueError: The source path is missing or a JSON-array adapter cannot be resolved.
+    HF handles subsets, splits, file lists/globs, and repository revisions.
+    Direct local JSON arrays use the incremental reader. Training consumes an
+    indexed Dataset; iterable/streaming training is not exposed here.
     """
-    if data_args.data_path is None:
-        raise ValueError("`data_path` must be provided for supervised fine-tuning.")
-
-    data_path = Path(data_args.data_path).expanduser()
-    if data_path.is_file() and is_json_array(data_path):
-        # datasets 5 loads an array fully and serializes it back to JSONL before
-        # creating Arrow. For LLaVA's ~1 GB legacy file this is both slow and
-        # memory hungry, and its progress remains at zero during that work.
-        logger.info_rank0(
-            "Building the Arrow cache incrementally from top-level JSON array %s",
-            data_path,
+    source = data_args.dataset_name_or_path
+    if not source:
+        raise ValueError(
+            "`dataset_name_or_path` must be provided for supervised fine-tuning."
         )
-        first_sample = read_first_json_array_item(str(data_path))
+    if not isinstance(data_args.split, str) or not data_args.split:
+        raise ValueError("`split` must select one dataset using a nonempty string.")
+
+    path = Path(source).expanduser()
+    if path.is_file():
+        conflicts = [
+            key
+            for key in ("data_files", "data_dir", "dataset_config_name", "revision")
+            if getattr(data_args, key) is not None
+        ]
+        if conflicts:
+            raise ValueError(
+                f"A direct dataset file cannot be combined with {conflicts}; use an HF builder instead."
+            )
+        if path.suffix.lower() in {".json", ".jsonl", ""} and is_json_array(path):
+            return _load_json_array(path, data_args)
+        # Let HF infer the format, including compression, from this one file.
+        source = str(path.resolve().parent)
+        data_files = str(path.resolve())
+    else:
+        if source.startswith(("/", "./", "../", "~")) and not path.exists():
+            raise FileNotFoundError(f"Training dataset path does not exist: {path}")
+        source = str(path) if path.is_dir() else source
+        data_files = data_args.data_files
+
+    dataset = load_dataset(
+        source,
+        name=data_args.dataset_config_name,
+        split=data_args.split,
+        data_files=data_files,
+        data_dir=data_args.data_dir,
+        revision=data_args.revision,
+        cache_dir=data_args.cache_dir,
+    )
+    if not isinstance(dataset, HFDataset):
+        raise TypeError(
+            "Training requires one indexed Hugging Face Dataset; select a single split."
+        )
+    if len(dataset):
         adapter = resolve_dataset_adapter(
             data_args.dataset_adapter,
-            first_sample,
+            dataset[0],
+            features=dataset.features,
         )
-        if adapter is None:
-            raise ValueError(
-                "Could not infer an adapter for this top-level JSON array. "
-                "Set `data.dataset_adapter` explicitly."
+        if adapter is not None:
+            logger.info_rank0("Using training dataset adapter %s", adapter.name)
+            dataset = dataset.map(
+                adapter.adapt,
+                remove_columns=dataset.column_names,
+                features=adapter.features,
+                desc=f"Applying {adapter.name} dataset adapter",
             )
-        logger.info_rank0("Using training dataset adapter %s", adapter.name)
-        fingerprint = _json_array_fingerprint(
-            data_path,
-            adapter.name,
-            adapter.cache_version,
-        )
-        dataset = HFDataset.from_generator(
-            _iter_adapted_json_array,
-            features=adapter.features,
-            gen_kwargs={
-                "path": str(data_path),
-                "adapter_name": adapter.name,
-            },
-            fingerprint=fingerprint,
-        )
-    else:
-        # TODO: expose the general `datasets.load_dataset` contract here instead
-        # of assuming a local JSON file. Future config should support dataset
-        # path/name, split, data_files, streaming, parquet, and Hub datasets.
-        dataset = load_dataset(
-            "json",
-            data_files=data_args.data_path,
-            split="train",
-        )
-        dataset = cast(HFDataset, dataset)
-        if len(dataset):
-            adapter = resolve_dataset_adapter(
-                data_args.dataset_adapter,
-                dataset[0],
-            )
-            if adapter is not None:
-                logger.info_rank0("Using training dataset adapter %s", adapter.name)
-                dataset = dataset.map(
-                    adapter.adapt,
-                    remove_columns=dataset.column_names,
-                    features=adapter.features,
-                    desc=f"Applying {adapter.name} dataset adapter",
-                )
-    return cast(HFDataset, dataset)
+    return dataset
 
 
 def make_supervised_data_module(
@@ -227,7 +256,13 @@ def make_supervised_data_module(
         data_args=data_args,
     )
     data_collator = DataCollatorForMultimodalSFT(processor=processor)
-    return dict(train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator)
+    return dict(
+        train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator
+    )
 
 
-__all__ = ["ProcessorSFTDataset", "load_training_dataset", "make_supervised_data_module"]
+__all__ = [
+    "ProcessorSFTDataset",
+    "load_training_dataset",
+    "make_supervised_data_module",
+]

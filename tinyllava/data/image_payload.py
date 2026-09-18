@@ -11,6 +11,8 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any
 from urllib.parse import urlparse
 
+from datasets import Image as HFImage
+
 from transformers.utils.chat_template_utils import ChatType
 
 
@@ -21,12 +23,28 @@ def collect_sample_image_payloads(
     images = sample.get("images", sample.get("image"))
     if images is None:
         return []
-    image_payloads = [images] if isinstance(images, (str, os.PathLike)) else list(images)
-    return [resolve_image_payload(image, image_folder=image_folder) for image in image_payloads]
+    image_payloads = (
+        list(images)
+        if isinstance(images, Sequence) and not isinstance(images, (str, bytes))
+        else [images]
+    )
+    return [
+        resolve_image_payload(image, image_folder=image_folder)
+        for image in image_payloads
+    ]
 
 
 def resolve_image_payload(image: Any, image_folder: str | None = None) -> Any:
     """Resolve path-like payloads and leave already-valid image objects untouched."""
+    if isinstance(image, Mapping) and ("bytes" in image or "path" in image):
+        return HFImage().decode_example(
+            {
+                "bytes": image.get("bytes"),
+                "path": resolve_image_payload(
+                    image.get("path"), image_folder=image_folder
+                ),
+            }
+        )
     if not isinstance(image, (str, os.PathLike)):
         return image
 
@@ -44,8 +62,10 @@ def add_image_payloads(messages: ChatType, images: Sequence[Any]) -> None:
         if not isinstance(content, list):
             continue
         for item in content:
-            if isinstance(item, Mapping) and item.get("type") == "image" and not any(
-                key in item for key in ("image", "url", "path", "base64")
+            if (
+                isinstance(item, Mapping)
+                and item.get("type") == "image"
+                and not any(key in item for key in ("image", "url", "path", "base64"))
             ):
                 try:
                     item["image"] = next(image_iter)
@@ -66,7 +86,9 @@ def resolve_message_image_payloads(
                 continue
             for key in ("image", "path"):
                 if key in item:
-                    item[key] = resolve_image_payload(item[key], image_folder=image_folder)
+                    item[key] = resolve_image_payload(
+                        item[key], image_folder=image_folder
+                    )
 
 
 def _is_remote_url(path: str) -> bool:

@@ -61,8 +61,8 @@ class TinyLanguageModel(nn.Module):
 
 
 def test_text_only_dataset_can_train_one_step(tmp_path):
-    data_path = tmp_path / "text_only.json"
-    data_path.write_text(
+    dataset_name_or_path = tmp_path / "text_only.json"
+    dataset_name_or_path.write_text(
         json.dumps(
             [
                 {
@@ -87,7 +87,7 @@ def test_text_only_dataset_can_train_one_step(tmp_path):
     data_module = make_supervised_data_module(
         processor=processor,
         data_args=DataArguments(
-            data_path=str(data_path),
+            dataset_name_or_path=str(dataset_name_or_path),
             dataset_adapter="llava_legacy",
         ),
     )

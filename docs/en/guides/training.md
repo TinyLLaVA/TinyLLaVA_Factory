@@ -7,7 +7,7 @@ so relative config and checkpoint paths resolve consistently.
 ```bash
 python -m tinyllava.train.train \
   --config configs/train/models/qwen2_base_pretrain.yaml \
-  data.data_path=/path/to/blip_laion_cc_sbu_558k.json \
+  data.dataset_name_or_path=/path/to/blip_laion_cc_sbu_558k.json \
   data.image_folder=/path/to/pretrain/images
 ```
 
@@ -22,7 +22,7 @@ from their base model IDs would discard the trained connector.
 python -m tinyllava.train.train \
   --config configs/train/models/qwen2_base_finetune.yaml \
   model.pretrained_model_name_or_path=output/tinyllava-qwen2-base-pretrain \
-  data.data_path=/path/to/llava_v1_5_mix665k.json \
+  data.dataset_name_or_path=/path/to/llava_v1_5_mix665k.json \
   data.image_folder=/path/to/dataset
 ```
 
@@ -41,7 +41,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 \
   --module tinyllava.train.train \
   --config configs/train/models/qwen2_base_finetune.yaml \
   training.gradient_accumulation_steps=8 \
-  data.data_path=/path/to/llava_v1_5_mix665k.json \
+  data.dataset_name_or_path=/path/to/llava_v1_5_mix665k.json \
   data.image_folder=/path/to/dataset
 ```
 

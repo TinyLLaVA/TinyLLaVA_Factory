@@ -10,7 +10,6 @@ class TrainingDatasetAdapter(Protocol):
     """Project source-specific rows into a stable training schema."""
 
     name: str
-    cache_version: str
     features: Features
 
     def adapt(self, sample: Mapping[str, Any]) -> dict[str, Any]:

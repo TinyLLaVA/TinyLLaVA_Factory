@@ -100,16 +100,30 @@ class DataArguments:
     """Locate training annotations and resolve their sample format.
 
     Attributes:
-        data_path: Local JSON or JSONL training annotations.
+        dataset_name_or_path: Hub repository, local dataset directory/file, or HF builder.
+        dataset_config_name: Dataset subset/configuration name (HF `name`).
+        split: Training split, including HF slice expressions.
+        data_files: File paths, glob patterns, or a mapping from splits to files.
+        data_dir: Data subdirectory passed to the HF loader.
+        revision: Hub branch, tag, or commit.
+        cache_dir: Directory for downloaded data and Arrow caches.
         image_folder: Root directory for relative image paths.
         dataset_adapter: Registered adapter name. `auto` detects known formats;
             `llava_legacy` selects LLaVA conversation records explicitly.
     """
 
-    data_path: str | None = field(
+    dataset_name_or_path: str | None = field(
         default=None,
-        metadata={"help": "Training data file or dataset path."},
+        metadata={
+            "help": "Hub dataset ID, local file/directory, or HF builder such as parquet."
+        },
     )
+    dataset_config_name: str | None = None
+    split: str = "train"
+    data_files: str | list[str] | dict[str, str | list[str]] | None = None
+    data_dir: str | None = None
+    revision: str | None = None
+    cache_dir: str | None = None
     image_folder: str | None = field(
         default=None,
         metadata={"help": "Root directory for relative image paths."},
@@ -301,7 +315,9 @@ class TrainingArguments(transformers.TrainingArguments):
     )
     tune_type_connector: str = field(
         default="full",
-        metadata={"help": "Connector/projector tuning strategy: 'frozen', 'full', or 'lora'."},
+        metadata={
+            "help": "Connector/projector tuning strategy: 'frozen', 'full', or 'lora'."
+        },
     )
     group_by_modality_length: bool = field(
         default=False,

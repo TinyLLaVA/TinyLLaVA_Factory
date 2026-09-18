@@ -13,7 +13,7 @@ model:
   attn_implementation: null
 
 data:
-  data_path: ${oc.env:TINYLLAVA_PRETRAIN_DATA,/data/vlm/llava_data/text_files/blip_laion_cc_sbu_558k.json}
+  dataset_name_or_path: ${oc.env:TINYLLAVA_PRETRAIN_DATA,/data/vlm/llava_data/text_files/blip_laion_cc_sbu_558k.json}
   image_folder: ${oc.env:TINYLLAVA_PRETRAIN_IMAGE_FOLDER,/data/vlm/llava_data/llava/llava_pretrain/images}
   dataset_adapter: llava_legacy
 

@@ -7,7 +7,7 @@ model:
   attn_implementation: null
 
 data:
-  data_path: ${oc.env:TINYLLAVA_FINETUNE_DATA,data/finetune.json}
+  dataset_name_or_path: ${oc.env:TINYLLAVA_FINETUNE_DATA,data/finetune.json}
   image_folder: ${oc.env:TINYLLAVA_FINETUNE_IMAGE_FOLDER,data}
   dataset_adapter: llava_legacy
 

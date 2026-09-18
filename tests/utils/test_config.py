@@ -119,3 +119,24 @@ def test_share_second_pretraining_stage_loads_base_checkpoint():
     assert config["model"]["pretrained_model_name_or_path"] == (
         "output/tinyllava-phi-share-base-pretrain"
     )
+
+
+def test_parse_data_source_options_from_yaml(tmp_path):
+    config_path = tmp_path / "sources.yaml"
+    config_path.write_text(
+        "data:\n"
+        "  dataset_name_or_path: parquet\n"
+        "  data_files:\n"
+        "    train: [part-1.parquet, part-2.parquet]\n"
+        "  split: train[:10%]\n"
+        "  cache_dir: /tmp/data-cache\n"
+        "training:\n"
+        "  output_dir: /tmp/train-output\n"
+        "  use_cpu: true\n"
+        "  report_to: []\n"
+    )
+    _, data, _ = parse_train_config(["--config", str(config_path)])
+    assert data.dataset_name_or_path == "parquet"
+    assert data.data_files == {"train": ["part-1.parquet", "part-2.parquet"]}
+    assert data.split == "train[:10%]"
+    assert data.cache_dir == "/tmp/data-cache"
