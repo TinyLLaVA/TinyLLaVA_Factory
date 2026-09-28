@@ -1,0 +1,5 @@
+model_type: mof__tlf_connector
+depth: 2
+act: gelu
+bias: true
+vision_hidden_sizes: [1024, 1024]

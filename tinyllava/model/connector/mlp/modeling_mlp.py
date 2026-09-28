@@ -1,7 +1,10 @@
 """MLP connector model."""
 
+from __future__ import annotations
+
 import warnings
 
+import torch
 from torch import nn
 from transformers.activations import ACT2FN
 
@@ -41,14 +44,20 @@ class MLPConnector(BaseConnectorModel):
 
         input_size = self.vision_hidden_size * self.num_vision_feature_layers
         if config.depth == 1:
-            self.layers.append(nn.Linear(input_size, self.text_hidden_size, bias=config.bias))
+            self.layers.append(
+                nn.Linear(input_size, self.text_hidden_size, bias=config.bias)
+            )
         else:
             self.layers.append(nn.Linear(input_size, hidden_size, bias=config.bias))
             for _ in range(1, config.depth - 1):
-                self.layers.append(nn.Linear(hidden_size, hidden_size, bias=config.bias))
-            self.layers.append(nn.Linear(hidden_size, self.text_hidden_size, bias=config.bias))
+                self.layers.append(
+                    nn.Linear(hidden_size, hidden_size, bias=config.bias)
+                )
+            self.layers.append(
+                nn.Linear(hidden_size, self.text_hidden_size, bias=config.bias)
+            )
 
-    def forward(self, vision_features):
+    def forward(self, vision_features: torch.Tensor) -> torch.Tensor:
         vision_features = self.layers[0](vision_features)
         for layer in self.layers[1:]:
             vision_features = self.activation(vision_features)

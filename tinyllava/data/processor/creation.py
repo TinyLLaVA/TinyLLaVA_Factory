@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from transformers.models.auto.processing_auto import PROCESSOR_MAPPING
-
-from tinyllava.data.processor.auto import AutoProcessor  # noqa: F401 - registers TinyLLaVA with HF AutoProcessor.
 from tinyllava.data.chat_template import inject_tinyllava_anchors
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
+
+from .auto import AutoProcessor
 
 
 def create_tinyllava_processor(
@@ -54,9 +53,8 @@ def create_tinyllava_processor(
         vision_feature_select_strategy=vision_feature_select_strategy,
     )
 
-    auto_config = config if config is not None and type(config) in PROCESSOR_MAPPING else TinyLlavaConfig()
-    processor_cls = PROCESSOR_MAPPING[type(auto_config)]
-    return processor_cls(
+    return AutoProcessor.from_config(
+        config if config is not None else TinyLlavaConfig(),
         image_processor=image_processor,
         tokenizer=tokenizer,
         patch_size=_get_attr(vision_config, "patch_size", default=14),
@@ -70,11 +68,15 @@ def create_tinyllava_processor(
 def ensure_image_token(tokenizer: Any, model: Any | None = None) -> int:
     image_token_id = _encode_single_token(tokenizer, DEFAULT_IMAGE_TOKEN)
     if image_token_id is None and hasattr(tokenizer, "add_special_tokens"):
-        tokenizer.add_special_tokens({"additional_special_tokens": [DEFAULT_IMAGE_TOKEN]})
+        tokenizer.add_special_tokens(
+            {"additional_special_tokens": [DEFAULT_IMAGE_TOKEN]}
+        )
         image_token_id = _encode_single_token(tokenizer, DEFAULT_IMAGE_TOKEN)
 
     if image_token_id is None:
-        raise ValueError(f"Tokenizer cannot encode TinyLLaVA image token {DEFAULT_IMAGE_TOKEN!r}.")
+        raise ValueError(
+            f"Tokenizer cannot encode TinyLLaVA image token {DEFAULT_IMAGE_TOKEN!r}."
+        )
 
     tokenizer.image_token = DEFAULT_IMAGE_TOKEN
     if model is not None and hasattr(model, "resize_token_embeddings"):

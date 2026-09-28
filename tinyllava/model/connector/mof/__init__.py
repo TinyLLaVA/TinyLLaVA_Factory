@@ -1,13 +1,10 @@
 from typing import TYPE_CHECKING
 
-from transformers.utils.import_utils import (
-    _LazyModule,
-    define_import_structure,
-)
+from transformers.utils.import_utils import _LazyModule, define_import_structure
 
 if TYPE_CHECKING:
-    from .auto import *  # noqa: F403
-    from .mof import *  # noqa: F403
+    from .configuration_mof import *  # noqa: F403
+    from .modeling_mof import *  # noqa: F403
 else:
     import sys
 

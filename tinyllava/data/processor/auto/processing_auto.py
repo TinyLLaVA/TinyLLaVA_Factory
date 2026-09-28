@@ -1,51 +1,64 @@
-"""Auto Custom Processor class."""
+"""Lazy model-config dispatch for project multimodal processors."""
+
+from __future__ import annotations
 
 import importlib
-from types import MethodType
+from os import PathLike
 
+from transformers import AutoProcessor as HFAutoProcessor
+from transformers.models.auto.auto_factory import _LazyAutoMapping
 from transformers.models.auto.processing_auto import (
-    PROCESSOR_MAPPING_NAMES as TRANSFORMERS_PROCESSOR_MAPPING_NAMES,
-    AutoProcessor,
+    PROCESSOR_MAPPING as HF_PROCESSOR_MAPPING,
 )
-from transformers import LlavaProcessor
-from transformers.models.auto import processing_auto as transformers_processing_auto
+from transformers.processing_utils import ProcessorMixin
 
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 
-from .auto_mappings import CUSTOM_PROCESSOR_MAPPING_NAMES
+from .auto_mappings import PROCESSOR_CONFIG_MAPPING_NAMES, PROCESSOR_MAPPING_NAMES
 
 
-def _load_custom_processor_attr_from_module(self, model_type, attr):
-    if model_type.endswith("__tlf_processor"):
-        module_name = model_type.replace("__tlf_processor", "")
-        if module_name not in self._modules:
-            self._modules[module_name] = importlib.import_module(f".{module_name}", "tinyllava.data.processor")
-        return getattr(self._modules[module_name], attr)
-
-    return self._transformers_original_load_attr_from_module(model_type, attr)
-
-
-def _register_custom_processor_mappings() -> None:
-    """Inject TinyLLaVA processor names into Transformers' global auto mapping."""
-    AutoProcessor.register(TinyLlavaConfig, LlavaProcessor, exist_ok=True)
-
-    TRANSFORMERS_PROCESSOR_MAPPING_NAMES.update(CUSTOM_PROCESSOR_MAPPING_NAMES)
-
-    processor_mapping = transformers_processing_auto.PROCESSOR_MAPPING
-
-    # kept for reliability, but not strictly necessary since the mapping is updated in place
-    processor_mapping._model_mapping = TRANSFORMERS_PROCESSOR_MAPPING_NAMES
-
-    if not hasattr(processor_mapping, "_transformers_original_load_attr_from_module"):
-        processor_mapping._transformers_original_load_attr_from_module = processor_mapping._load_attr_from_module
-
-    processor_mapping._load_attr_from_module = MethodType(
-        _load_custom_processor_attr_from_module,
-        processor_mapping,
-    )
+class _LazyProcessorMapping(_LazyAutoMapping):
+    def _load_attr_from_module(self, model_type: str, attr: str) -> type:
+        if attr == PROCESSOR_CONFIG_MAPPING_NAMES[model_type]:
+            module = importlib.import_module(
+                f"tinyllava.model.configuration_{model_type}"
+            )
+        else:
+            module = importlib.import_module(f"tinyllava.data.processor.{model_type}")
+        return getattr(module, attr)
 
 
-_register_custom_processor_mappings()
+PROCESSOR_MAPPING = _LazyProcessorMapping(
+    PROCESSOR_CONFIG_MAPPING_NAMES,
+    PROCESSOR_MAPPING_NAMES,
+)
+
+
+class AutoProcessor(HFAutoProcessor):
+    @classmethod
+    def from_config(cls, config: TinyLlavaConfig, **kwargs) -> ProcessorMixin:
+        """Select the processor by composite model type, independent of connector."""
+        if type(config) in PROCESSOR_MAPPING:
+            return PROCESSOR_MAPPING[type(config)].from_config(config, **kwargs)
+        return HF_PROCESSOR_MAPPING[type(config)](**kwargs)
+
+    @classmethod
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: str | PathLike[str], **kwargs
+    ) -> ProcessorMixin:
+        """Load a saved project processor lazily, delegating native classes to HF."""
+        processor_dict, _ = ProcessorMixin.get_processor_dict(
+            pretrained_model_name_or_path, **kwargs
+        )
+        for model_type, class_name in PROCESSOR_MAPPING_NAMES.items():
+            if processor_dict.get("processor_class") == class_name:
+                processor_cls = PROCESSOR_MAPPING._load_attr_from_module(
+                    model_type, class_name
+                )
+                return processor_cls.from_pretrained(
+                    pretrained_model_name_or_path, **kwargs
+                )
+        return super().from_pretrained(pretrained_model_name_or_path, **kwargs)
 
 
 __all__ = ["AutoProcessor"]

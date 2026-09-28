@@ -27,6 +27,10 @@ class BaseConnectorModel(PreTrainedModel):
         )
         self.vision_feature_layer = _require_feature_layer(vision_feature_layer)
 
+    def get_output_sequence_length(self, input_length: int) -> int:
+        """Number of language-space tokens produced for a visual sequence."""
+        return self.config.get_output_sequence_length(input_length)
+
     @property
     def num_vision_feature_layers(self) -> int:
         if isinstance(self.vision_feature_layer, int):
@@ -43,7 +47,11 @@ def _require_positive_int(value: int, name: str) -> int:
 def _require_feature_layer(value: int | list[int]) -> int | list[int]:
     if isinstance(value, int):
         return value
-    if isinstance(value, list) and value and all(isinstance(item, int) for item in value):
+    if (
+        isinstance(value, list)
+        and value
+        and all(isinstance(item, int) for item in value)
+    ):
         return value
     raise ValueError(
         "vision_feature_layer must be an integer or a non-empty list of integers, "

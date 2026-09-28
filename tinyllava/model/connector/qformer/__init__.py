@@ -6,12 +6,8 @@ from transformers.utils.import_utils import (
 )
 
 if TYPE_CHECKING:
-    from .auto import *  # noqa: F403
-    from .identity import *  # noqa: F403
-    from .mlp import *  # noqa: F403
-    from .mof import *  # noqa: F403
-    from .qformer import *  # noqa: F403
-    from .resampler import *  # noqa: F403
+    from .configuration_qformer import *  # noqa: F403
+    from .modeling_qformer import *  # noqa: F403
 else:
     import sys
 

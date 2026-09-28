@@ -1,11 +1,15 @@
 """Auto Connector Model class."""
 
+from __future__ import annotations
+
 import importlib
 
 from transformers.models.auto.auto_factory import _BaseAutoModelClass, _LazyAutoMapping
 
-from .configuration_auto import CONNECTOR_CONFIG_MAPPING_NAMES
+from ..configuration_base import BaseConnectorConfig
+from ..modeling_base import BaseConnectorModel
 from .auto_mappings import CONNECTOR_MODEL_MAPPING_NAMES
+from .configuration_auto import CONNECTOR_CONFIG_MAPPING_NAMES
 
 
 class _LazyAutoConnectorModelMapping(_LazyAutoMapping):
@@ -17,7 +21,9 @@ class _LazyAutoConnectorModelMapping(_LazyAutoMapping):
         - model_mapping: The map model type to connector model class
     """
 
-    def _load_attr_from_module(self, model_type, attr):
+    def _load_attr_from_module(
+        self, model_type: str, attr: str
+    ) -> type[BaseConnectorConfig] | type[BaseConnectorModel]:
         if not model_type.endswith("__tlf_connector"):
             raise KeyError(model_type)
 
@@ -29,7 +35,9 @@ class _LazyAutoConnectorModelMapping(_LazyAutoMapping):
         return getattr(self._modules[module_name], attr)
 
 
-CONNECTOR_MODEL_MAPPING = _LazyAutoConnectorModelMapping(CONNECTOR_CONFIG_MAPPING_NAMES, CONNECTOR_MODEL_MAPPING_NAMES)
+CONNECTOR_MODEL_MAPPING = _LazyAutoConnectorModelMapping(
+    CONNECTOR_CONFIG_MAPPING_NAMES, CONNECTOR_MODEL_MAPPING_NAMES
+)
 
 
 class AutoConnectorModel(_BaseAutoModelClass):

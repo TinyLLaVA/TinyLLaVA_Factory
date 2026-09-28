@@ -1,8 +1,6 @@
+"""Project multimodal processors indexed by composite model configuration."""
+
 from collections import OrderedDict
 
-
-CUSTOM_PROCESSOR_MAPPING_NAMES = OrderedDict(
-    [
-        ("mof__tlf_processor", "MOFProcessor"),
-    ]
-)
+PROCESSOR_CONFIG_MAPPING_NAMES = OrderedDict(tinyllava="TinyLlavaConfig")
+PROCESSOR_MAPPING_NAMES = OrderedDict(tinyllava="TinyLlavaProcessor")

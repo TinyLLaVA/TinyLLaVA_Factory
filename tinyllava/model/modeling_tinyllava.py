@@ -180,10 +180,24 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
         # but only if the image_sizes is not None (the default in this and related architectures)
         if image_sizes is not None:
             split_sizes = (
-                (torch.as_tensor(image_sizes, device=image_features.device) // self.vision_tower.patch_size)
+                (
+                    torch.as_tensor(image_sizes, device=image_features.device)
+                    // self.config.vision_config.patch_size
+                )
                 .prod(dim=-1)
                 .tolist()
             )
+            patch_size = self.config.vision_config.patch_size
+            patch_count = (pixel_values.shape[-2] // patch_size) * (
+                pixel_values.shape[-1] // patch_size
+            )
+            additional_tokens = selected_image_feature.shape[1] - patch_count
+            split_sizes = [
+                self.multi_modal_projector.get_output_sequence_length(
+                    size + additional_tokens
+                )
+                for size in split_sizes
+            ]
             image_features = torch.split(image_features.squeeze(0), split_sizes)
         else:
             image_features = list(image_features)

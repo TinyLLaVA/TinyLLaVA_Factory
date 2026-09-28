@@ -1,5 +1,8 @@
 """MLP connector model configuration"""
 
+from __future__ import annotations
+
+
 from huggingface_hub.dataclasses import strict
 
 from ..configuration_base import BaseConnectorConfig

@@ -16,3 +16,13 @@ the collator pads tokens and concatenates image tensors.
 ::: tinyllava.data.processor.creation.create_tinyllava_processor
 
 ::: tinyllava.data.chat_template.loading.resolve_chat_template
+
+::: tinyllava.data.processor.tinyllava.TinyLlavaProcessor
+
+::: tinyllava.data.processor.auto.AutoProcessor
+    options:
+      members: [from_config, from_pretrained]
+
+::: tinyllava.data.image_processor.auto.AutoImageProcessor
+    options:
+      members: [from_pretrained]

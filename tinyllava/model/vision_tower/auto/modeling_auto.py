@@ -9,6 +9,10 @@ from collections.abc import Iterator
 from transformers import AutoModel, PreTrainedConfig, PreTrainedModel
 from transformers.models.auto.auto_factory import _BaseAutoModelClass, _LazyAutoMapping
 
+from ..mof.configuration_mof import (
+    MofVisionConfig,  # noqa: F401 - HF AutoConfig registration
+)
+
 
 class _LazyAutoVisionTowerMapping(_LazyAutoMapping):
     def __getitem__(self, key: type[PreTrainedConfig]) -> type[PreTrainedModel]:
@@ -50,8 +54,8 @@ class _LazyAutoVisionTowerMapping(_LazyAutoMapping):
 
 
 VISION_TOWER_MODEL_MAPPING = _LazyAutoVisionTowerMapping(
-    OrderedDict(),
-    OrderedDict(),
+    OrderedDict(mof="MofVisionConfig"),
+    OrderedDict(mof="MofVisionModel"),
 )
 
 

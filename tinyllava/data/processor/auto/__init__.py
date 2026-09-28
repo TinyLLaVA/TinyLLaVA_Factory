@@ -1,15 +1,16 @@
 from typing import TYPE_CHECKING
 
-from transformers.utils.import_utils import (
-    _LazyModule,
-    define_import_structure,
-)
-
+from transformers.utils.import_utils import _LazyModule, define_import_structure
 
 if TYPE_CHECKING:
-    from .processing_auto import *
+    from .processing_auto import *  # noqa: F403
 else:
     import sys
 
     _file = globals()["__file__"]
-    sys.modules[__name__] = _LazyModule(__name__, _file, define_import_structure(_file), module_spec=__spec__)
+    sys.modules[__name__] = _LazyModule(
+        __name__,
+        _file,
+        define_import_structure(_file),
+        module_spec=__spec__,
+    )
