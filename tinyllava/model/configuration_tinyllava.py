@@ -12,19 +12,19 @@
 # limitations under the License.
 """TinyLLaVA model configuration"""
 
+from __future__ import annotations
+
 from typing import Literal
 
 from huggingface_hub.dataclasses import strict
-
 from transformers import (
-    PreTrainedConfig,
     CONFIG_MAPPING,
     AutoConfig,
+    PreTrainedConfig,
 )
 
-from .llm import LANGUAGE_CONFIG_MAPPING
-from .vision_tower import VISION_TOWER_CONFIG_MAPPING
 from .connector import CONNECTOR_CONFIG_MAPPING
+from .llm import LANGUAGE_CONFIG_MAPPING
 
 
 @strict
@@ -72,10 +72,12 @@ class TinyLlavaConfig(PreTrainedConfig):
 
     def __post_init__(self, **kwargs):
         if isinstance(self.vision_config, dict):
-            self.vision_config["model_type"] = self.vision_config.get("model_type", "clip_vision_model")
-            self.vision_config = VISION_TOWER_CONFIG_MAPPING[self.vision_config["model_type"]](**self.vision_config)
+            vision_config = dict(self.vision_config)
+            model_type = vision_config.pop("model_type", "clip_vision_model")
+            self.vision_config = AutoConfig.for_model(model_type, **vision_config)
         elif self.vision_config is None:
-            self.vision_config = VISION_TOWER_CONFIG_MAPPING["clip_vision_model"](
+            self.vision_config = AutoConfig.for_model(
+                "clip_vision_model",
                 intermediate_size=4096,
                 hidden_size=1024,
                 patch_size=14,
@@ -86,9 +88,15 @@ class TinyLlavaConfig(PreTrainedConfig):
                 projection_dim=768,
             )
 
+        # CLIP/SigLIP source configs can include both modalities.
+        self.vision_config = getattr(
+            self.vision_config, "vision_config", self.vision_config
+        )
+
         if isinstance(self.text_config, dict):
-            self.text_config["model_type"] = self.text_config.get("model_type", "llama")
-            self.text_config = LANGUAGE_CONFIG_MAPPING[self.text_config["model_type"]](**self.text_config)
+            text_config = dict(self.text_config)
+            model_type = text_config.pop("model_type", "llama")
+            self.text_config = LANGUAGE_CONFIG_MAPPING[model_type](**text_config)
         elif self.text_config is None:
             self.text_config = LANGUAGE_CONFIG_MAPPING["llama"]()
 
@@ -99,8 +107,12 @@ class TinyLlavaConfig(PreTrainedConfig):
             self.tie_word_embeddings = self.text_config.tie_word_embeddings
 
         if isinstance(self.connector_config, dict):
-            self.connector_config["model_type"] = self.connector_config.get("model_type", "mlp__tlf_connector")
-            self.connector_config = CONNECTOR_CONFIG_MAPPING[self.connector_config["model_type"]](
+            self.connector_config["model_type"] = self.connector_config.get(
+                "model_type", "mlp__tlf_connector"
+            )
+            self.connector_config = CONNECTOR_CONFIG_MAPPING[
+                self.connector_config["model_type"]
+            ](
                 **self.connector_config,
             )
         elif self.connector_config is None:

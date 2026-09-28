@@ -50,7 +50,7 @@ docs = [
 "Bug Tracker" = "https://github.com/TinyLLaVA/TinyLLaVA_Factory/issues"
 
 [tool.setuptools.packages.find]
-exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*"]
+exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*", "tinyllava.model.llm.deepseek_v2_lite*"]
 
 [tool.wheel]
 exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*"]

@@ -1,40 +1,58 @@
-"""Auto Vision Tower Model class."""
+"""HF-style lazy dispatch for project vision models and native HF backbones."""
+
+from __future__ import annotations
 
 import importlib
 from collections import OrderedDict
+from collections.abc import Iterator
 
+from transformers import AutoModel, PreTrainedConfig, PreTrainedModel
 from transformers.models.auto.auto_factory import _BaseAutoModelClass, _LazyAutoMapping
-from transformers.models.auto.modeling_auto import MODEL_MAPPING_NAMES
-
-from .auto_mappings import VISION_TOWER_MODEL_MAPPING_NAMES
-from .configuration_auto import VISION_TOWER_CONFIG_MAPPING_NAMES
 
 
-class _LazyAutoVisionTowerModelMapping(_LazyAutoMapping):
-    """
-    A mapping config to object (vision tower for instance) that will load keys and values when it is accessed.
+class _LazyAutoVisionTowerMapping(_LazyAutoMapping):
+    def __getitem__(self, key: type[PreTrainedConfig]) -> type[PreTrainedModel]:
+        if key in self._extra_content:
+            return self._extra_content[key]
+        # Consult the live HF mapping so public AutoModel registrations work too.
+        if key in AutoModel._model_mapping:
+            return AutoModel._model_mapping[key]
+        return super().__getitem__(key)
 
-    Args:
-        - config_mapping: The map model type to config class
-        - model_mapping: The map model type to vision tower class
-    """
+    def __contains__(self, key: object) -> bool:
+        return key in AutoModel._model_mapping or super().__contains__(key)
 
-    def _load_attr_from_module(self, model_type, attr):
-        if model_type.endswith("__tlf_vision_tower"):
-            module_name = model_type.removesuffix("__tlf_vision_tower")
-            if module_name not in self._modules:
-                self._modules[module_name] = importlib.import_module(f".{module_name}", "tinyllava.model.vision_tower")
-            return getattr(self._modules[module_name], attr)
+    def __iter__(self) -> Iterator[type[PreTrainedConfig]]:
+        return iter(self.keys())
 
-        return super()._load_attr_from_module(model_type, attr)
+    def keys(self) -> list[type[PreTrainedConfig]]:
+        return list(dict.fromkeys([*super().keys(), *AutoModel._model_mapping.keys()]))
+
+    def values(self) -> list[type[PreTrainedModel]]:
+        return [self[key] for key in self.keys()]
+
+    def items(self) -> list[tuple[type[PreTrainedConfig], type[PreTrainedModel]]]:
+        return [(key, self[key]) for key in self.keys()]
+
+    def __len__(self) -> int:
+        native = AutoModel._model_mapping
+        return len(native) + sum(key not in native for key in super().keys())
+
+    def _load_attr_from_module(
+        self, model_type: str, attr: str
+    ) -> type[PreTrainedConfig] | type[PreTrainedModel]:
+        if model_type not in self._modules:
+            self._modules[model_type] = importlib.import_module(
+                f".{model_type}",
+                "tinyllava.model.vision_tower",
+            )
+        return getattr(self._modules[model_type], attr)
 
 
-VISION_TOWER_MODEL_MAPPING_NAMES = OrderedDict(
-    **VISION_TOWER_MODEL_MAPPING_NAMES,
-    **MODEL_MAPPING_NAMES,
+VISION_TOWER_MODEL_MAPPING = _LazyAutoVisionTowerMapping(
+    OrderedDict(),
+    OrderedDict(),
 )
-
-VISION_TOWER_MODEL_MAPPING = _LazyAutoVisionTowerModelMapping(VISION_TOWER_CONFIG_MAPPING_NAMES, VISION_TOWER_MODEL_MAPPING_NAMES)
 
 
 class AutoVisionTowerModel(_BaseAutoModelClass):

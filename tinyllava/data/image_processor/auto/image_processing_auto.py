@@ -1,46 +1,49 @@
-"""Auto Custom Processor class."""
+"""Lazy project image processors with native Hugging Face fallback."""
+
+from __future__ import annotations
 
 import importlib
-from types import MethodType
+from os import PathLike
 
-from transformers.models.auto.image_processing_auto import (
-    IMAGE_PROCESSOR_MAPPING_NAMES as TRANSFORMERS_PROCESSOR_MAPPING_NAMES,
-    AutoImageProcessor,
-)
-from transformers.models.auto import image_processing_auto as transformers_image_processing_auto
+from transformers import AutoImageProcessor as HFAutoImageProcessor
+from transformers.image_processing_base import ImageProcessingMixin
+from transformers.image_processing_utils import BaseImageProcessor
 
-from .auto_mappings import CUSTOM_PROCESSOR_MAPPING_NAMES
+from .auto_mappings import CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES
 
 
-def _load_custom_processor_attr_from_module(self, model_type, attr):
-    if model_type.endswith("__tlf_image_processor"):
-        module_name = model_type.replace("__tlf_image_processor", "")
-        if module_name not in self._modules:
-            self._modules[module_name] = importlib.import_module(f".{module_name}", "tinyllava.data.image_processor")
-        return getattr(self._modules[module_name], attr)
+class AutoImageProcessor(HFAutoImageProcessor):
+    @classmethod
+    def from_pretrained(
+        cls, pretrained_model_name_or_path: str | PathLike[str], **kwargs
+    ) -> BaseImageProcessor:
+        """Load the saved image processor, importing a local extension only if selected.
 
-    return self._transformers_original_load_attr_from_module(model_type, attr)
-
-
-def _register_custom_processor_mappings() -> None:
-    """Inject TinyLLaVA processor names into Transformers' global auto mapping."""
-    TRANSFORMERS_PROCESSOR_MAPPING_NAMES.update(CUSTOM_PROCESSOR_MAPPING_NAMES)
-
-    image_processor_mapping = transformers_image_processing_auto.IMAGE_PROCESSOR_MAPPING
-
-    # kept for reliability, but not strictly necessary since the mapping is updated in place
-    image_processor_mapping._model_mapping = TRANSFORMERS_PROCESSOR_MAPPING_NAMES
-
-    if not hasattr(image_processor_mapping, "_transformers_original_load_attr_from_module"):
-        image_processor_mapping._transformers_original_load_attr_from_module = image_processor_mapping._load_attr_from_module
-
-    image_processor_mapping._load_attr_from_module = MethodType(
-        _load_custom_processor_attr_from_module,
-        image_processor_mapping,
-    )
-
-
-_register_custom_processor_mappings()
+        Project entries use unique class names in `image_processor_type`.
+        Native processors, registered HF extensions and remote-code handling
+        remain delegated to Hugging Face. This class does not modify HF mappings.
+        """
+        if CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES:
+            try:
+                processor_dict, _ = ImageProcessingMixin.get_image_processor_dict(
+                    pretrained_model_name_or_path,
+                    **kwargs,
+                )
+            except OSError:
+                # HF also supports sources with preprocessing embedded in model
+                # config, such as timm; let its loader resolve these sources.
+                return super().from_pretrained(pretrained_model_name_or_path, **kwargs)
+            processor_name = processor_dict.get("image_processor_type")
+            for module_name, class_name in CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES.items():
+                if processor_name == class_name:
+                    module = importlib.import_module(
+                        f".{module_name}", "tinyllava.data.image_processor"
+                    )
+                    processor_cls = getattr(module, class_name)
+                    return processor_cls.from_pretrained(
+                        pretrained_model_name_or_path, **kwargs
+                    )
+        return super().from_pretrained(pretrained_model_name_or_path, **kwargs)
 
 
 __all__ = ["AutoImageProcessor"]

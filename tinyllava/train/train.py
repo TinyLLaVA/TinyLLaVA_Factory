@@ -2,29 +2,29 @@ from __future__ import annotations
 
 from tinyllava.data.chat_template.loading import resolve_chat_template
 from tinyllava.data.dataset import make_supervised_data_module
+from tinyllava.data.image_processor import AutoImageProcessor
 from tinyllava.data.processor.creation import create_tinyllava_processor
-from tinyllava.utils.model_loading import (
-    load_model_config,
-    load_training_model,
-    load_tokenizer,
-    resolve_component_paths,
-)
-from tinyllava.model.vision_tower.registry import load_image_processor
-from tinyllava.train.strategy import get_training_strategy
 from tinyllava.train.modality_trainer import TinyLlavaTrainer
-from tinyllava.utils.config import parse_train_config
+from tinyllava.train.strategy import get_training_strategy
 from tinyllava.utils.checkpoint import resolve_resume_checkpoint
+from tinyllava.utils.config import parse_train_config
 from tinyllava.utils.deepspeed import (
     configure_zero3_gradient_checkpointing,
 )
-from tinyllava.utils.logging import logger_setting, log_trainable_params
+from tinyllava.utils.logging import log_trainable_params, logger_setting
+from tinyllava.utils.model_loading import (
+    load_model_config,
+    load_tokenizer,
+    load_training_model,
+    resolve_component_paths,
+)
 from tinyllava.utils.precision import (
     cast_model_to_training_dtype,
     resolve_training_precision,
 )
 
 
-def train():
+def train() -> None:
     model_args, data_args, training_args = parse_train_config()
     logger_setting(getattr(training_args, "output_dir", None))
     configure_zero3_gradient_checkpointing(training_args)
@@ -45,9 +45,9 @@ def train():
     tokenizer = load_tokenizer(model_args, paths)
     model.tokenizer = tokenizer
 
-    image_processor = load_image_processor(
+    image_processor = AutoImageProcessor.from_pretrained(
         paths.image_processor,
-        model_type=model.config.vision_config.model_type,
+        cache_dir=model_args.cache_dir,
     )
     processor = create_tinyllava_processor(
         tokenizer=tokenizer,

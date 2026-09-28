@@ -220,3 +220,6 @@ __marimo__/
 /output/
 /datasets/*
 !/datasets/README.md
+
+# Local remnant of the former model submodule
+/tinyllava/model/llm/deepseek_v2_lite/

@@ -6,16 +6,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from transformers import AutoConfig, AutoTokenizer
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from tinyllava.data.chat_template.loading import resolve_chat_template
+from tinyllava.data.image_processor import AutoImageProcessor
 from tinyllava.data.processor.creation import create_tinyllava_processor
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
-from tinyllava.model.vision_tower.registry import load_image_processor
 from tinyllava.utils.arguments import ModelArguments
 from tinyllava.utils.config import load_connector_config
 from tinyllava.utils.logging import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -196,7 +196,7 @@ def load_model_config(
 def load_tokenizer(
     model_args: ModelArguments,
     paths: ComponentPaths,
-):
+) -> PreTrainedTokenizerBase:
     """Load the tokenizer matching resolved language/checkpoint paths."""
     return AutoTokenizer.from_pretrained(
         paths.tokenizer,
@@ -228,9 +228,7 @@ def load_training_model(
     """
     loading_kwargs = dict(language_model_loading_kwargs or {})
     loading_kwargs.setdefault("cache_dir", model_args.cache_dir)
-    loading_kwargs.setdefault(
-        "attn_implementation", model_args.attn_implementation
-    )
+    loading_kwargs.setdefault("attn_implementation", model_args.attn_implementation)
 
     if paths.pretrained_model is not None:
         # Transformers recursively applies a string implementation to every
@@ -238,9 +236,7 @@ def load_training_model(
         # connector models without attention are left untouched.
         attn_implementation = loading_kwargs.get("attn_implementation")
         if isinstance(attn_implementation, str):
-            loading_kwargs["attn_implementation"] = {
-                "text_config": attn_implementation
-            }
+            loading_kwargs["attn_implementation"] = {"text_config": attn_implementation}
         logger.info_rank0(
             "Loading complete TinyLLaVA checkpoint from %s.",
             paths.pretrained_model,
@@ -286,9 +282,9 @@ def load_tinyllava_model_bundle(
     )
     tokenizer = load_tokenizer(model_args, paths)
     model.tokenizer = tokenizer
-    image_processor = load_image_processor(
+    image_processor = AutoImageProcessor.from_pretrained(
         paths.image_processor,
-        model_type=model.config.vision_config.model_type,
+        cache_dir=model_args.cache_dir,
     )
     processor = create_tinyllava_processor(
         tokenizer=tokenizer,
@@ -315,7 +311,7 @@ def load_tinyllava_checkpoint_bundle(
     model_path: str,
     *,
     device: str | None = None,
-    **from_pretrained_kwargs: Any,
+    **from_pretrained_kwargs,
 ) -> TinyLlavaModelBundle:
     """Load a composite checkpoint together with its saved preprocessing assets.
 
@@ -335,9 +331,8 @@ def load_tinyllava_checkpoint_bundle(
         **from_pretrained_kwargs,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-    image_processor = load_image_processor(
+    image_processor = AutoImageProcessor.from_pretrained(
         model_path,
-        model_type=model.config.vision_config.model_type,
     )
     processor = create_tinyllava_processor(
         tokenizer=tokenizer,
