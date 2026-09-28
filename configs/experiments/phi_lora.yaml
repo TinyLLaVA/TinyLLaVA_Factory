@@ -1,0 +1,11 @@
+model: phi
+stages:
+  pretrain:
+    recipe: pretrain
+    dataset: llava_558k
+    model:
+      model_max_length: 3072
+      attn_implementation: flash_attention_2
+  finetune:
+    recipe: lora_finetune
+    dataset: llava_665k

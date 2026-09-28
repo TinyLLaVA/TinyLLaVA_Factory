@@ -1,0 +1,4 @@
+data:
+  adapter: vqa
+  question_file: ${eval_dir}/gqa/llava_gqa_testdev_balanced.jsonl
+  image_folder: ${eval_dir}/gqa/images

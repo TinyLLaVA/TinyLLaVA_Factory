@@ -82,21 +82,19 @@ with open(pokemon_data_path, 'w') as f:
 ## Custom Finetune
 After acquiring the dataset following the above data format, you can finetune our trained model TinyLLaVA-Phi-2-SigLIP-3.1B checkpoint by using lora.
 
-Set the v2 composite checkpoint and dataset paths through environment
-variables. Override YAML values on the command line when needed:
+Select the v2 composite checkpoint and data paths in the config or on the command line:
 
 ```bash
-export TINYLLAVA_PRETRAINED_MODEL=/path/to/v2-checkpoint
-export TINYLLAVA_FINETUNE_DATA=/path/to/finetune.json
-export TINYLLAVA_FINETUNE_IMAGE_FOLDER=/path/to/images
-
-bash scripts/train/custom_finetune.sh \
-    training.output_dir=output/my-custom-lora
+python -m tinyllava.run --config configs/train/lora_finetune.yaml \
+  checkpoint=/path/to/v2-checkpoint \
+  data.dataset_name_or_path=/path/to/finetune.json \
+  data.image_folder=/path/to/images \
+  name=my-custom-lora
 ```
 
 For distributed training, invoke `tinyllava/train/train.py` with
 `torchrun` and the same
-`configs/train/models/custom_lora_finetune.yaml` configuration.
+`configs/train/lora_finetune.yaml` configuration.
 
 ## Evaluation with Custom Finetuned Model
 All of the models trained by TinyLLaVA Factory have the same evaluation procedure, no matter it is trained through custom finetune or through normal training. Please see the [Evaluation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html) section in our Doc.

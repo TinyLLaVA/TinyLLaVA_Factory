@@ -218,3 +218,5 @@ __marimo__/
 # TinyLLaVA local data and training artifacts
 /data/
 /output/
+/datasets/*
+!/datasets/README.md

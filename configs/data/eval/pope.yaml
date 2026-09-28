@@ -1,0 +1,4 @@
+data:
+  adapter: pope
+  question_file: ${eval_dir}/pope/llava_pope_test.jsonl
+  image_folder: ${eval_dir}/pope/val2014

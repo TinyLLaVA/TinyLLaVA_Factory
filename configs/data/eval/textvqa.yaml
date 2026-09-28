@@ -1,0 +1,4 @@
+data:
+  adapter: vqa
+  question_file: ${eval_dir}/textvqa/llava_textvqa_val_v051_ocr.jsonl
+  image_folder: ${eval_dir}/textvqa/train_images

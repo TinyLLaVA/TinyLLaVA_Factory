@@ -1,0 +1,15 @@
+model:
+  name: phi
+  model_max_length: 3072
+stages:
+  base_pretrain:
+    recipe: pretrain
+    dataset: llava_558k
+  pretrain:
+    recipe: finetune
+    dataset: sharegpt4v_pretrain
+    training:
+      gradient_accumulation_steps: 8
+  finetune:
+    recipe: finetune
+    dataset: sharegpt4v_finetune

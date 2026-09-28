@@ -100,66 +100,39 @@ Please refer to the [training data guide](docs/en/guides/data.md).
 
 #### 2. Train
 
-Training is configured with YAML files under `configs/train/`. Run one
-configuration directly and use OmegaConf dotlist overrides for local paths or
-one-off changes:
+Models, datasets and training policies are defined independently in
+`configs/models/`, `configs/data/` and `configs/recipes/`. Experiments select them
+without repeating paths:
 
 ```bash
-python tinyllava/train/train.py \
-    --config configs/train/models/phi_pretrain.yaml \
-    data.dataset_name_or_path=/path/to/pretrain.json \
-    data.image_folder=/path/to/images
+python -m tinyllava.run --config configs/experiments/phi.yaml --dry-run
+python -m tinyllava.run --config configs/experiments/phi.yaml
 ```
 
-Use `torchrun` for distributed jobs. The effective global batch is:
-`num_gpus * per_device_train_batch_size * gradient_accumulation_steps`.
+Inputs default to `datasets/`. Outputs are inferred as `output/phi/pretrain/` and
+`output/phi/finetune/`; later stages automatically load the previous checkpoint.
+Stage names are arbitrary. Override `name=my-run` to create a separate experiment,
+`dataset_dir=/path/to/data` to relocate inputs, or use `--steps finetune` to run one stage.
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 \
-python -m torch.distributed.run --nproc_per_node=4 \
-    tinyllava/train/train.py \
-    --config configs/train/models/phi_pretrain.yaml
+CUDA_VISIBLE_DEVICES=0,1 python -m tinyllava.run \
+  --config configs/experiments/qwen2_base_legacy.yaml
 ```
 
-For the Qwen2-0.5B paper-compatible prompt, use the dedicated launcher. It
-derives gradient accumulation from the visible GPU count and keeps the
-pretraining and fine-tuning global batches at 256 and 128 respectively:
-
-```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 \
-    scripts/train/qwen2/train_qwen2_base_legacy.sh check
-CUDA_VISIBLE_DEVICES=0,1,2,3 \
-    scripts/train/qwen2/train_qwen2_base_legacy.sh all
-```
+The legacy Qwen2 recipe automatically preserves global batches 256/128.
+See the [configuration guide](configs/README.md) and [training guide](docs/en/guides/training.md).
 
 #### 3. Evaluation
 
-Evaluation generation is configured with the YAML files in `configs/eval/`.
-Set the shared paths through environment variables and select a benchmark config:
-
 ```bash
-export MODEL_PATH="$PWD/output/tinyllava-qwen2-instruct-finetune"
-export MODEL_NAME="tinyllava-qwen2-instruct-finetune"
-export EVAL_DIR="/path/to/llava_data/eval"
-
-python -m tinyllava.eval.batch_generation \
-    --config configs/eval/mmmu.yaml
+python -m tinyllava.run --config configs/eval/textvqa.yaml \
+  model=output/phi/finetune runtime.batch_size=4
 ```
 
-YAML values can be changed for one run with OmegaConf dotlist overrides:
-
-```bash
-python -m tinyllava.eval.batch_generation \
-    --config configs/eval/mmmu.yaml \
-    model.model_name_or_path=output/my-checkpoint \
-    generation.max_new_tokens=512 runtime.device=cuda:0
-```
-
-The scripts in `scripts/eval/` use the same YAML configs and also run each
-benchmark's conversion or scoring step. Set `EVAL_CONFIG` to use a custom
-config with one of those scripts. Please refer to the
-[Evaluation documentation](docs/en/guides/evaluation.md)
-for dataset preparation.
+Benchmark inputs live under `datasets/eval/`; results are inferred under
+`output/phi/finetune/eval/textvqa/`. Use `--steps generate` for generation only.
+For dataset preparation and official scoring requirements, see the
+[evaluation guide](docs/en/guides/evaluation.md).
 
 ## Model Zoo
 

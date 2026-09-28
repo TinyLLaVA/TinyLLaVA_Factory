@@ -1,0 +1,35 @@
+model:
+  name: qwen2_base
+  vision_feature_select_strategy: full
+launcher:
+  distributed: true
+  devices: auto
+  master_port: 29501
+training:
+  deepspeed: configs/deepspeed/zero3.json
+  precision: bf16
+  tf32: false
+  weight_decay: 0.0
+stages:
+  pretrain:
+    recipe: pretrain
+    dataset: llava_558k
+    training:
+      per_device_train_batch_size: 16
+      gradient_accumulation_steps: 4
+    model:
+      chat_template_path: configs/chat_templates/pretrain_legacy.jinja
+    launcher:
+      global_batch_size: 256
+  finetune:
+    recipe: finetune
+    dataset: llava_665k
+    training:
+      group_by_modality_length: true
+      per_device_train_batch_size: 4
+      gradient_accumulation_steps: 8
+    model:
+      chat_template_path: configs/chat_templates/qwen2_base_legacy.jinja
+      attn_implementation: sdpa
+    launcher:
+      global_batch_size: 128

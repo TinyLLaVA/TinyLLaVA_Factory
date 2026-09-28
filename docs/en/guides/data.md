@@ -12,7 +12,7 @@ Download annotations and images following the dataset maintainers' instructions:
 Preserve the relative paths encoded in each annotation. A typical LLaVA layout is:
 
 ```text
-dataset/
+datasets/
   text_files/
     blip_laion_cc_sbu_558k.json
     llava_v1_5_mix665k.json
@@ -25,9 +25,29 @@ dataset/
   vg/VG_100K_2/
 ```
 
-Pretraining uses `dataset/llava/llava_pretrain/images` as the image root;
-the instruction mixture uses `dataset` because its paths include dataset prefixes.
+Pretraining uses `datasets/llava/llava_pretrain/images` as the image root;
+the instruction mixture uses `datasets` because its paths include dataset prefixes.
 For example, `coco/train2017/example.jpg` resolves relative to `data.image_folder`.
+
+## Named datasets and storage
+
+Select a dataset with `dataset: llava_558k` or `dataset: llava_665k`. Their annotation
+and image paths are defined once in `configs/data/`. ShareGPT4V presets are
+`sharegpt4v_pretrain` and `sharegpt4v_finetune`. Add a YAML file there to register
+another dataset; its filename is the selector name.
+
+`dataset_dir` defaults to `datasets/`; override it per run or set
+`TINYLLAVA_DATASET_DIR`. Evaluation inputs live under `datasets/eval/`.
+Keep checkpoints and predictions under `output/`, outside the input tree.
+Hard-linking files from a shared collection on the same filesystem avoids copying
+image payloads; recreate directories and preserve relative paths. Linked files
+share contents with their sources, so copy a file before editing it.
+
+The local collection linked from `/data/vlm/llava_data` contains complete image
+references for LLaVA 558K, LLaVA 665K and the cleaned ShareGPT4V fine-tuning set.
+The ShareGPT4V pretraining annotation references 543,842 unavailable images;
+complete those downloads before running its stage. See `datasets/README.md` in
+the repository for the local validation inventory.
 
 ## Data sources
 

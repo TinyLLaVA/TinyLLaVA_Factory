@@ -1,0 +1,4 @@
+data:
+  adapter: vqa
+  question_file: ${eval_dir}/MME/llava_mme.jsonl
+  image_folder: ${eval_dir}/MME/MME_Benchmark_release_version

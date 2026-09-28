@@ -1,9 +1,11 @@
+import argparse
 import sys
 from collections.abc import Sequence
 from typing import Any
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
+from tinyllava.configuration import load_eval_config, load_train_config
 from tinyllava.utils.arguments import (
     DataArguments,
     EvalArguments,
@@ -15,7 +17,6 @@ from tinyllava.utils.arguments import (
     ModelArguments,
     TrainingArguments,
 )
-
 
 TRAIN_CONFIG_SECTIONS = ("model", "data", "training", "peft")
 EVAL_CONFIG_SECTIONS = ("model", "data", "generation", "runtime", "output")
@@ -37,7 +38,7 @@ def parse_train_config(
     Examples:
         ```python
         model_args, data_args, training_args = parse_train_config([
-            "--config", "configs/train/models/qwen2_base_pretrain.yaml",
+            "--config", "configs/train/pretrain.yaml",
             "training.output_dir=output/example",
         ])
         ```
@@ -46,9 +47,7 @@ def parse_train_config(
     cli_args = list(sys.argv[1:] if args is None else args)
     parsed_args = _parse_config_args(cli_args)
 
-    config = _load_config_mapping(parsed_args.config)
-    if parsed_args.overrides:
-        config = _merge_overrides(config, parsed_args.overrides)
+    config = load_train_config(parsed_args.config, parsed_args.overrides)
     config = _merge_launcher_arguments(
         config,
         deepspeed=parsed_args.deepspeed,
@@ -91,7 +90,9 @@ def build_train_arguments(
     training_config = dict(training_config)
     if peft_config:
         if "peft_config" in training_config:
-            raise ValueError("Use either top-level 'peft' or 'training.peft_config', not both.")
+            raise ValueError(
+                "Use either top-level 'peft' or 'training.peft_config', not both."
+            )
         training_config["peft_config"] = peft_config
 
     return (
@@ -115,10 +116,9 @@ def parse_eval_config(args: Sequence[str] | None = None) -> EvalArguments:
     cli_args = list(sys.argv[1:] if args is None else args)
     parsed_args = _parse_eval_config_args(cli_args)
 
-    config = _load_config_mapping(parsed_args.config)
-    if parsed_args.overrides:
-        config = _merge_overrides(config, parsed_args.overrides)
-    return build_eval_arguments(config)
+    return build_eval_arguments(
+        load_eval_config(parsed_args.config, parsed_args.overrides)
+    )
 
 
 def build_eval_arguments(config: dict[str, Any]) -> EvalArguments:
@@ -176,9 +176,7 @@ def load_connector_config(path: str | None) -> dict[str, Any] | None:
     return connector_config
 
 
-def _parse_config_args(args: list[str]):
-    import argparse
-
+def _parse_config_args(args: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train TinyLLaVA from a structured YAML config."
     )
@@ -209,9 +207,7 @@ def _parse_config_args(args: list[str]):
     return parser.parse_args(args)
 
 
-def _parse_eval_config_args(args: list[str]):
-    import argparse
-
+def _parse_eval_config_args(args: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate TinyLLaVA from a structured YAML config."
     )
@@ -264,7 +260,7 @@ def _merge_launcher_arguments(
     return config
 
 
-def _to_plain_container(config) -> dict[str, Any]:
+def _to_plain_container(config: DictConfig) -> dict[str, Any]:
     plain = OmegaConf.to_container(config, resolve=True)
     if not isinstance(plain, dict):
         raise ValueError("Config must be a mapping.")
@@ -291,7 +287,9 @@ def _require_mapping(
     config_kind: str = "Train",
 ) -> None:
     if not isinstance(section, dict):
-        raise ValueError(f"{config_kind} config section '{section_name}' must be a mapping.")
+        raise ValueError(
+            f"{config_kind} config section '{section_name}' must be a mapping."
+        )
 
 
 __all__ = [

@@ -1,0 +1,12 @@
+model: qwen2_instruct
+stages:
+  pretrain:
+    recipe: pretrain
+    dataset: llava_558k
+    training:
+      per_device_train_batch_size: 16
+  finetune:
+    recipe: finetune
+    dataset: llava_665k
+    training:
+      per_device_train_batch_size: 4

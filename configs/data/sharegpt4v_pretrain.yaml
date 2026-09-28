@@ -1,0 +1,3 @@
+dataset_name_or_path: ${dataset_dir}/text_files/really_cleaned_share-captioner_coco_lcs_sam_1246k_1107.json
+image_folder: ${dataset_dir}
+dataset_adapter: llava_legacy

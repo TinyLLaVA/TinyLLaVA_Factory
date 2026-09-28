@@ -1,0 +1,29 @@
+training:
+  precision: auto
+  training_strategy: lora
+  tune_type_llm: lora
+  tune_type_vision_tower: frozen
+  tune_type_connector: full
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0002
+  num_train_epochs: 1
+  save_strategy: steps
+  save_steps: 500
+  save_total_limit: 2
+  save_only_model: false
+  resume_from_checkpoint: auto
+  eval_strategy: 'no'
+  remove_unused_columns: false
+  gradient_checkpointing: true
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  logging_steps: 1
+  dataloader_num_workers: 8
+  report_to: tensorboard
+peft:
+  r: 128
+  lora_alpha: 256
+model:
+  model_max_length: 3072
+  attn_implementation: flash_attention_2

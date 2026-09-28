@@ -2,16 +2,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from omegaconf import OmegaConf
 
+from tinyllava.configuration import load_train_config, training_stages
 from tinyllava.utils.config import build_train_arguments, parse_train_config
-
 
 ROOT = Path(__file__).parents[2]
 FINETUNE_CONFIGS = sorted((ROOT / "configs" / "train").glob("*finetune.yaml"))
-FINETUNE_CONFIGS += sorted(
-    (ROOT / "configs" / "train" / "models").glob("*finetune.yaml")
-)
 
 
 def test_parse_train_config_accepts_deepspeed_launcher_arguments(tmp_path):
@@ -27,12 +23,12 @@ def test_parse_train_config_accepts_deepspeed_launcher_arguments(tmp_path):
                 "--config",
                 str(config_path),
                 "--deepspeed",
-                "scripts/zero3.json",
+                "configs/deepspeed/zero3.json",
                 "--local_rank=2",
             ]
         )
 
-    assert config["training"]["deepspeed"] == "scripts/zero3.json"
+    assert config["training"]["deepspeed"] == "configs/deepspeed/zero3.json"
     assert config["training"]["local_rank"] == 2
 
 
@@ -96,10 +92,7 @@ def test_precision_is_resolved_before_deepspeed_auto_values(tmp_path):
     ids=lambda path: path.stem,
 )
 def test_finetune_configs_load_composite_pretraining_checkpoints(config_path):
-    config = OmegaConf.to_container(
-        OmegaConf.load(config_path),
-        resolve=False,
-    )
+    config = load_train_config(config_path)
     model = config["model"]
 
     assert model["pretrained_model_name_or_path"]
@@ -109,16 +102,12 @@ def test_finetune_configs_load_composite_pretraining_checkpoints(config_path):
 
 
 def test_share_second_pretraining_stage_loads_base_checkpoint():
-    config = OmegaConf.to_container(
-        OmegaConf.load(
-            ROOT / "configs" / "train" / "models" / "phi_share_pretrain.yaml"
-        ),
-        resolve=False,
+    stages = training_stages(ROOT / "configs/experiments/phi_share.yaml")
+    assert (
+        stages[1][1]["model"]["pretrained_model_name_or_path"]
+        == stages[0][1]["training"]["output_dir"]
     )
-
-    assert config["model"]["pretrained_model_name_or_path"] == (
-        "output/tinyllava-phi-share-base-pretrain"
-    )
+    assert "language_model_name_or_path" not in stages[1][1]["model"]
 
 
 def test_parse_data_source_options_from_yaml(tmp_path):

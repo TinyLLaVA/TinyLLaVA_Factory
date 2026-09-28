@@ -1,0 +1,8 @@
+model: tinyllama
+stages:
+  pretrain:
+    recipe: pretrain
+    dataset: llava_558k
+  finetune:
+    recipe: finetune
+    dataset: llava_665k

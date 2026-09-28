@@ -1,0 +1,4 @@
+data:
+  adapter: vqa
+  question_file: ${eval_dir}/vqav2/llava_vqav2_mscoco_test-dev2015.jsonl
+  image_folder: ${eval_dir}/vqav2/test2015

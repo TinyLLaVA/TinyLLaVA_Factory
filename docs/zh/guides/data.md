@@ -2,6 +2,14 @@
 
 预训练常用 LLaVA 558K 图文对，微调常用 LLaVA 665K 对话。下载入口：[LLaVA-Pretrain](https://huggingface.co/datasets/liuhaotian/LLaVA-Pretrain)、[LLaVA-Instruct-150K](https://huggingface.co/datasets/liuhaotian/LLaVA-Instruct-150K)。微调标注引用多个数据集的图像，需一并下载并按标注路径组织。
 
+## 默认目录与数据集名称
+
+数据默认存放在 `datasets/`，标注位于 `datasets/text_files/`，评测输入位于 `datasets/eval/`。保留原标注中的图片相对路径，例如 `datasets/coco/train2017/`、`datasets/gqa/images/`、`datasets/vg/VG_100K/`。预训练图片根目录为 `datasets/llava/llava_pretrain/images/`，665K 和 ShareGPT4V 的图片根目录为 `datasets/`。
+
+`configs/data/` 统一定义数据集，实验通过 `dataset: llava_558k`、`llava_665k`、`sharegpt4v_pretrain` 或 `sharegpt4v_finetune` 选择。添加一个 YAML 文件即可注册新名称。用 `dataset_dir=/path/to/data` 或 `TINYLLAVA_DATASET_DIR` 整体移动数据根目录。checkpoint、预测和计分结果统一写入 `output/`。
+
+本机已从 `/data/vlm/llava_data` 硬链接 1,489,338 个文件，未链接 checkpoint 和已有评测结果。目录重新建立，文件共享原 inode；编辑标注或图片前先复制，避免修改共享源内容。LLaVA 558K、665K 和清洗后的 ShareGPT4V 微调集图片引用完整；ShareGPT4V 预训练集缺少 543,842 个图片引用，需补齐后再运行。完整本地统计见仓库 `datasets/README.md`。
+
 ## 数据入口
 
 `data.dataset_name_or_path` 接受 Hub 数据集 ID、本地数据集目录、JSON/JSONL/Parquet 文件或 `parquet` 等 Hugging Face builder。原配置项 `data.data_path` 已替换，已有 YAML 和命令行覆盖项需同步改名。
