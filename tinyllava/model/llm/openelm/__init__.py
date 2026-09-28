@@ -6,8 +6,8 @@ from transformers.utils.import_utils import (
 )
 
 if TYPE_CHECKING:
-    from .auto import *  # noqa: F403
-    from .openelm import *  # noqa: F403
+    from .configuration_openelm import *  # noqa: F403
+    from .modeling_openelm import *  # noqa: F403
 else:
     import sys
 

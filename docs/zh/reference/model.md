@@ -19,3 +19,7 @@
       members: [from_pretrained_components, forward]
 
 ::: tinyllava.model.connector.mof.MofConnector
+
+::: tinyllava.model.llm.openelm.OpenELMConfig
+
+::: tinyllava.model.llm.openelm.OpenELMForCausalLM

@@ -62,7 +62,7 @@ setattr(logging.Logger, "warning_rank0_once", warning_rank0_once)
 class LoggerHandler(logging.Handler):
     r"""Redirect the logging output to the logging file for TinyLLaVA Board."""
 
-    def __init__(self, output_dir: str) -> None:
+    def __init__(self, output_dir: str):
         super().__init__()
         self._formatter = logging.Formatter(
             fmt="[%(levelname)s|%(asctime)s] %(filename)s:%(lineno)s >> %(message)s",

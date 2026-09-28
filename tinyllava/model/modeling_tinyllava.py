@@ -13,20 +13,23 @@
 # limitations under the License.
 """PyTorch TinyLlava model."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 
 import torch
 from torch import nn
-
 from transformers import (
-    AutoModelForCausalLM,
-    PreTrainedModel,
-    GenerationMixin,
     Cache,
+    GenerationMixin,
+    PreTrainedModel,
+)
+from transformers.modeling_outputs import (
+    BaseModelOutputWithPast,
+    BaseModelOutputWithPooling,
 )
 from transformers.processing_utils import Unpack
-from transformers.modeling_outputs import BaseModelOutputWithPast, BaseModelOutputWithPooling
 from transformers.utils.generic import (
     ModelOutput,
     TransformersKwargs,
@@ -35,10 +38,10 @@ from transformers.utils.generic import (
 )
 from transformers.utils.import_utils import torch_compilable_check
 
-from .llm import AutoLanguageModel
-from .vision_tower import AutoVisionTowerModel
-from .connector import AutoConnectorModel
 from .configuration_tinyllava import TinyLlavaConfig
+from .connector import AutoConnectorModel
+from .llm import AutoLanguageModel, AutoLanguageModelForCausalLM
+from .vision_tower import AutoVisionTowerModel
 
 
 @dataclass
@@ -135,10 +138,10 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
 
         self.post_init()
 
-    def get_input_embeddings(self):
+    def get_input_embeddings(self) -> nn.Module:
         return self.language_model.get_input_embeddings()
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, value: nn.Module) -> None:
         self.language_model.set_input_embeddings(value)
 
     @merge_with_config_defaults
@@ -168,7 +171,10 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
             if vision_feature_select_strategy == "default":
                 selected_image_feature = selected_image_feature[:, 1:]
         else:
-            hs_pool = [image_outputs.hidden_states[layer_idx] for layer_idx in vision_feature_layer]
+            hs_pool = [
+                image_outputs.hidden_states[layer_idx]
+                for layer_idx in vision_feature_layer
+            ]
             # For default; crop CLS from each hidden state in the hidden state pool
             if vision_feature_select_strategy == "default":
                 hs_pool = [hs[:, 1:] for hs in hs_pool]
@@ -206,15 +212,22 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
         return image_outputs
 
     def get_placeholder_mask(
-        self, input_ids: torch.LongTensor, inputs_embeds: torch.FloatTensor, image_features: torch.FloatTensor
-    ):
+        self,
+        input_ids: torch.LongTensor,
+        inputs_embeds: torch.FloatTensor,
+        image_features: torch.FloatTensor,
+    ) -> torch.Tensor:
         """
         Obtains multimodal placeholder mask from `input_ids` or `inputs_embeds`, and checks that the placeholder token count is
         equal to the length of multimodal features. If the lengths are different, an error is raised.
         """
         if input_ids is None:
             special_image_mask = inputs_embeds == self.get_input_embeddings()(
-                torch.tensor(self.config.image_token_id, dtype=torch.long, device=inputs_embeds.device)
+                torch.tensor(
+                    self.config.image_token_id,
+                    dtype=torch.long,
+                    device=inputs_embeds.device,
+                )
             )
             special_image_mask = special_image_mask.all(-1)
         else:
@@ -222,7 +235,11 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
 
         n_image_tokens = special_image_mask.sum()
         n_image_features = image_features.shape[0] * image_features.shape[1]
-        special_image_mask = special_image_mask.unsqueeze(-1).expand_as(inputs_embeds).to(inputs_embeds.device)
+        special_image_mask = (
+            special_image_mask.unsqueeze(-1)
+            .expand_as(inputs_embeds)
+            .to(inputs_embeds.device)
+        )
         torch_compilable_check(
             inputs_embeds[special_image_mask].numel() == image_features.numel(),
             f"Image features and image tokens do not match, tokens: {n_image_tokens}, features: {n_image_features}",
@@ -244,7 +261,9 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
         **kwargs: Unpack[TransformersKwargs],
     ) -> tuple | TinyLlavaModelOutputWithPast:
         if (input_ids is None) ^ (inputs_embeds is not None):
-            raise ValueError("You must specify exactly one of input_ids or inputs_embeds")
+            raise ValueError(
+                "You must specify exactly one of input_ids or inputs_embeds"
+            )
 
         if inputs_embeds is None:
             inputs_embeds = self.get_input_embeddings()(input_ids)
@@ -257,11 +276,15 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
                 image_sizes=image_sizes,
                 return_dict=True,
             ).pooler_output
-            image_features = torch.cat(image_features, dim=0).to(inputs_embeds.device, inputs_embeds.dtype)
+            image_features = torch.cat(image_features, dim=0).to(
+                inputs_embeds.device, inputs_embeds.dtype
+            )
             special_image_mask = self.get_placeholder_mask(
                 input_ids, inputs_embeds=inputs_embeds, image_features=image_features
             )
-            inputs_embeds = inputs_embeds.masked_scatter(special_image_mask, image_features)
+            inputs_embeds = inputs_embeds.masked_scatter(
+                special_image_mask, image_features
+            )
 
         outputs = self.language_model(
             attention_mask=attention_mask,
@@ -292,8 +315,6 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
             initialized from `config`.
     """
 
-    _tied_weights_keys = {"lm_head.weight": "model.language_model.embed_tokens.weight"}
-
     def __init__(
         self,
         config: TinyLlavaConfig,
@@ -319,6 +340,15 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
                 bias=False,
             )
         )
+        input_embeddings = self.model.language_model.get_input_embeddings()
+        embedding_path = next(
+            name
+            for name, module in self.model.language_model.named_modules()
+            if module is input_embeddings
+        )
+        self._tied_weights_keys = {
+            "lm_head.weight": f"model.language_model.{embedding_path}.weight"
+        }
         self.post_init()
 
     @classmethod
@@ -330,7 +360,7 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         vision_model_name_or_path: str,
         language_model_loading_kwargs: dict[str, Any] | None = None,
         vision_model_loading_kwargs: dict[str, Any] | None = None,
-    ) -> "TinyLlavaForConditionalGeneration":
+    ) -> TinyLlavaForConditionalGeneration:
         """Load language and vision weights and initialize a new connector.
 
         Args:
@@ -350,7 +380,7 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         language_model_loading_kwargs = dict(language_model_loading_kwargs or {})
         vision_model_loading_kwargs = dict(vision_model_loading_kwargs or {})
 
-        causal_lm = AutoModelForCausalLM.from_pretrained(
+        causal_lm = AutoLanguageModelForCausalLM.from_pretrained(
             language_model_name_or_path,
             config=config.text_config,
             **language_model_loading_kwargs,
@@ -377,10 +407,10 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
         model.generation_config = causal_lm.generation_config
         return model
 
-    def get_input_embeddings(self):
+    def get_input_embeddings(self) -> nn.Module:
         return self.model.get_input_embeddings()
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, value: nn.Module) -> None:
         self.model.set_input_embeddings(value)
 
     def get_output_embeddings(self) -> nn.Module:
@@ -472,13 +502,20 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
 
         hidden_states = outputs[0]
         # Only compute necessary logits, and do not upcast them to float if we are not computing the loss
-        slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
+        slice_indices = (
+            slice(-logits_to_keep, None)
+            if isinstance(logits_to_keep, int)
+            else logits_to_keep
+        )
         logits = self.lm_head(hidden_states[:, slice_indices, :])
 
         loss = None
         if labels is not None:
             loss = self.loss_function(
-                logits=logits, labels=labels, vocab_size=self.config.text_config.vocab_size, **kwargs
+                logits=logits,
+                labels=labels,
+                vocab_size=self.config.text_config.vocab_size,
+                **kwargs,
             )
 
         return TinyLlavaCausalLMOutputWithPast(
@@ -492,15 +529,15 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
 
     def prepare_inputs_for_generation(
         self,
-        input_ids,
-        past_key_values=None,
-        inputs_embeds=None,
-        pixel_values=None,
-        attention_mask=None,
-        logits_to_keep=None,
-        is_first_iteration=False,
+        input_ids: torch.Tensor | None,
+        past_key_values: Cache | None = None,
+        inputs_embeds: torch.Tensor | None = None,
+        pixel_values: torch.Tensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+        logits_to_keep: int | torch.Tensor | None = None,
+        is_first_iteration: bool = False,
         **kwargs,
-    ):
+    ) -> dict[str, Any]:
         """Prepare a decoding step, retaining images only when features are needed.
 
         Args:

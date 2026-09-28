@@ -104,3 +104,23 @@ processor Auto 映射以复合模型配置 `TinyLlavaConfig` 为键，与 HF 的
 `get_output_sequence_length(input_length)`，不增加 processor 子类或映射项。
 MLP/Identity 保持 N，MoF 返回 2N，查询型 connector 返回配置的固定数量。
 模型侧特征拆分调用同一个方法，避免维护两份长度规则。
+
+## 语言模型
+
+`AutoLanguageModel` 和 `AutoLanguageModelForCausalLM` 实时使用 HF 的
+backbone/causal-LM 映射。原生 Llama、Gemma、Phi、Qwen2、StableLM
+不需要项目封装；导入后通过 HF 公共接口注册的模型也能被识别。
+项目映射只描述本地实现，按需加载选中的模块；配置注册不会导入模型实现或加载权重。
+
+保留 OpenELM，是因为项目已有对应预设，而当前 Transformers 依赖尚未提供原生实现。
+规范实现位于 `tinyllava.model.llm.openelm`，使用 HF Cache、GenerationMixin、
+标准嵌入访问接口及共享输出头。本地支持官方 270M 的共享嵌入配置，保留层参数名称，
+移除了未使用的旧 backbone classifier。随包保留
+[Apple 许可证](https://huggingface.co/apple/OpenELM-270M-Instruct/blob/main/LICENSE)。
+
+通过项目 Auto 入口按需加载 OpenELM。独立使用 HF
+`AutoModel`/`AutoModelForCausalLM` 时，先显式导入对应 OpenELM 类以激活公共注册。
+复合模型通过 `get_input_embeddings()` 推导共享权重路径，不假设语言模型内部属性名称。
+
+验证覆盖微型离线检查点、有/无缓存解码、左侧 padding、多模态训练及保存恢复；
+尚未进行完整预训练 OpenELM 的效果评估。

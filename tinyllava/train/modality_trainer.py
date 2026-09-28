@@ -120,7 +120,7 @@ class ModalityLengthGroupedSampler(Sampler[int]):
         lengths: Sequence[int],
         generator: torch.Generator | None = None,
         seed: int = 0,
-    ) -> None:
+    ):
         self.batch_size = batch_size
         self.world_size = world_size
         self.lengths = lengths

@@ -61,3 +61,6 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "UP"]
 ignore = ["E501"]
+
+[tool.setuptools.package-data]
+"tinyllava.model.llm.openelm" = ["LICENSE", "README.md"]

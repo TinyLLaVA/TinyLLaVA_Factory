@@ -135,3 +135,30 @@ implementing `get_output_sequence_length(input_length)` in its config, with no
 new processor subclass or processor mapping entry. MLP/Identity preserve N,
 MoF returns 2N, and query connectors return their configured fixed count.
 Model-side splitting delegates to the same method, avoiding duplicate rules.
+
+## Language models
+
+`AutoLanguageModel` and `AutoLanguageModelForCausalLM` use the live HF
+backbone/causal-LM mappings. Native Llama, Gemma, Phi, Qwen2 and StableLM need
+no project wrappers. Public HF registrations remain visible after import.
+The project language mappings only describe local implementations and load
+the selected module lazily; registering config classes does not load weights
+or modeling modules.
+
+OpenELM is retained because the project has an OpenELM preset and the current
+Transformers dependency does not supply it. Its canonical implementation lives
+in `tinyllava.model.llm.openelm`, using HF Cache, GenerationMixin, standard
+embedding accessors and tied output weights. The official shared-embedding
+270M config is supported locally. The implementation preserves layer parameter
+names; the unused legacy backbone classifier was removed. See the bundled
+[Apple license](https://huggingface.co/apple/OpenELM-270M-Instruct/blob/main/LICENSE).
+
+Use the project Auto loaders to select OpenELM lazily. For standalone HF
+`AutoModel`/`AutoModelForCausalLM` loading, import the corresponding OpenELM
+class first to activate its public HF registration. Composite models derive
+the tied input-embedding path through `get_input_embeddings()` rather than
+assuming a particular language model's internal attribute name.
+
+Validation uses tiny offline checkpoints, cached versus uncached decoding,
+left padding, multimodal training, and checkpoint round trips. It does not
+constitute a full pretrained OpenELM quality evaluation.
