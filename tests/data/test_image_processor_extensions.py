@@ -28,7 +28,7 @@ def test_local_image_processor_is_loaded_only_when_selected(tmp_path, monkeypatc
     )
     monkeypatch.setitem(
         CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES,
-        "test_extension",
+        "test_extension__tlf_image_processor",
         "ExtensionImageProcessor",
     )
     module_name = "tinyllava.data.image_processor.test_extension"

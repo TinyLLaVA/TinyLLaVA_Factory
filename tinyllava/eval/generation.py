@@ -7,18 +7,22 @@ from transformers.image_utils import load_image
 
 from tinyllava.data.image_payload import add_image_payloads
 from tinyllava.data.message_format import normalize_content
-from tinyllava.data.processor.creation import create_tinyllava_processor
+from tinyllava.data.processor import BaseProcessor
 from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
 
 
-def build_processor_from_model(model: Any, tokenizer: Any | None = None, image_processor: Any | None = None):
+def build_processor_from_model(
+    model: Any, tokenizer: Any | None = None, image_processor: Any | None = None
+):
     tokenizer = tokenizer or model.tokenizer
     if image_processor is None:
         processor = getattr(model, "processor", None)
         image_processor = getattr(processor, "image_processor", None)
     if image_processor is None:
-        raise ValueError("`image_processor` must be provided unless `model.processor.image_processor` exists.")
-    return create_tinyllava_processor(
+        raise ValueError(
+            "`image_processor` must be provided unless `model.processor.image_processor` exists."
+        )
+    return BaseProcessor.from_model(
         tokenizer=tokenizer,
         image_processor=image_processor,
         model=model,
@@ -107,7 +111,9 @@ def prepare_generation_inputs(
     return move_to_device(dict(inputs), device=device)
 
 
-def move_to_device(inputs: dict[str, Any], *, device: torch.device | str) -> dict[str, Any]:
+def move_to_device(
+    inputs: dict[str, Any], *, device: torch.device | str
+) -> dict[str, Any]:
     moved = {}
     for key, value in inputs.items():
         if isinstance(value, torch.Tensor):

@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from transformers.utils.import_utils import _LazyModule, define_import_structure
 
 if TYPE_CHECKING:
+    from .configuration_auto import *  # noqa: F403
     from .modeling_auto import *  # noqa: F403
 else:
     import sys

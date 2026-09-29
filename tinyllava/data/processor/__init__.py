@@ -4,7 +4,7 @@ from transformers.utils.import_utils import _LazyModule, define_import_structure
 
 if TYPE_CHECKING:
     from .auto import *  # noqa: F403
-    from .creation import *  # noqa: F403
+    from .processing_base import *  # noqa: F403
     from .tinyllava import *  # noqa: F403
 else:
     import sys

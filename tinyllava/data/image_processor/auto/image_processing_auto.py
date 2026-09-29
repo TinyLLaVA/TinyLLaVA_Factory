@@ -37,7 +37,8 @@ class AutoImageProcessor(HFAutoImageProcessor):
             for module_name, class_name in CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES.items():
                 if processor_name == class_name:
                     module = importlib.import_module(
-                        f".{module_name}", "tinyllava.data.image_processor"
+                        f".{module_name.removesuffix('__tlf_image_processor')}",
+                        "tinyllava.data.image_processor",
                     )
                     processor_cls = getattr(module, class_name)
                     return processor_cls.from_pretrained(

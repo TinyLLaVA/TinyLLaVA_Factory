@@ -19,7 +19,7 @@ from tinyllava.model.llm import (
 )
 
 
-def test_language_auto_observes_public_hf_registrations():
+def test_language_auto_supports_explicit_project_registrations():
     class RegisteredConfig(LlamaConfig):
         model_type = "tinyllava_test_language"
 
@@ -32,6 +32,9 @@ def test_language_auto_observes_public_hf_registrations():
     AutoConfig.register(RegisteredConfig.model_type, RegisteredConfig)
     AutoModel.register(RegisteredConfig, RegisteredModel)
     AutoModelForCausalLM.register(RegisteredConfig, RegisteredLM)
+    LANGUAGE_CONFIG_MAPPING.register(RegisteredConfig.model_type, RegisteredConfig)
+    AutoLanguageModel.register(RegisteredConfig, RegisteredModel)
+    AutoLanguageModelForCausalLM.register(RegisteredConfig, RegisteredLM)
     config = LANGUAGE_CONFIG_MAPPING[RegisteredConfig.model_type](
         vocab_size=32,
         hidden_size=8,

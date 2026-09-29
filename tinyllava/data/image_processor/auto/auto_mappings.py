@@ -1,6 +1,6 @@
-"""Lazy local image processors: package name -> saved image_processor_type.
+"""Lazy local image processors: namespaced package key -> saved image_processor_type.
 
-For example, {"custom": "CustomImageProcessor"} resolves
+For example, {"custom__tlf_image_processor": "CustomImageProcessor"} resolves
 `tinyllava.data.image_processor.custom.CustomImageProcessor` on demand.
 Native HF processors do not need entries here.
 """

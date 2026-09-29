@@ -63,7 +63,9 @@ def test_composite_vision_configs_are_normalized(config_cls, vision_cls, as_dict
     assert isinstance(config.vision_config, vision_cls)
 
 
-def test_public_auto_registration_reaches_tinyllava_config():
+def test_project_auto_registration_reaches_tinyllava_config():
+    from tinyllava.model.vision_tower import VISION_TOWER_CONFIG_MAPPING
+
     class CustomVisionConfig(CLIPVisionConfig):
         model_type = "test_custom_vision"
 
@@ -72,6 +74,10 @@ def test_public_auto_registration_reaches_tinyllava_config():
 
     AutoConfig.register(CustomVisionConfig.model_type, CustomVisionConfig)
     AutoModel.register(CustomVisionConfig, CustomVisionModel)
+    VISION_TOWER_CONFIG_MAPPING.register(
+        CustomVisionConfig.model_type, CustomVisionConfig
+    )
+    AutoVisionTowerModel.register(CustomVisionConfig, CustomVisionModel)
     vision = CustomVisionConfig(
         hidden_size=16,
         intermediate_size=32,
@@ -85,3 +91,21 @@ def test_public_auto_registration_reaches_tinyllava_config():
     assert isinstance(
         AutoVisionTowerModel.from_config(config.vision_config), CustomVisionModel
     )
+
+
+def test_mof_namespace_is_distinct_from_an_unqualified_hf_name(monkeypatch):
+    from transformers.models.auto.configuration_auto import CONFIG_MAPPING
+
+    from tinyllava.model.vision_tower import VISION_TOWER_CONFIG_MAPPING
+    from tinyllava.model.vision_tower.mof import MofVisionConfig
+
+    class OtherMofConfig(CLIPVisionConfig):
+        model_type = "mof"
+
+    monkeypatch.setitem(CONFIG_MAPPING._extra_content, "mof", OtherMofConfig)
+    assert AutoConfig.for_model("mof").__class__ is OtherMofConfig
+    assert MofVisionConfig.model_type == "mof__tlf_vision_tower"
+    assert VISION_TOWER_CONFIG_MAPPING[MofVisionConfig.model_type] is MofVisionConfig
+    config = TinyLlavaConfig(vision_config=MofVisionConfig().to_dict())
+    assert isinstance(config.vision_config, MofVisionConfig)
+    assert AutoConfig.for_model("mof").__class__ is OtherMofConfig

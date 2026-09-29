@@ -17,7 +17,7 @@ class MofVisionConfig(PreTrainedConfig):
     to the MoF connector.
     """
 
-    model_type = "mof"
+    model_type = "mof__tlf_vision_tower"
     sub_configs = {"clip_config": CLIPVisionConfig, "dinov2_config": Dinov2Config}
     num_additional_image_tokens = 1
 

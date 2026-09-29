@@ -7,7 +7,7 @@ from PIL import Image
 from transformers import CLIPImageProcessor
 
 from tests.data.test_auto_vision_processing import tokenizer
-from tinyllava.data.processor import AutoProcessor, create_tinyllava_processor
+from tinyllava.data.processor import AutoProcessor, BaseProcessor
 from tinyllava.model import TinyLlavaConfig
 
 
@@ -18,7 +18,7 @@ def test_query_processor_matches_connector_and_saves_without_model_config(
     config = TinyLlavaConfig(
         connector_config={"model_type": name + "__tlf_connector", "num_queries": 3}
     )
-    processor = create_tinyllava_processor(
+    processor = BaseProcessor.from_model(
         tokenizer=tokenizer(),
         image_processor=CLIPImageProcessor(
             size={"shortest_edge": 16}, crop_size={"height": 16, "width": 16}

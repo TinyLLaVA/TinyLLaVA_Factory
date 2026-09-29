@@ -8,6 +8,7 @@ from transformers.models.auto.auto_factory import _BaseAutoModelClass, _LazyAuto
 
 from ..configuration_base import BaseConnectorConfig
 from ..modeling_base import BaseConnectorModel
+from . import auto_mappings
 from .auto_mappings import CONNECTOR_MODEL_MAPPING_NAMES
 from .configuration_auto import CONNECTOR_CONFIG_MAPPING_NAMES
 
@@ -24,15 +25,15 @@ class _LazyAutoConnectorModelMapping(_LazyAutoMapping):
     def _load_attr_from_module(
         self, model_type: str, attr: str
     ) -> type[BaseConnectorConfig] | type[BaseConnectorModel]:
-        if not model_type.endswith("__tlf_connector"):
+        if model_type not in auto_mappings.CONNECTOR_CONFIG_MAPPING_NAMES:
             raise KeyError(model_type)
 
         module_name = model_type.removesuffix("__tlf_connector")
-        if module_name not in self._modules:
-            self._modules[module_name] = importlib.import_module(
+        if model_type not in self._modules:
+            self._modules[model_type] = importlib.import_module(
                 f".{module_name}", "tinyllava.model.connector"
             )
-        return getattr(self._modules[module_name], attr)
+        return getattr(self._modules[model_type], attr)
 
 
 CONNECTOR_MODEL_MAPPING = _LazyAutoConnectorModelMapping(

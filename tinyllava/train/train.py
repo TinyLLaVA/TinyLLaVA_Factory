@@ -3,7 +3,7 @@ from __future__ import annotations
 from tinyllava.data.chat_template.loading import resolve_chat_template
 from tinyllava.data.dataset import make_supervised_data_module
 from tinyllava.data.image_processor import AutoImageProcessor
-from tinyllava.data.processor.creation import create_tinyllava_processor
+from tinyllava.data.processor import BaseProcessor
 from tinyllava.train.modality_trainer import TinyLlavaTrainer
 from tinyllava.train.strategy import get_training_strategy
 from tinyllava.utils.checkpoint import resolve_resume_checkpoint
@@ -49,7 +49,7 @@ def train() -> None:
         paths.image_processor,
         cache_dir=model_args.cache_dir,
     )
-    processor = create_tinyllava_processor(
+    processor = BaseProcessor.from_model(
         tokenizer=tokenizer,
         image_processor=image_processor,
         model=model,

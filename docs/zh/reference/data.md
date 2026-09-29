@@ -12,7 +12,7 @@ adapter 归一化记录，processor 编码，collator 完成 padding 与监督�
     options:
       members: [DataCollatorForMultimodalSFT, build_labels]
 
-::: tinyllava.data.processor.creation.create_tinyllava_processor
+::: tinyllava.data.processor.processing_base.BaseProcessor
 
 ::: tinyllava.data.chat_template.loading.resolve_chat_template
 

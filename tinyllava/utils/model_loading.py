@@ -10,7 +10,7 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from tinyllava.data.chat_template.loading import resolve_chat_template
 from tinyllava.data.image_processor import AutoImageProcessor
-from tinyllava.data.processor.creation import create_tinyllava_processor
+from tinyllava.data.processor import BaseProcessor
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
 from tinyllava.utils.arguments import ModelArguments
@@ -286,7 +286,7 @@ def load_tinyllava_model_bundle(
         paths.image_processor,
         cache_dir=model_args.cache_dir,
     )
-    processor = create_tinyllava_processor(
+    processor = BaseProcessor.from_model(
         tokenizer=tokenizer,
         image_processor=image_processor,
         model=model,
@@ -334,7 +334,7 @@ def load_tinyllava_checkpoint_bundle(
     image_processor = AutoImageProcessor.from_pretrained(
         model_path,
     )
-    processor = create_tinyllava_processor(
+    processor = BaseProcessor.from_model(
         tokenizer=tokenizer,
         image_processor=image_processor,
         model=model,

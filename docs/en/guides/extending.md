@@ -31,10 +31,11 @@ introducing public interfaces.
 ## Vision models and I-MoF
 
 Native CLIP, SigLIP, DINOv2 and other compatible HF vision backbones load through
-`AutoVisionTowerModel`, which delegates native models to the live HF Auto mapping.
+`AutoVisionTowerModel`, which combines project and native HF mapping names.
 TinyLLaVA extracts the vision sub-config from CLIP/SigLIP composite
-configs. Custom models register their configuration and model with the public
-HF Auto APIs. They must return spatial token hidden states and expose compatible
+configs. Project vision types use the `__tlf_vision_tower` suffix. Register runtime
+extensions explicitly in `VISION_TOWER_CONFIG_MAPPING` and `AutoVisionTowerModel`;
+HF Auto registration is separate. Custom models must return spatial token hidden states and expose compatible
 `hidden_size`, `patch_size` and image-token metadata. The saved preprocessing
 configuration selects `AutoImageProcessor`; there is no second vision registry.
 
@@ -107,7 +108,7 @@ they do not establish reproduction of the paper's benchmark scores.
 and inference. HF-native image processors continue to use HF's own resolution.
 For a project-specific processor, add a package such as
 `tinyllava/data/image_processor/custom/` exporting `CustomImageProcessor`, then
-add `("custom", "CustomImageProcessor")` to
+add `("custom__tlf_image_processor", "CustomImageProcessor")` to
 `CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES` in `image_processor/auto/auto_mappings.py`.
 Use a unique class name and save it as `image_processor_type` with
 `save_pretrained`. Only the processor selected by this metadata is imported.
@@ -136,14 +137,38 @@ new processor subclass or processor mapping entry. MLP/Identity preserve N,
 MoF returns 2N, and query connectors return their configured fixed count.
 Model-side splitting delegates to the same method, avoiding duplicate rules.
 
+## Custom multimodal processors
+
+A new input pipeline, such as video, can implement an independent HF
+`ProcessorMixin`; it need not inherit `TinyLlavaProcessor` or define a
+`from_config` method. Register its model config and processor class with the
+project `AutoProcessor.register(MyConfig, MyProcessor)`.
+`AutoProcessor.from_config(config, **kwargs)` selects the class and passes only
+`kwargs` to its constructor. Pass processor-specific settings explicitly.
+`BaseProcessor` inherits HF `LlavaProcessor` and provides connector configuration, serialization, and
+`get_output_sequence_length`. `BaseProcessor.from_model` assembles the image
+processor/tokenizer settings, synchronizes image tokens and model embeddings,
+and selects the concrete class through Auto. New processors can inherit this
+base to reuse LLaVA image-token expansion and override its behavior. Independent
+non-LLaVA processors can still register directly with Auto. The old `creation.py` entry point is removed.
+
+For lazy package extensions, add config and processor class names to
+`PROCESSOR_CONFIG_MAPPING_NAMES` and `PROCESSOR_MAPPING_NAMES`, and their full
+module paths to `PROCESSOR_CONFIG_MODULE_NAMES` and `PROCESSOR_MODULE_NAMES`.
+The paths need not match the model type or each other. Saved processors are
+selected by `processor_class`; runtime registrations must be repeated in a new
+process. Use unique processor class names. Video processing itself belongs to
+the selected implementation, not the Auto factory.
+
 ## Language models
 
-`AutoLanguageModel` and `AutoLanguageModelForCausalLM` use the live HF
-backbone/causal-LM mappings. Native Llama, Gemma, Phi, Qwen2 and StableLM need
-no project wrappers. Public HF registrations remain visible after import.
-The project language mappings only describe local implementations and load
-the selected module lazily; registering config classes does not load weights
-or modeling modules.
+`AutoLanguageModel` and `AutoLanguageModelForCausalLM` merge project and native
+HF mapping names, inheriting HF lookup and enumeration behavior. Local module
+resolution is the only model-mapping override. Runtime extensions register
+explicitly with the project config/model mappings; HF registrations are separate.
+Project language types use `__tlf_language_model`. OpenELM retains the official
+`openelm` model type so official checkpoint configs can be read. Config imports
+do not load modeling modules or weights.
 
 OpenELM is retained because the project has an OpenELM preset and the current
 Transformers dependency does not supply it. Its canonical implementation lives

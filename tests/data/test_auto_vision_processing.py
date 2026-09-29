@@ -17,7 +17,7 @@ from transformers import (
 )
 
 from tinyllava.data.image_processor import AutoImageProcessor
-from tinyllava.data.processor import AutoProcessor, create_tinyllava_processor
+from tinyllava.data.processor import AutoProcessor, BaseProcessor
 from tinyllava.data.processor.tinyllava import TinyLlavaProcessor
 from tinyllava.model import TinyLlavaConfig
 from tinyllava.model.vision_tower.mof import MofVisionConfig
@@ -68,7 +68,7 @@ def test_mof_processor_expansion_and_auto_round_trip(tmp_path, strategy, count):
     image_processor = CLIPImageProcessor(
         size={"shortest_edge": 16}, crop_size={"height": 16, "width": 16}
     )
-    processor = create_tinyllava_processor(
+    processor = BaseProcessor.from_model(
         tokenizer=tokenizer(),
         image_processor=image_processor,
         model=SimpleNamespace(config=config),
@@ -93,7 +93,7 @@ def test_mof_processor_expansion_and_auto_round_trip(tmp_path, strategy, count):
 
 def test_standard_models_preserve_hf_llava_token_expansion():
     config = TinyLlavaConfig()
-    processor = create_tinyllava_processor(
+    processor = BaseProcessor.from_model(
         tokenizer=tokenizer(),
         image_processor=CLIPImageProcessor(),
         model=SimpleNamespace(config=config),
@@ -124,7 +124,7 @@ def test_saved_processor_loads_lazily_without_model_config(
     tmp_path, connector_type, expected_class
 ):
     config = TinyLlavaConfig(connector_config={"model_type": connector_type})
-    processor = create_tinyllava_processor(
+    processor = BaseProcessor.from_model(
         tokenizer=tokenizer(),
         image_processor=CLIPImageProcessor(),
         model=SimpleNamespace(config=config),

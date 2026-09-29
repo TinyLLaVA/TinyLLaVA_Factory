@@ -18,8 +18,10 @@
 
 ## 视觉模型与 I-MoF
 
-原生 CLIP、SigLIP、DINOv2 及接口兼容的 HF 视觉模型通过 `AutoVisionTowerModel` 查询 HF 当前的 Auto 映射。
-CLIP/SigLIP 的完整配置会先提取视觉子配置。新增模型使用 HF 公开的 Auto 注册接口，
+原生 CLIP、SigLIP、DINOv2 及接口兼容的 HF 视觉模型通过 `AutoVisionTowerModel` 合并后的项目与 HF 原生命名映射加载。
+CLIP/SigLIP 的完整配置会先提取视觉子配置。项目视觉类型使用 `__tlf_vision_tower` 后缀。运行时扩展显式注册到
+`VISION_TOWER_CONFIG_MAPPING` 和 `AutoVisionTowerModel`，HF 注册独立维护。模型应
+
 返回空间 token 的 hidden states，并提供匹配的 `hidden_size`、`patch_size` 和图像
 token 元数据。预处理类由 checkpoint 保存的配置交给 `AutoImageProcessor` 解析。
 
@@ -82,7 +84,7 @@ python -m tinyllava.run --config configs/train/pretrain.yaml \
 `tinyllava.data.image_processor` 保留为训练和推理共用的懒加载扩展入口，原生处理器
 继续由 HF 解析。新增项目实现时，例如在 `tinyllava/data/image_processor/custom/`
 导出 `CustomImageProcessor`，并在 `image_processor/auto/auto_mappings.py` 的
-`CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES` 中加入 `("custom", "CustomImageProcessor")`。
+`CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES` 中加入 `("custom__tlf_image_processor", "CustomImageProcessor")`。
 使用唯一类名，通过 `save_pretrained` 将其保存为 `image_processor_type`。
 只有 checkpoint 选中的实现才会被导入，本地 Auto 类不修改 HF 全局映射或加载方法。
 
@@ -105,12 +107,31 @@ processor Auto 映射以复合模型配置 `TinyLlavaConfig` 为键，与 HF 的
 MLP/Identity 保持 N，MoF 返回 2N，查询型 connector 返回配置的固定数量。
 模型侧特征拆分调用同一个方法，避免维护两份长度规则。
 
+## 自定义多模态 processor
+
+视频等新输入流程可以直接实现 HF `ProcessorMixin`，无需继承
+`TinyLlavaProcessor`，也无需定义 `from_config` 方法。通过项目入口
+`AutoProcessor.register(MyConfig, MyProcessor)` 注册配置类与处理器类。
+`AutoProcessor.from_config(config, **kwargs)` 选择处理器后，仅把 `kwargs`
+传给构造函数；处理器专用参数由调用方显式提供。
+`BaseProcessor` 直接继承 HF `LlavaProcessor`，提供 connector 配置、序列化和 `get_output_sequence_length`。
+`BaseProcessor.from_model` 组织图像处理器和 tokenizer 参数，同步图像 token 与模型
+embedding，并通过 Auto 选择具体处理器。新处理器可继承该基类，无需继承
+`TinyLlavaProcessor`，并可复用或覆盖 LLaVA 图像 token 展开；非 LLaVA 处理器仍可独立注册 Auto。旧 `creation.py` 入口已删除。
+
+包内懒加载扩展在 `PROCESSOR_CONFIG_MAPPING_NAMES` 和
+`PROCESSOR_MAPPING_NAMES` 填写类名，在 `PROCESSOR_CONFIG_MODULE_NAMES` 和
+`PROCESSOR_MODULE_NAMES` 填写完整模块路径。路径无需与模型类型或彼此同名。
+保存后的处理器按 `processor_class` 选择，运行时注册需要在新进程重新执行；
+处理器类名应唯一。视频处理逻辑由具体实现负责，不放入 Auto 工厂。
+
 ## 语言模型
 
-`AutoLanguageModel` 和 `AutoLanguageModelForCausalLM` 实时使用 HF 的
-backbone/causal-LM 映射。原生 Llama、Gemma、Phi、Qwen2、StableLM
-不需要项目封装；导入后通过 HF 公共接口注册的模型也能被识别。
-项目映射只描述本地实现，按需加载选中的模块；配置注册不会导入模型实现或加载权重。
+`AutoLanguageModel` 和 `AutoLanguageModelForCausalLM` 合并项目与 HF 原生命名表，
+沿用 HF 的查询和枚举实现，模型映射仅覆盖本地模块定位。运行时扩展显式注册到项目
+配置与模型映射，HF 注册独立维护。项目语言类型使用 `__tlf_language_model` 后缀。
+OpenELM 保留官方 `openelm` 类型以读取官方 checkpoint 配置。
+配置导入不会加载模型实现或权重。
 
 保留 OpenELM，是因为项目已有对应预设，而当前 Transformers 依赖尚未提供原生实现。
 规范实现位于 `tinyllava.model.llm.openelm`，使用 HF Cache、GenerationMixin、

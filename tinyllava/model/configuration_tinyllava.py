@@ -25,6 +25,7 @@ from transformers import (
 
 from .connector import CONNECTOR_CONFIG_MAPPING
 from .llm import LANGUAGE_CONFIG_MAPPING
+from .vision_tower import VISION_TOWER_CONFIG_MAPPING
 
 
 @strict
@@ -74,10 +75,11 @@ class TinyLlavaConfig(PreTrainedConfig):
         if isinstance(self.vision_config, dict):
             vision_config = dict(self.vision_config)
             model_type = vision_config.pop("model_type", "clip_vision_model")
-            self.vision_config = AutoConfig.for_model(model_type, **vision_config)
+            self.vision_config = VISION_TOWER_CONFIG_MAPPING[model_type](
+                **vision_config
+            )
         elif self.vision_config is None:
-            self.vision_config = AutoConfig.for_model(
-                "clip_vision_model",
+            self.vision_config = VISION_TOWER_CONFIG_MAPPING["clip_vision_model"](
                 intermediate_size=4096,
                 hidden_size=1024,
                 patch_size=14,

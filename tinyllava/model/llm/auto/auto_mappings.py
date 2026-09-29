@@ -1,4 +1,4 @@
-"""Project language models; native models remain in the live HF mappings."""
+"""Project language models; native model names are merged by the Auto modules."""
 
 from collections import OrderedDict
 
