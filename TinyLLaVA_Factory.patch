@@ -1,0 +1,73 @@
+From 7141fd7a5ff308f51c7f5f25811e1f8059e9b946 Mon Sep 17 00:00:00 2001
+From: example <example@example.com>
+Date: Thu, 1 Oct 2026 00:17:06 +0800
+Subject: [PATCH] temporary
+
+---
+ tinyllava/utils/auto_switch_npu_and_gpu.py | 51 ++++++++++++++--------
+ 1 file changed, 34 insertions(+), 17 deletions(-)
+
+diff --git a/tinyllava/utils/auto_switch_npu_and_gpu.py b/tinyllava/utils/auto_switch_npu_and_gpu.py
+index 06dac8c..7c5380c 100644
+--- a/tinyllava/utils/auto_switch_npu_and_gpu.py
++++ b/tinyllava/utils/auto_switch_npu_and_gpu.py
+@@ -1,22 +1,39 @@
+-import torch
+-
+-try:
+-    import torch_npu
+-
+-    has_gpu = False
+-
+-
+-    # option = {"ACL_PRECISION_MODE": "must_keep_origin_dtype"}
+-    # torch_npu.npu.set_option(option)
+-
+-    def get_device():
+-        return torch.device('npu')
+-except ImportError:
+-    has_gpu = torch.cuda.is_available()
++from contextlib import suppress
++from importlib import import_module
++from typing import NamedTuple
+ 
++import torch
+ 
+-    def get_device():
+-        return torch.device("cuda")
++class _AdapterSpecification(NamedTuple):
++  module_name: str
++  device_name: str
++
++_adapters = (
++  _AdapterSpecification(
++    module_name="torch_npu",
++    device_name="npu",
++  ),
++  _AdapterSpecification(
++    module_name="torch_musa",
++    device_name="musa",
++  ),
++)
++
++has_gpu = None
++for adapter in _adapters:
++  with suppress(ImportError):
++    _package = import_module(adapter.module_name)
++    globals()[adapter.module_name] = _package
++
++    has_gpu = True
++    def get_device() -> str:
++      return torch.device(adapter.device_name)
++
++    break
++if has_gpu is None:
++  has_gpu = torch.cuda.is_available()
++  def get_device():
++    return torch.device("cuda")
+ 
+ 
+ def test():
+-- 
+2.34.1
+

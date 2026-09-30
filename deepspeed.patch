@@ -1,0 +1,2788 @@
+From 0b88becd2e5e8e56cb528ce86c41fd25aa341435 Mon Sep 17 00:00:00 2001
+From: example <example@example.com>
+Date: Wed, 30 Sep 2026 23:08:43 +0800
+Subject: [PATCH] temporary
+
+---
+ accelerator/musa_accelerator.py               | 304 +++++++
+ accelerator/real_accelerator.py               | 105 ++-
+ deepspeed/comm/comm.py                        | 790 +++++++++++-------
+ deepspeed/comm/constants.py                   |  17 +-
+ deepspeed/comm/torch.py                       | 367 +++++---
+ deepspeed/runtime/zero/linear.py              |   4 +-
+ .../zero/partitioned_param_coordinator.py     |   1 +
+ op_builder/all_ops.py                         |  11 +-
+ op_builder/musa/__init__.py                   |   7 +
+ op_builder/musa/async_io.py                   | 104 +++
+ op_builder/musa/builder.py                    |  88 ++
+ op_builder/musa/cpu_adagrad.py                |  25 +
+ op_builder/musa/cpu_adam.py                   |  25 +
+ op_builder/musa/cpu_lion.py                   |  25 +
+ op_builder/musa/not_implemented.py            |  24 +
+ 15 files changed, 1445 insertions(+), 452 deletions(-)
+ create mode 100644 accelerator/musa_accelerator.py
+ create mode 100644 op_builder/musa/__init__.py
+ create mode 100644 op_builder/musa/async_io.py
+ create mode 100644 op_builder/musa/builder.py
+ create mode 100644 op_builder/musa/cpu_adagrad.py
+ create mode 100644 op_builder/musa/cpu_adam.py
+ create mode 100644 op_builder/musa/cpu_lion.py
+ create mode 100644 op_builder/musa/not_implemented.py
+
+diff --git a/accelerator/musa_accelerator.py b/accelerator/musa_accelerator.py
+new file mode 100644
+index 00000000..5feadb42
+--- /dev/null
++++ b/accelerator/musa_accelerator.py
+@@ -0,0 +1,304 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++import importlib
++import inspect
++from collections.abc import Callable
++from contextlib import suppress
++
++from .abstract_accelerator import DeepSpeedAccelerator
++
++# During setup stage torch may not be installed, pass on no torch will
++# allow op builder related API to be executed.
++with suppress(ImportError):
++    import torch
++    import torch_musa
++
++
++class MUSA_Accelerator(DeepSpeedAccelerator):
++    def __init__(self):
++        super().__init__()
++        self._name = "musa"
++        self._communication_backend_name = "mccl"
++        self._compile_backend = "inductor"
++        # dict that holds class name <--> class type mapping i.e.
++        # 'AsyncIOBuilder': <class 'op_builder.async_io.AsyncIOBuilder'>
++        # this dict will be filled at init stage
++        self.class_dict: None | dict[str, Callable]
++        self.class_dict = None
++
++    def is_synchronized_device(self):
++        return False
++
++    def use_host_timers(self):
++        return self.is_synchronized_device()
++
++    def resolves_data_dependency(self):
++        return self.is_synchronized_device()
++
++    def handles_memory_backpressure(self):
++        return self.is_synchronized_device()
++
++    # Device APIs
++    def device_name(self, device_index=None):
++        if device_index is None:
++            return "musa"
++        return f"musa:{device_index}"
++
++    def device(self, device_index=None):
++        return (
++            torch.device("musa")
++            if device_index is None
++            else torch.device("musa", device_index)
++        )
++
++    def set_device(self, device_index):
++        torch.musa.set_device(device_index)
++
++    def current_device(self):
++        return torch.musa.current_device()
++
++    def current_device_name(self):
++        return f"musa:{torch.musa.current_device()}"
++
++    def device_count(self):
++        return torch.musa.device_count()
++
++    def synchronize(self, device_index=None):
++        return torch.musa.synchronize(device_index)
++
++    # RNG APIs
++    def random(self):
++        return torch.random
++
++    def set_rng_state(self, new_state, device_index=None):
++        if device_index is None:
++            torch.musa.set_rng_state(new_state)
++        else:
++            torch.musa.set_rng_state(new_state, device_index)
++
++    def get_rng_state(self, device_index=None):
++        if device_index is None:
++            return torch.musa.get_rng_state()
++
++        return torch.musa.get_rng_state(device_index)
++
++    def manual_seed(self, seed):
++        return torch.musa.manual_seed(seed)
++
++    def manual_seed_all(self, seed):
++        return torch.musa.manual_seed_all(seed)
++
++    def initial_seed(self):
++        return torch.musa.initial_seed()
++
++    def default_generator(self, device_index):
++        return torch.musa.default_generators[device_index]
++
++    # Streams/Events
++    @property
++    def Stream(self):
++        return torch.musa.Stream
++
++    def stream(self, stream):
++        return torch.musa.stream(stream)
++
++    def current_stream(self, device_index=None):
++        return torch.musa.current_stream(device_index)
++
++    def default_stream(self, device_index=None):
++        return torch.musa.default_stream(device_index)
++
++    @property
++    def Event(self):
++        return torch.musa.Event
++
++    # Memory management
++    def empty_cache(self):
++        return torch.musa.empty_cache()
++
++    def memory_allocated(self, device_index=None):
++        return torch.musa.memory_allocated(device_index)
++
++    def max_memory_allocated(self, device_index=None):
++        return torch.musa.max_memory_allocated(device_index)
++
++    def reset_max_memory_allocated(self, device_index=None):
++        return torch.musa.reset_max_memory_allocated(device_index)
++
++    def memory_cached(self, device_index=None):
++        # Deprecated interface, now replaced by memory_reserved
++        return torch.musa.memory_reserved(device_index)
++
++    def max_memory_cached(self, device_index=None):
++        return torch.musa.max_memory_reserved(device_index)
++
++    def reset_max_memory_cached(self, device_index=None):
++        return torch.musa.reset_max_memory_cached(device_index)
++
++    def memory_stats(self, device_index=None):
++        return torch.musa.memory_stats(device_index)
++
++    def reset_peak_memory_stats(self, device_index=None):
++        return torch.musa.reset_peak_memory_stats(device_index)
++
++    def memory_reserved(self, device_index=None):
++        return torch.musa.memory_reserved(device_index)
++
++    def max_memory_reserved(self, device_index=None):
++        return torch.musa.max_memory_reserved(device_index)
++
++    def total_memory(self, device_index=None):
++        return torch.musa.get_device_properties(device_index).total_memory
++
++    def available_memory(self, device_index=None):
++        return self.total_memory(device_index) - self.memory_allocated(device_index)
++
++    # Data types
++    def is_bf16_supported(self):
++        return torch.musa.is_bf16_supported()
++
++    def is_fp16_supported(self):
++        return True
++
++    def supported_dtypes(self):
++        _supported_types = [torch.float, torch.half]
++        if self.is_bf16_supported():
++            _supported_types.append(torch.bfloat16)
++        return _supported_types
++
++    # Misc
++    def is_available(self):
++        return torch.musa.is_available()
++
++    def range_push(self, msg, domain=None, category=None):
++      return
++
++    def range_pop(self, domain=None):
++      return
++
++    def lazy_call(self, callback):
++        # TODO: implement lazy calls properly
++        return callback()
++
++    def communication_backend_name(self):
++        return self._communication_backend_name
++
++    def is_triton_supported(self):
++        return False
++
++    # Graph operations
++    def create_graph(self):
++        return torch.musa.MUSAGraph()
++
++    def capture_to_graph(self, graph, pool=None, stream=None):
++        return torch.musa.graph(graph, pool, stream)
++
++    def replay_graph(self, graph):
++        graph.replay()
++
++    # Tensor operations
++
++    @property
++    def BFloat16Tensor(self):
++        return torch.musa.BFloat16Tensor
++
++    @property
++    def ByteTensor(self):
++        return torch.musa.ByteTensor
++
++    @property
++    def DoubleTensor(self):
++        return torch.musa.DoubleTensor
++
++    @property
++    def FloatTensor(self):
++        return torch.musa.FloatTensor
++
++    @property
++    def HalfTensor(self):
++        return torch.musa.HalfTensor
++
++    @property
++    def IntTensor(self):
++        return torch.musa.IntTensor
++
++    @property
++    def LongTensor(self):
++        return torch.musa.LongTensor
++
++    def pin_memory(self, tensor, align_bytes=1):
++        return tensor.pin_memory()
++
++    def is_pinned(self, tensor):
++        return tensor.is_pinned()
++
++    def on_accelerator(self, tensor):
++        return tensor.is_musa
++
++    def op_builder_dir(self):
++        try:
++            # is op_builder from deepspeed or a 3p version? this should only succeed if it's deepspeed
++            # if successful this also means we're doing a local install and not JIT compile path
++            from op_builder import __deepspeed__  # noqa: F401 # type: ignore
++
++            return "op_builder.musa"
++        except ImportError:
++            return "deepspeed.ops.op_builder.musa"
++
++    def _lazy_init_class_dict(self) -> dict[str, Callable]:
++        if self.class_dict is None:
++            op_builder_module = importlib.import_module(self.op_builder_dir())
++
++            self.class_dict = {}
++            for class_name, class_obj in inspect.getmembers(
++                op_builder_module,
++                inspect.isclass,
++            ):
++                self.class_dict[class_name] = class_obj
++
++        return self.class_dict
++
++    # create an instance of op builder and return, name specified by class_name
++    def create_op_builder(self, class_name):
++        builder_class = self.get_op_builder(class_name)
++        return None if builder_class is None else builder_class()
++
++    # return an op builder class, name specified by class_name
++    def get_op_builder(self, class_name):
++        _class_list = self._lazy_init_class_dict()
++        if class_name in _class_list:
++            return _class_list[class_name]
++        else:
++            return (
++                _class_list["NotImplementedBuilder"]
++                if "NotImplementedBuilder" in _class_list
++                else None
++            )
++
++    def build_extension(self):
++        from torch.utils.cpp_extension import BuildExtension
++
++        return BuildExtension
++
++    def export_envs(self):
++        return ["MCCL", "LD_LIBRARY", "PATH"]
++
++    def visible_devices_envs(self):
++        return ["MUSA_VISIBLE_DEVICES"]
++
++    def set_visible_devices_envs(self, current_env, local_accelerator_ids):
++        for env in self.visible_devices_envs():
++            current_env[env] = ",".join(map(str, local_accelerator_ids))
++
++    def get_compile_backend(self):
++        return self._compile_backend
++
++    def set_compile_backend(self, backend):
++        supported_backends = torch._dynamo.list_backends(exclude_tags=())
++        if backend in supported_backends:
++            self._compile_backend = backend
++        else:
++            message = f"{backend} not supported by {self.device_name()}. Supported Backends are {supported_backends}"
++            raise ValueError(message)
+diff --git a/accelerator/real_accelerator.py b/accelerator/real_accelerator.py
+index cd5083ae..40875d95 100644
+--- a/accelerator/real_accelerator.py
++++ b/accelerator/real_accelerator.py
+@@ -20,7 +20,18 @@ try:
+ except ImportError as e:
+     dsa2 = None
+ 
+-SUPPORTED_ACCELERATOR_LIST = ['cuda', 'cpu', 'xpu', 'npu', 'mps', 'hpu', 'mlu', 'sdaa', 'supa']
++SUPPORTED_ACCELERATOR_LIST = [
++    "cuda",
++    "cpu",
++    "xpu",
++    "npu",
++    "mps",
++    "hpu",
++    "mlu",
++    "sdaa",
++    "supa",
++    "musa",
++]
+ 
+ ds_accelerator = None
+ 
+@@ -36,8 +47,13 @@ def _validate_accelerator(accel_obj):
+     # accelerator.abstractor_accelerator
+     # or deepspeed.accelerator.abstract_accelerator, consider accel_obj
+     # is a conforming object
+-    if not ((dsa1 is not None and isinstance(accel_obj, dsa1)) or (dsa2 is not None and isinstance(accel_obj, dsa2))):
+-        raise AssertionError(f"{accel_obj.__class__.__name__} accelerator is not subclass of DeepSpeedAccelerator")
++    if not (
++        (dsa1 is not None and isinstance(accel_obj, dsa1))
++        or (dsa2 is not None and isinstance(accel_obj, dsa2))
++    ):
++        raise AssertionError(
++            f"{accel_obj.__class__.__name__} accelerator is not subclass of DeepSpeedAccelerator"
++        )
+ 
+     # TODO: turn off is_available test since this breaks tests
+     # assert accel_obj.is_available(), \
+@@ -61,23 +77,31 @@ def get_accelerator():
+         if accelerator_name == "xpu":
+             try:
+                 import torch
+-                assert hasattr(torch, 'xpu') and torch.xpu.is_available(), \
++
++                assert hasattr(torch, "xpu") and torch.xpu.is_available(), (
+                     "XPU_Accelerator requires PyTorch with XPU support (torch.xpu)."
++                )
+             except (ImportError, AssertionError) as e:
+-                raise ValueError(f"XPU_Accelerator requires PyTorch with XPU support: {e}")
++                raise ValueError(
++                    f"XPU_Accelerator requires PyTorch with XPU support: {e}"
++                )
+         elif accelerator_name == "cpu":
+             pass
+         elif accelerator_name == "npu":
+             try:
+                 import torch_npu  # noqa: F401 # type: ignore
+             except ImportError as e:
+-                raise ValueError("NPU_Accelerator requires torch_npu, which is not installed on this system.")
++                raise ValueError(
++                    "NPU_Accelerator requires torch_npu, which is not installed on this system."
++                )
+             pass
+         elif accelerator_name == "sdaa":
+             try:
+                 import torch_sdaa  # noqa: F401 # type: ignore
+             except ImportError as e:
+-                raise ValueError("SDAA_Accelerator requires torch_sdaa, which is not installed on this system.")
++                raise ValueError(
++                    "SDAA_Accelerator requires torch_sdaa, which is not installed on this system."
++                )
+             pass
+         elif accelerator_name == "mps":
+             try:
+@@ -86,26 +110,41 @@ def get_accelerator():
+                 # should use torch.mps.is_available() if it exists someday but this is used as proxy
+                 torch.mps.current_allocated_memory()
+             except (RuntimeError, ImportError) as e:
+-                raise ValueError("MPS_Accelerator requires torch.mps, which is not installed on this system.")
++                raise ValueError(
++                    "MPS_Accelerator requires torch.mps, which is not installed on this system."
++                )
+         elif accelerator_name == "hpu":
+             try:
+                 import habana_frameworks.torch.hpu  # noqa: F401
+             except ImportError as e:
+                 raise ValueError(
+-                    "HPU_Accelerator requires habana_frameworks.torch.hpu, which is not installed on this system.")
++                    "HPU_Accelerator requires habana_frameworks.torch.hpu, which is not installed on this system."
++                )
+         elif accelerator_name == "mlu":
+             try:
+                 import torch_mlu  # noqa: F401
+             except ImportError as e:
+-                raise ValueError("MLU_Accelerator requires torch_mlu, which is not installed on this system.")
++                raise ValueError(
++                    "MLU_Accelerator requires torch_mlu, which is not installed on this system."
++                )
+         elif accelerator_name == "supa":
+             try:
+                 import torch_supa  # noqa: F401 # type: ignore
+             except ImportError as e:
+-                raise ValueError("SUPA_Accelerator requires torch_supa, which is not installed on this system.")
++                raise ValueError(
++                    "SUPA_Accelerator requires torch_supa, which is not installed on this system."
++                )
++        elif accelerator_name == "musa":
++            try:
++                import torch_musa
++            except ImportError:
++                message = "MUSA_Accelerator requires torch_musa, which is not installed on this system."
++                raise ValueError(message)
+         elif accelerator_name not in SUPPORTED_ACCELERATOR_LIST:
+-            raise ValueError(f'DS_ACCELERATOR must be one of {SUPPORTED_ACCELERATOR_LIST}. '
+-                             f'Value "{accelerator_name}" is not supported')
++            raise ValueError(
++                f"DS_ACCELERATOR must be one of {SUPPORTED_ACCELERATOR_LIST}. "
++                f'Value "{accelerator_name}" is not supported'
++            )
+         ds_set_method = "override"
+ 
+     # 2. If no override, detect which accelerator to use automatically
+@@ -125,7 +164,7 @@ def get_accelerator():
+             import torch
+ 
+             # Detect XPU via PyTorch
+-            if hasattr(torch, 'xpu'):
++            if hasattr(torch, "xpu"):
+                 if torch.xpu.is_available():
+                     accelerator_name = "xpu"
+         except ImportError as e:
+@@ -171,16 +210,25 @@ def get_accelerator():
+             try:
+                 # Detect Biren SUPA GPU. torch_supa spoofs torch.cuda so this  #ignore-cuda
+                 # check must come before the CUDA detection below.
+-                import torch_supa  # noqa: F401,F811 # type: ignore
+                 import torch
++                import torch_supa  # noqa: F401,F811 # type: ignore
+ 
+-                if hasattr(torch, 'supa') and torch.supa.is_available():
++                if hasattr(torch, "supa") and torch.supa.is_available():
+                     accelerator_name = "supa"
+             except ImportError as e:
+                 pass
+         if accelerator_name is None:
+             try:
+                 import torch
++                import torch_musa
++
++                if torch.musa.is_available():
++                    accelerator_name = "musa"
++            except ImportError:
++                pass
++        if accelerator_name is None:
++            try:
++                import torch
+ 
+                 # Determine if we are on a GPU or x86 CPU with torch.
+                 # "torch.cuda.is_available()" provides a stronger guarantee,     #ignore-cuda
+@@ -188,7 +236,9 @@ def get_accelerator():
+                 # While "torch.cuda.device_count() > 0" check ensures that       #ignore-cuda
+                 # we won't try to do any CUDA calls when no device is available
+                 # For reference: https://github.com/deepspeedai/DeepSpeed/pull/6810
+-                if torch.cuda.device_count() > 0 and torch.cuda.is_available():  #ignore-cuda
++                if (
++                    torch.cuda.device_count() > 0 and torch.cuda.is_available()
++                ):  # ignore-cuda
+                     accelerator_name = "cuda"
+             except (RuntimeError, ImportError) as e:
+                 # TODO need a more decent way to detect which accelerator to use, consider using nvidia-smi command for detection
+@@ -197,7 +247,8 @@ def get_accelerator():
+             # borrow this log from PR#5084
+             if accel_logger is not None:
+                 accel_logger.warning(
+-                    "Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.")
++                    "Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it."
++                )
+             # cpu added as catch-all when accelerator detection fails
+             accelerator_name = "cpu"
+ 
+@@ -228,21 +279,27 @@ def get_accelerator():
+         from .mps_accelerator import MPS_Accelerator
+ 
+         ds_accelerator = MPS_Accelerator()
+-    elif accelerator_name == 'hpu':
++    elif accelerator_name == "hpu":
+         from .hpu_accelerator import HPU_Accelerator
+ 
+         ds_accelerator = HPU_Accelerator()
+-    elif accelerator_name == 'mlu':
++    elif accelerator_name == "mlu":
+         from .mlu_accelerator import MLU_Accelerator
+ 
+         ds_accelerator = MLU_Accelerator()
+-    elif accelerator_name == 'supa':
++    elif accelerator_name == "supa":
+         from .supa_accelerator import SUPA_Accelerator
+ 
+         ds_accelerator = SUPA_Accelerator()
++    elif accelerator_name == "musa":
++        from .musa_accelerator import MUSA_Accelerator
++
++        ds_accelerator = MUSA_Accelerator()
+     _validate_accelerator(ds_accelerator)
+     if accel_logger is not None:
+-        accel_logger.info(f"Setting ds_accelerator to {ds_accelerator._name} ({ds_set_method})")
++        accel_logger.info(
++            f"Setting ds_accelerator to {ds_accelerator._name} ({ds_set_method})"
++        )
+     return ds_accelerator
+ 
+ 
+@@ -250,7 +307,9 @@ def set_accelerator(accel_obj):
+     global ds_accelerator
+     _validate_accelerator(accel_obj)
+     if accel_logger is not None and accel_obj is not None:
+-        accel_logger.info(f"Setting ds_accelerator to {accel_obj._name} (model specified)")
++        accel_logger.info(
++            f"Setting ds_accelerator to {accel_obj._name} (model specified)"
++        )
+     ds_accelerator = accel_obj
+ 
+ 
+diff --git a/deepspeed/comm/comm.py b/deepspeed/comm/comm.py
+index f9e94f01..10766a30 100755
+--- a/deepspeed/comm/comm.py
++++ b/deepspeed/comm/comm.py
+@@ -3,40 +3,40 @@
+ 
+ # DeepSpeed Team
+ """
+-    DeepSpeed Communication Package: deepspeed.comm
+-    deepspeed.comm
+-        -- import and use deepspeed.ops.comm
+-        -- use torch.distributed directly if both this package and torch.distributed use the same NCCL version
+-        -- use custom collectives
+-            -- can either use torch.dist or ds.ops.comm?
+-        Note: the old 1-bit compressed allreduce variants that resided in deepspeed.runtime.comm will be moved here as well.
+-    deepspeed.comm API
+-        -- must be kept fully compatible (same signatures) as torch.dist API to ensure backward/cross-framework compatibility.
+-        -- e.g. if a client code used
+-            from deepspeed import comm as dist
+-            instead of
+-            import torch.distributed as dist
+-            The code should work without breaking any of the public torch.distributed functionality
+-    Future:
+-        -- deepspeed groups API should be brought into ds.comm
++DeepSpeed Communication Package: deepspeed.comm
++deepspeed.comm
++    -- import and use deepspeed.ops.comm
++    -- use torch.distributed directly if both this package and torch.distributed use the same NCCL version
++    -- use custom collectives
++        -- can either use torch.dist or ds.ops.comm?
++    Note: the old 1-bit compressed allreduce variants that resided in deepspeed.runtime.comm will be moved here as well.
++deepspeed.comm API
++    -- must be kept fully compatible (same signatures) as torch.dist API to ensure backward/cross-framework compatibility.
++    -- e.g. if a client code used
++        from deepspeed import comm as dist
++        instead of
++        import torch.distributed as dist
++        The code should work without breaking any of the public torch.distributed functionality
++Future:
++    -- deepspeed groups API should be brought into ds.comm
+ """
+ 
++import os
++from datetime import timedelta
++
+ import torch
+ from torch.distributed import GradBucket  # noqa: F401
+-import os
+ 
+-from ..constants import TORCH_DISTRIBUTED_DEFAULT_PORT, default_pg_timeout
+-from .constants import *
+-from .reduce_op import *
++from deepspeed import utils
+ from deepspeed.accelerator import get_accelerator
+ from deepspeed.comm.ccl import CCLBackend
+-
+-from deepspeed.utils.comms_logging import CommsLogger
+-from deepspeed.utils import timer, get_caller_func
+ from deepspeed.comm.torch import TorchBackend
++from deepspeed.utils import get_caller_func, timer
++from deepspeed.utils.comms_logging import CommsLogger
+ 
+-from deepspeed import utils
+-from datetime import timedelta
++from ..constants import TORCH_DISTRIBUTED_DEFAULT_PORT, default_pg_timeout
++from .constants import *
++from .reduce_op import *
+ 
+ # Current deepspeed.comm backend (cdb) global object for simple access by client code
+ cdb = None
+@@ -52,13 +52,13 @@ nccl_backend = None
+ mpi_backend = None
+ ccl_backend = None
+ hccl_backend = None
++mccl_backend = None
+ 
+ # This should be set here so all rank/size information from the launcher can be propagated
+ from deepspeed.comm.utils import *
+ 
+ 
+-class ProcessGroup():
+-
++class ProcessGroup:
+     def __init__(self, comm_id, ranks=[]):
+         self.ranks = ranks
+         self.comm_id = comm_id
+@@ -104,9 +104,13 @@ def timed_op(func):
+     def log_wrapper(*args, **kwargs):
+         # Add enabled flag so that overhead to each comm op is two if conditions at most
+         if comms_logger.enabled:
+-            if ('prof' in kwargs
+-                    and kwargs['prof']) or comms_logger.prof_all or ('log_name' in kwargs
+-                                                                     and kwargs['log_name'] in comms_logger.prof_ops):
++            if (
++                ("prof" in kwargs and kwargs["prof"])
++                or comms_logger.prof_all
++                or (
++                    "log_name" in kwargs and kwargs["log_name"] in comms_logger.prof_ops
++                )
++            ):
+                 # Need func args for their defaults
+                 func_args = get_default_args(func)
+                 func_args.update(kwargs)
+@@ -123,8 +127,14 @@ def timed_op(func):
+                 # If we're using MPI, we can't simply sync the stream
+                 if cdb.using_mpi:
+                     cdb.barrier()
+-                if ('prof' in kwargs and kwargs['prof']) or comms_logger.prof_all or (
+-                        'log_name' in kwargs and kwargs['log_name'] in comms_logger.prof_ops):
++                if (
++                    ("prof" in kwargs and kwargs["prof"])
++                    or comms_logger.prof_all
++                    or (
++                        "log_name" in kwargs
++                        and kwargs["log_name"] in comms_logger.prof_ops
++                    )
++                ):
+                     log_name = get_debug_log_name(func_args, comms_logger.debug)
+                     raw_name = func.__name__
+                     timers(log_name).stop()
+@@ -147,9 +157,10 @@ def init_deepspeed_backend(ds_backend, timeout, init_method):
+     global mpi_backend
+     global ccl_backend
+     global hccl_backend
++    global mccl_backend
+ 
+-    rank = int(os.getenv('RANK', '-1'))
+-    size = int(os.getenv('WORLD_SIZE', '-1'))
++    rank = int(os.getenv("RANK", "-1"))
++    size = int(os.getenv("WORLD_SIZE", "-1"))
+ 
+     if ds_backend == NCCL_BACKEND:
+         utils.logger.debug("NCCL backend in DeepSpeed not yet implemented")
+@@ -158,16 +169,20 @@ def init_deepspeed_backend(ds_backend, timeout, init_method):
+     elif ds_backend == GLOO_BACKEND:
+         utils.logger.debug("Gloo backend in DeepSpeed not yet implemented")
+     elif ds_backend == CCL_BACKEND:
+-        ccl_backend = CCLBackend(rank=rank, world_size=size, timeout=timeout, init_method=init_method)
++        ccl_backend = CCLBackend(
++            rank=rank, world_size=size, timeout=timeout, init_method=init_method
++        )
+         utils.logger.info(f"Initialize {ds_backend} backend")
+     elif ds_backend == HCCL_BACKEND:
+         utils.logger.debug("HCCL backend in DeepSpeed not yet implemented")
++    elif ds_backend == MCCL_BACKEND:
++        utils.logger.warning("MCCL backend in DeepSpeed not yet implemented")
+     else:
+         utils.logger.debug(f"DeepSpeed does not support {ds_backend} backend")
+ 
+ 
+ def is_initialized():
+-    #assert cdb is not None, 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    # assert cdb is not None, 'DeepSpeed backend not set, please initialize it using init_process_group()'
+     if cdb is None:
+         return False
+     else:
+@@ -181,8 +196,9 @@ def destroy_process_group(group=None):
+ 
+ def new_group(ranks):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return cdb.new_group(ranks)
+ 
+ 
+@@ -202,6 +218,7 @@ def set_backend():
+     global mpi_backend
+     global ccl_backend
+     global hccl_backend
++    global mccl_backend
+ 
+     backend_name = get_accelerator().communication_backend_name()
+ 
+@@ -217,10 +234,21 @@ def set_backend():
+     elif backend_name == HCCL_BACKEND:
+         if hccl_backend is not None and hccl_backend.is_initialized():
+             cdb = hccl_backend
++    elif backend_name == MCCL_BACKEND:
++        if mccl_backend is not None and mccl_backend.is_initialized():
++            cdb = mccl_backend
+ 
+ 
+ @timed_op
+-def broadcast(tensor, src, group=None, async_op=False, prof=False, log_name='broadcast', debug=get_caller_func()):
++def broadcast(
++    tensor,
++    src,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="broadcast",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
+ 
+@@ -228,208 +256,304 @@ def broadcast(tensor, src, group=None, async_op=False, prof=False, log_name='bro
+ @timed_op
+ def broadcast_object_list(object_list, src, group=None, device=None):
+     global cdb
+-    return cdb.broadcast_object_list(object_list=object_list, src=src, group=group, device=device)
++    return cdb.broadcast_object_list(
++        object_list=object_list, src=src, group=group, device=device
++    )
+ 
+ 
+ @timed_op
+-def all_gather(tensor_list,
+-               tensor,
+-               group=None,
+-               async_op=False,
+-               prof=False,
+-               log_name='all_gather',
+-               debug=get_caller_func()):
++def all_gather(
++    tensor_list,
++    tensor,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="all_gather",
++    debug=get_caller_func(),
++):
+     global cdb
+-    return cdb.all_gather(tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op)
++    return cdb.all_gather(
++        tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op
++    )
+ 
+ 
+ @timed_op
+-def all_gather_object(object_list, obj, group=None, prof=False, log_name='all_gather_object', debug=get_caller_func()):
++def all_gather_object(
++    object_list,
++    obj,
++    group=None,
++    prof=False,
++    log_name="all_gather_object",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.all_gather_object(object_list=object_list, obj=obj, group=group)
+ 
+ 
+ def has_reduce_scatter_tensor():
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return cdb.has_reduce_scatter_tensor()
+ 
+ 
+-def reduce_scatter_fn(output_tensor,
+-                      tensor,
+-                      op=ReduceOp.SUM,
+-                      group=None,
+-                      async_op=False,
+-                      prof=False,
+-                      debug=get_caller_func()):
++def reduce_scatter_fn(
++    output_tensor,
++    tensor,
++    op=ReduceOp.SUM,
++    group=None,
++    async_op=False,
++    prof=False,
++    debug=get_caller_func(),
++):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     if cdb.has_reduce_scatter_tensor():
+-        return reduce_scatter_tensor(output_tensor,
+-                                     tensor,
+-                                     op=op,
+-                                     group=group,
+-                                     async_op=async_op,
+-                                     prof=prof,
+-                                     debug=debug)
++        return reduce_scatter_tensor(
++            output_tensor,
++            tensor,
++            op=op,
++            group=group,
++            async_op=async_op,
++            prof=prof,
++            debug=debug,
++        )
+     else:
+         if get_rank() == 0:
+-            utils.logger.warning_once("unable to find torch.distributed.reduce_scatter_tensor. will fall back to "
+-                                      "torch.distributed.reduce_scatter which will result in suboptimal performance. "
+-                                      "please consider upgrading your pytorch installation.")
++            utils.logger.warning_once(
++                "unable to find torch.distributed.reduce_scatter_tensor. will fall back to "
++                "torch.distributed.reduce_scatter which will result in suboptimal performance. "
++                "please consider upgrading your pytorch installation."
++            )
+         input_tensor_lst = list(torch.chunk(tensor, cdb.get_world_size(group)))
+-        return reduce_scatter(output_tensor,
+-                              input_tensor_lst,
+-                              op=op,
+-                              group=group,
+-                              async_op=async_op,
+-                              prof=prof,
+-                              debug=debug)
++        return reduce_scatter(
++            output_tensor,
++            input_tensor_lst,
++            op=op,
++            group=group,
++            async_op=async_op,
++            prof=prof,
++            debug=debug,
++        )
+ 
+ 
+ @timed_op
+-def reduce_scatter_tensor(output_tensor,
+-                          tensor,
+-                          op=ReduceOp.SUM,
+-                          group=None,
+-                          async_op=False,
+-                          prof=False,
+-                          log_name='reduce_scatter_tensor',
+-                          debug=get_caller_func()):
+-    global cdb
+-    return cdb.reduce_scatter_tensor(output_tensor=output_tensor,
+-                                     input_tensor=tensor,
+-                                     op=op,
+-                                     group=group,
+-                                     async_op=async_op)
++def reduce_scatter_tensor(
++    output_tensor,
++    tensor,
++    op=ReduceOp.SUM,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="reduce_scatter_tensor",
++    debug=get_caller_func(),
++):
++    global cdb
++    return cdb.reduce_scatter_tensor(
++        output_tensor=output_tensor,
++        input_tensor=tensor,
++        op=op,
++        group=group,
++        async_op=async_op,
++    )
+ 
+ 
+ @timed_op
+-def all_gather_into_tensor(output_tensor,
+-                           tensor,
+-                           group=None,
+-                           async_op=False,
+-                           prof=False,
+-                           log_name='all_gather_into_tensor',
+-                           debug=get_caller_func()):
++def all_gather_into_tensor(
++    output_tensor,
++    tensor,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="all_gather_into_tensor",
++    debug=get_caller_func(),
++):
+     global cdb
+-    return cdb.all_gather_into_tensor(output_tensor=output_tensor, input_tensor=tensor, group=group, async_op=async_op)
++    return cdb.all_gather_into_tensor(
++        output_tensor=output_tensor, input_tensor=tensor, group=group, async_op=async_op
++    )
+ 
+ 
+ def has_all_gather_into_tensor():
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return cdb.has_all_gather_into_tensor()
+ 
+ 
+-def allgather_fn(output_tensor, input_tensor, group=None, async_op=False, debug=get_caller_func()):
++def allgather_fn(
++    output_tensor, input_tensor, group=None, async_op=False, debug=get_caller_func()
++):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     if cdb.has_all_gather_into_tensor():
+-        return all_gather_into_tensor(output_tensor, input_tensor, group=group, async_op=async_op, debug=debug)
++        return all_gather_into_tensor(
++            output_tensor, input_tensor, group=group, async_op=async_op, debug=debug
++        )
+     else:
+         if get_rank() == 0:
+-            utils.logger.warning_once("unable to find torch.distributed.all_gather_into_tensor. will fall back to "
+-                                      "torch.distributed.all_gather which will result in suboptimal performance. "
+-                                      "please consider upgrading your pytorch installation.")
++            utils.logger.warning_once(
++                "unable to find torch.distributed.all_gather_into_tensor. will fall back to "
++                "torch.distributed.all_gather which will result in suboptimal performance. "
++                "please consider upgrading your pytorch installation."
++            )
+         output_tensors = list(torch.chunk(output_tensor, cdb.get_world_size(group)))
+-        return all_gather(output_tensors, input_tensor, group=group, async_op=async_op, debug=debug)
++        return all_gather(
++            output_tensors, input_tensor, group=group, async_op=async_op, debug=debug
++        )
+ 
+ 
+ @timed_op
+-def all_to_all_single(output,
+-                      tensor,
+-                      output_split_sizes=None,
+-                      input_split_sizes=None,
+-                      group=None,
+-                      async_op=False,
+-                      prof=False,
+-                      log_name='all_to_all_single',
+-                      debug=get_caller_func()):
+-    global cdb
+-    return cdb.all_to_all_single(output=output,
+-                                 input=tensor,
+-                                 output_split_sizes=output_split_sizes,
+-                                 input_split_sizes=input_split_sizes,
+-                                 group=group,
+-                                 async_op=async_op)
++def all_to_all_single(
++    output,
++    tensor,
++    output_split_sizes=None,
++    input_split_sizes=None,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="all_to_all_single",
++    debug=get_caller_func(),
++):
++    global cdb
++    return cdb.all_to_all_single(
++        output=output,
++        input=tensor,
++        output_split_sizes=output_split_sizes,
++        input_split_sizes=input_split_sizes,
++        group=group,
++        async_op=async_op,
++    )
+ 
+ 
+ @timed_op
+ def all_to_all(output_tensor_list, input_tensor_list, group=None, async_op=False):
+     global cdb
+-    return cdb.all_to_all(output_tensor_list, input_tensor_list, group=group, async_op=async_op)
++    return cdb.all_to_all(
++        output_tensor_list, input_tensor_list, group=group, async_op=async_op
++    )
+ 
+ 
+ @timed_op
+-def send(tensor, dst, group=None, tag=0, prof=False, log_name='send', debug=get_caller_func()):
++def send(
++    tensor, dst, group=None, tag=0, prof=False, log_name="send", debug=get_caller_func()
++):
+     global cdb
+     return cdb.send(tensor=tensor, dst=dst, group=group, tag=tag)
+ 
+ 
+ @timed_op
+-def recv(tensor, src=None, group=None, tag=0, prof=False, log_name='recv', debug=get_caller_func()):
++def recv(
++    tensor,
++    src=None,
++    group=None,
++    tag=0,
++    prof=False,
++    log_name="recv",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.recv(tensor=tensor, src=src, group=group, tag=tag)
+ 
+ 
+ @timed_op
+-def isend(tensor, dst, group=None, tag=0, prof=False, log_name='isend', debug=get_caller_func()):
++def isend(
++    tensor,
++    dst,
++    group=None,
++    tag=0,
++    prof=False,
++    log_name="isend",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.send(tensor=tensor, dst=dst, group=group, tag=tag)
+ 
+ 
+ @timed_op
+-def irecv(tensor, src=None, group=None, tag=0, prof=False, log_name='irecv', debug=get_caller_func()):
++def irecv(
++    tensor,
++    src=None,
++    group=None,
++    tag=0,
++    prof=False,
++    log_name="irecv",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.recv(tensor=tensor, src=src, group=group, tag=tag)
+ 
+ 
+ @timed_op
+-def gather(tensor,
+-           gather_list=None,
+-           dst=0,
+-           group=None,
+-           async_op=False,
+-           prof=False,
+-           log_name='gather',
+-           debug=get_caller_func()):
++def gather(
++    tensor,
++    gather_list=None,
++    dst=0,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="gather",
++    debug=get_caller_func(),
++):
+     global cdb
+-    return cdb.gather(tensor=tensor, gather_list=gather_list, dst=dst, group=group, async_op=async_op)
++    return cdb.gather(
++        tensor=tensor, gather_list=gather_list, dst=dst, group=group, async_op=async_op
++    )
+ 
+ 
+ @timed_op
+-def scatter(tensor,
+-            scatter_list=None,
+-            src=0,
+-            group=None,
+-            async_op=False,
+-            prof=False,
+-            log_name='scatter',
+-            debug=get_caller_func()):
++def scatter(
++    tensor,
++    scatter_list=None,
++    src=0,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="scatter",
++    debug=get_caller_func(),
++):
+     global cdb
+-    return cdb.scatter(tensor=tensor, scatter_list=scatter_list, src=src, group=group, async_op=async_op)
++    return cdb.scatter(
++        tensor=tensor,
++        scatter_list=scatter_list,
++        src=src,
++        group=group,
++        async_op=async_op,
++    )
+ 
+ 
+ @timed_op
+-def barrier(group=None, async_op=False, device_ids=None, prof=False, log_name='barrier', debug=get_caller_func()):
++def barrier(
++    group=None,
++    async_op=False,
++    device_ids=None,
++    prof=False,
++    log_name="barrier",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.barrier(group=group, async_op=async_op)
+ 
+ 
+ @timed_op
+-def monitored_barrier(group=None,
+-                      timeout=None,
+-                      wait_all_ranks=False,
+-                      prof=False,
+-                      log_name='monitored_barrier',
+-                      debug=get_caller_func()):
++def monitored_barrier(
++    group=None,
++    timeout=None,
++    wait_all_ranks=False,
++    prof=False,
++    log_name="monitored_barrier",
++    debug=get_caller_func(),
++):
+     global cdb
+-    return cdb.monitored_barrier(group=group, timeout=timeout, wait_all_ranks=wait_all_ranks)
++    return cdb.monitored_barrier(
++        group=group, timeout=timeout, wait_all_ranks=wait_all_ranks
++    )
+ 
+ 
+ def log_summary(show_straggler=False, return_dict=False):
+@@ -496,16 +620,20 @@ def log_summary(show_straggler=False, return_dict=False):
+             all_reduce_stats = stats["summary"]["all_reduce"]
+     """
+     global cdb
+-    barrier(log_name='log_summary_barrier')
++    barrier(log_name="log_summary_barrier")
+ 
+     result = None
+     if cdb.get_rank() == 0:
+-        result = comms_logger.log_all(print_log=True, show_straggler=show_straggler, return_dict=return_dict)
++        result = comms_logger.log_all(
++            print_log=True, show_straggler=show_straggler, return_dict=return_dict
++        )
+     else:
+         # Non-rank-0 processes: don't print but may still return dict if requested
+-        result = comms_logger.log_all(print_log=False, show_straggler=show_straggler, return_dict=return_dict)
++        result = comms_logger.log_all(
++            print_log=False, show_straggler=show_straggler, return_dict=return_dict
++        )
+ 
+-    barrier(log_name='log_summary_barrier')
++    barrier(log_name="log_summary_barrier")
+     return result
+ 
+ 
+@@ -588,100 +716,122 @@ def get_logged_comm_ops():
+ 
+ 
+ @timed_op
+-def reduce(tensor,
+-           dst,
+-           op=ReduceOp.SUM,
+-           group=None,
+-           async_op=False,
+-           prof=False,
+-           log_name='reduce',
+-           debug=get_caller_func()):
++def reduce(
++    tensor,
++    dst,
++    op=ReduceOp.SUM,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="reduce",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.reduce(tensor=tensor, dst=dst, op=op, group=group, async_op=async_op)
+ 
+ 
+ @timed_op
+-def reduce_scatter(output,
+-                   input_list,
+-                   op=ReduceOp.SUM,
+-                   group=None,
+-                   async_op=False,
+-                   prof=False,
+-                   log_name='reduce_scatter',
+-                   debug=get_caller_func()):
++def reduce_scatter(
++    output,
++    input_list,
++    op=ReduceOp.SUM,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="reduce_scatter",
++    debug=get_caller_func(),
++):
+     global cdb
+-    return cdb.reduce_scatter(output=output, input_list=input_list, op=op, group=group, async_op=async_op)
++    return cdb.reduce_scatter(
++        output=output, input_list=input_list, op=op, group=group, async_op=async_op
++    )
+ 
+ 
+ def has_all_reduce_coalesced():
+     """"""
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
+-    assert cdb.has_all_reduce_coalesced is not None, 'has_all_reduce_coalesced is not yet defined'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
++    assert cdb.has_all_reduce_coalesced is not None, (
++        "has_all_reduce_coalesced is not yet defined"
++    )
+     return cdb.has_all_reduce_coalesced
+ 
+ 
+ def has_coalescing_manager():
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
+-    assert cdb.has_coalescing_manager is not None, 'has_coalescing_manager is not yet defined'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
++    assert cdb.has_coalescing_manager is not None, (
++        "has_coalescing_manager is not yet defined"
++    )
+     return cdb.has_coalescing_manager
+ 
+ 
+ def all_gather_coalesced(output_tensors, input_tensors, group=None, async_op=False):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
+-    return cdb.all_gather_coalesced(output_tensors, input_tensors, group=group, async_op=async_op)
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
++    return cdb.all_gather_coalesced(
++        output_tensors, input_tensors, group=group, async_op=async_op
++    )
+ 
+ 
+ @timed_op
+-def all_reduce(tensor,
+-               op=ReduceOp.SUM,
+-               group=None,
+-               async_op=False,
+-               prof=False,
+-               log_name='all_reduce',
+-               debug=get_caller_func()):
+-    #if profile_comm:
++def all_reduce(
++    tensor,
++    op=ReduceOp.SUM,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="all_reduce",
++    debug=get_caller_func(),
++):
++    # if profile_comm:
+     # context of the timers?
+     # timers.start()
+     # TensorBoard logging for comm calls.?
+     global cdb
+-    #print(f'op = {op}, cdb= {cdb.name}')
++    # print(f'op = {op}, cdb= {cdb.name}')
+     return cdb.all_reduce(tensor, op, group, async_op)
+ 
+ 
+ @timed_op
+-def inference_all_reduce(tensor,
+-                         op=ReduceOp.SUM,
+-                         group=None,
+-                         async_op=False,
+-                         prof=False,
+-                         log_name='all_reduce',
+-                         debug=get_caller_func()):
++def inference_all_reduce(
++    tensor,
++    op=ReduceOp.SUM,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="all_reduce",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.inference_all_reduce(tensor, op, group)
+ 
+ 
+ @timed_op
+-def all_reduce_coalesced(tensors,
+-                         op=ReduceOp.SUM,
+-                         group=None,
+-                         async_op=False,
+-                         prof=False,
+-                         log_name='all_reduce',
+-                         debug=get_caller_func()):
++def all_reduce_coalesced(
++    tensors,
++    op=ReduceOp.SUM,
++    group=None,
++    async_op=False,
++    prof=False,
++    log_name="all_reduce",
++    debug=get_caller_func(),
++):
+     global cdb
+     return cdb.all_reduce_coalesced(tensors, op, group, async_op)
+ 
+ 
+ def get_world_group():
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return cdb.get_world_group()
+ 
+ 
+@@ -697,8 +847,9 @@ def get_world_size(group=None) -> int:
+     """
+     global cdb
+ 
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return cdb.get_world_size(group)
+ 
+ 
+@@ -717,36 +868,40 @@ def get_rank(group=None):
+         -1, if not part of the group
+     """
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return cdb.get_rank(group)
+ 
+ 
+ def get_local_rank():
+     """
+-        Helper function to get local rank after a backend has been set and initialized
+-        Args:
+-            None
+-        Returns:
+-            local rank (= GPU device ID)
++    Helper function to get local rank after a backend has been set and initialized
++    Args:
++        None
++    Returns:
++        local rank (= GPU device ID)
+     """
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return get_local_rank_from_launcher()
+ 
+ 
+ def get_global_rank(group=None, group_rank=0):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     return cdb.get_global_rank(group, group_rank)
+ 
+ 
+ def get_all_ranks_from_group(group=None):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     rank = 0
+     group_ranks = []
+     try:
+@@ -760,42 +915,52 @@ def get_all_ranks_from_group(group=None):
+ 
+ def initialize_mesh_device(mesh_shape, mesh_dim_names):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+     mesh_device = None
+-    if hasattr(cdb, 'init_device_mesh'):
+-        utils.logger.info(f"Initializing mesh device with backend {cdb.name} \
+-                with shape {mesh_shape} and dim names {mesh_dim_names}")
++    if hasattr(cdb, "init_device_mesh"):
++        utils.logger.info(
++            f"Initializing mesh device with backend {cdb.name} \
++                with shape {mesh_shape} and dim names {mesh_dim_names}"
++        )
+         mesh_device = cdb.init_device_mesh(mesh_shape, mesh_dim_names)
+     else:
+         if get_rank() == 0:
+-            utils.logger.warning_once(f"Backend {cdb.name} does not support mesh device initialization")
++            utils.logger.warning_once(
++                f"Backend {cdb.name} does not support mesh device initialization"
++            )
+     return mesh_device
+ 
+ 
+ def enable_symm_mem_for_group(group_name: str):
+     global cdb
+-    assert cdb is not None and cdb.is_initialized(
+-    ), 'DeepSpeed backend not set, please initialize it using init_process_group()'
++    assert cdb is not None and cdb.is_initialized(), (
++        "DeepSpeed backend not set, please initialize it using init_process_group()"
++    )
+ 
+-    if hasattr(cdb, 'enable_symm_mem_for_group'):
++    if hasattr(cdb, "enable_symm_mem_for_group"):
+         cdb.enable_symm_mem_for_group(group_name)
+     else:
+-        raise RuntimeError(f"Backend {cdb.name} does not support symmetric memory initialization")
++        raise RuntimeError(
++            f"Backend {cdb.name} does not support symmetric memory initialization"
++        )
+ 
+ 
+ # Main DeepSpeed Comms. public API.
+-def init_distributed(dist_backend=None,
+-                     auto_mpi_discovery=True,
+-                     distributed_port=TORCH_DISTRIBUTED_DEFAULT_PORT,
+-                     verbose=True,
+-                     timeout=default_pg_timeout,
+-                     init_method=None,
+-                     dist_init_required=None,
+-                     config=None,
+-                     rank=-1,
+-                     world_size=-1):
+-    ''' Initialize dist backend, potentially performing MPI discovery if needed
++def init_distributed(
++    dist_backend=None,
++    auto_mpi_discovery=True,
++    distributed_port=TORCH_DISTRIBUTED_DEFAULT_PORT,
++    verbose=True,
++    timeout=default_pg_timeout,
++    init_method=None,
++    dist_init_required=None,
++    config=None,
++    rank=-1,
++    world_size=-1,
++):
++    """Initialize dist backend, potentially performing MPI discovery if needed
+ 
+     Arguments:
+         dist_backend: Optional (str). torch distributed backend, e.g., nccl, mpi, gloo, hccl
+@@ -807,7 +972,7 @@ def init_distributed(dist_backend=None,
+         config: Optional (dict). DeepSpeed configuration for setting up comms options (e.g. Comms profiling)
+         rank: Optional (int). The current manually specified rank. Some init_method like "tcp://" need the rank and world_size as well (see: https://pytorch.org/docs/stable/distributed.html#tcp-initialization)
+         world_size: Optional (int). Desired world_size for the TCP or Shared file-system initialization.
+-    '''
++    """
+     global cdb
+ 
+     configure(deepspeed_config=config)
+@@ -816,24 +981,34 @@ def init_distributed(dist_backend=None,
+         dist_init_required = cdb is None or not cdb.is_initialized()
+ 
+     if cdb is None:
+-        init_deepspeed_backend(get_accelerator().communication_backend_name(), timeout, init_method)
++        init_deepspeed_backend(
++            get_accelerator().communication_backend_name(), timeout, init_method
++        )
+         set_backend()
+-        utils.logger.info(f'cdb={cdb}')
++        utils.logger.info(f"cdb={cdb}")
+     if cdb is None and torch.distributed.is_initialized():
+         # The user initialized torch.dist themselves, create cdb and short-circuit
+         cdb = TorchBackend(dist_backend, timeout, init_method)
+         return
+ 
+     if dist_init_required is False:
+-        assert (
+-            cdb is not None and cdb.is_initialized() is True
+-        ), "Distributed backend is not initialized. Please set dist_init_required to True or initialize before calling deepspeed.initialize()"
++        assert cdb is not None and cdb.is_initialized() is True, (
++            "Distributed backend is not initialized. Please set dist_init_required to True or initialize before calling deepspeed.initialize()"
++        )
+     else:
+         # Initialize torch distributed if needed
+-        required_env = ["RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"]
++        required_env = [
++            "RANK",
++            "WORLD_SIZE",
++            "MASTER_ADDR",
++            "MASTER_PORT",
++            "LOCAL_RANK",
++        ]
+         if auto_mpi_discovery and not all(map(lambda v: v in os.environ, required_env)):
+             if verbose:
+-                utils.logger.info("Not using the DeepSpeed or dist launchers, attempting to detect MPI environment...")
++                utils.logger.info(
++                    "Not using the DeepSpeed or dist launchers, attempting to detect MPI environment..."
++                )
+             if in_aml() and not in_dlts():
+                 patch_aml_env_for_torch_nccl_backend(verbose=verbose)
+             elif in_aws_sm():
+@@ -842,24 +1017,30 @@ def init_distributed(dist_backend=None,
+                 mpi_discovery(distributed_port=distributed_port, verbose=verbose)
+ 
+         if cdb is not None and cdb.is_initialized():
+-            if int(os.getenv('RANK', '0')) == 0:
+-                utils.logger.info('Distributed backend already initialized')
++            if int(os.getenv("RANK", "0")) == 0:
++                utils.logger.info("Distributed backend already initialized")
+         else:
+             assert isinstance(timeout, timedelta)
+             if dist_backend is None:
+                 dist_backend = get_accelerator().communication_backend_name()
+-            if int(os.getenv('RANK', '0')) == 0:
+-                utils.logger.info('Initializing TorchBackend in DeepSpeed with backend {}'.format(dist_backend))
++            if int(os.getenv("RANK", "0")) == 0:
++                utils.logger.info(
++                    "Initializing TorchBackend in DeepSpeed with backend {}".format(
++                        dist_backend
++                    )
++                )
+             # Create a torch backend object, initialize torch distributed, and assign to cdb
+             cdb = TorchBackend(dist_backend, timeout, init_method, rank, world_size)
+ 
+ 
+ def mpi_discovery(distributed_port=TORCH_DISTRIBUTED_DEFAULT_PORT, verbose=True):
+-    '''
++    """
+     Discovery MPI environment via mpi4py and map to relevant dist state
+-    '''
+-    from mpi4py import MPI
++    """
+     import subprocess
++
++    from mpi4py import MPI
++
+     comm = MPI.COMM_WORLD
+     rank = comm.Get_rank()
+     world_size = comm.Get_size()
+@@ -867,12 +1048,16 @@ def mpi_discovery(distributed_port=TORCH_DISTRIBUTED_DEFAULT_PORT, verbose=True)
+     master_addr = None
+     if rank == 0:
+         import shlex
++
+         try:
+             hostname_cmd = shlex.split("hostname -I")
+             result = subprocess.check_output(hostname_cmd)
+-            master_addr = result.decode('utf-8').split()[0]
+-        except subprocess.CalledProcessError:  # hostname -I not available (e.g. on macOS)
++            master_addr = result.decode("utf-8").split()[0]
++        except (
++            subprocess.CalledProcessError
++        ):  # hostname -I not available (e.g. on macOS)
+             import socket
++
+             master_addr = socket.gethostbyname(socket.gethostname())
+     master_addr = comm.bcast(master_addr, root=0)
+ 
+@@ -881,37 +1066,47 @@ def mpi_discovery(distributed_port=TORCH_DISTRIBUTED_DEFAULT_PORT, verbose=True)
+     all_procs = comm.allgather(proc_name)
+     local_rank = sum([i == proc_name for i in all_procs[:rank]])
+ 
+-    os.environ['RANK'] = str(rank)
+-    os.environ['WORLD_SIZE'] = str(world_size)
+-    os.environ['LOCAL_RANK'] = str(local_rank)
+-    os.environ['MASTER_ADDR'] = master_addr
+-    os.environ['MASTER_PORT'] = str(distributed_port)
++    os.environ["RANK"] = str(rank)
++    os.environ["WORLD_SIZE"] = str(world_size)
++    os.environ["LOCAL_RANK"] = str(local_rank)
++    os.environ["MASTER_ADDR"] = master_addr
++    os.environ["MASTER_PORT"] = str(distributed_port)
+ 
+     if verbose:
+         utils.logger.info(
+-            "Discovered MPI settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}".
+-            format(os.environ['RANK'], os.environ['LOCAL_RANK'], os.environ['WORLD_SIZE'], os.environ['MASTER_ADDR'],
+-                   os.environ['MASTER_PORT']))
++            "Discovered MPI settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}".format(
++                os.environ["RANK"],
++                os.environ["LOCAL_RANK"],
++                os.environ["WORLD_SIZE"],
++                os.environ["MASTER_ADDR"],
++                os.environ["MASTER_PORT"],
++            )
++        )
+ 
+     if cdb is not None and cdb.is_initialized():
+-        assert cdb.get_rank() == rank, "MPI rank {} does not match torch rank {}".format(rank, cdb.get_rank())
+-        assert cdb.get_world_size() == world_size, "MPI world size {} does not match torch world size {}".format(
+-            world_size, cdb.get_world_size())
++        assert cdb.get_rank() == rank, (
++            "MPI rank {} does not match torch rank {}".format(rank, cdb.get_rank())
++        )
++        assert cdb.get_world_size() == world_size, (
++            "MPI world size {} does not match torch world size {}".format(
++                world_size, cdb.get_world_size()
++            )
++        )
+ 
+ 
+ def in_aml():
+     # Are we running inside an Azure Machine Learning (AML) environment?
+-    return 'AZUREML_EXPERIMENT_ID' in os.environ
++    return "AZUREML_EXPERIMENT_ID" in os.environ
+ 
+ 
+ def in_aws_sm():
+     # Are we running inside an AWS SageMaker environment?
+-    return 'SM_TRAINING_ENV' in os.environ
++    return "SM_TRAINING_ENV" in os.environ
+ 
+ 
+ def in_dlts():
+     # Are we running on a DLTS cluster?
+-    return 'DLTS_JOB_ID' in os.environ
++    return "DLTS_JOB_ID" in os.environ
+ 
+ 
+ def patch_aml_env_for_torch_nccl_backend(master_port=6105, verbose=True):
+@@ -921,7 +1116,9 @@ def patch_aml_env_for_torch_nccl_backend(master_port=6105, verbose=True):
+     """
+     os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+     os.environ["WORLD_SIZE"] = os.environ["OMPI_COMM_WORLD_SIZE"]
+-    single_node = int(os.environ["OMPI_COMM_WORLD_LOCAL_SIZE"]) == int(os.environ["WORLD_SIZE"])
++    single_node = int(os.environ["OMPI_COMM_WORLD_LOCAL_SIZE"]) == int(
++        os.environ["WORLD_SIZE"]
++    )
+ 
+     if not single_node:
+         master_node_params = os.environ["AZ_BATCH_MASTER_NODE"].split(":")
+@@ -934,27 +1131,40 @@ def patch_aml_env_for_torch_nccl_backend(master_port=6105, verbose=True):
+         os.environ["MASTER_PORT"] = DEFAULT_AML_MASTER_PORT
+ 
+     if verbose:
+-        utils.logger.info("NCCL_SOCKET_IFNAME original value = {}".format(os.environ["NCCL_SOCKET_IFNAME"]))
++        utils.logger.info(
++            "NCCL_SOCKET_IFNAME original value = {}".format(
++                os.environ["NCCL_SOCKET_IFNAME"]
++            )
++        )
+ 
+     os.environ["NCCL_SOCKET_IFNAME"] = DEFAULT_AML_NCCL_SOCKET_IFNAME
+-    os.environ['LOCAL_RANK'] = os.environ["OMPI_COMM_WORLD_LOCAL_RANK"]
++    os.environ["LOCAL_RANK"] = os.environ["OMPI_COMM_WORLD_LOCAL_RANK"]
+ 
+     if verbose:
+         utils.logger.info(
+-            "Discovered AzureML settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}"
+-            .format(os.environ['RANK'], os.environ['LOCAL_RANK'], os.environ['WORLD_SIZE'], os.environ['MASTER_ADDR'],
+-                    os.environ['MASTER_PORT']))
++            "Discovered AzureML settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}".format(
++                os.environ["RANK"],
++                os.environ["LOCAL_RANK"],
++                os.environ["WORLD_SIZE"],
++                os.environ["MASTER_ADDR"],
++                os.environ["MASTER_PORT"],
++            )
++        )
+ 
+ 
+ def patch_aws_sm_env_for_torch_nccl_backend(verbose=True):
+-    """Helper routine to get and set environment variables when running inside an AWS SageMaker environment.
+-    """
++    """Helper routine to get and set environment variables when running inside an AWS SageMaker environment."""
+     os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+-    os.environ['LOCAL_RANK'] = os.environ["OMPI_COMM_WORLD_LOCAL_RANK"]
++    os.environ["LOCAL_RANK"] = os.environ["OMPI_COMM_WORLD_LOCAL_RANK"]
+     os.environ["WORLD_SIZE"] = os.environ["OMPI_COMM_WORLD_SIZE"]
+ 
+     if verbose:
+         utils.logger.info(
+-            "Discovered AWS SageMaker settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}"
+-            .format(os.environ['RANK'], os.environ['LOCAL_RANK'], os.environ['WORLD_SIZE'], os.environ['MASTER_ADDR'],
+-                    os.environ['MASTER_PORT']))
++            "Discovered AWS SageMaker settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}".format(
++                os.environ["RANK"],
++                os.environ["LOCAL_RANK"],
++                os.environ["WORLD_SIZE"],
++                os.environ["MASTER_ADDR"],
++                os.environ["MASTER_PORT"],
++            )
++        )
+diff --git a/deepspeed/comm/constants.py b/deepspeed/comm/constants.py
+index 50d234c9..7e25b6bd 100644
+--- a/deepspeed/comm/constants.py
++++ b/deepspeed/comm/constants.py
+@@ -3,12 +3,13 @@
+ 
+ # DeepSpeed Team
+ 
+-NCCL_BACKEND = 'nccl'
+-CCL_BACKEND = 'ccl'
+-MPI_BACKEND = 'mpi'
+-GLOO_BACKEND = 'gloo'
+-SCCL_BACKEND = 'sccl'
+-HCCL_BACKEND = 'hccl'
++NCCL_BACKEND = "nccl"
++CCL_BACKEND = "ccl"
++MPI_BACKEND = "mpi"
++GLOO_BACKEND = "gloo"
++SCCL_BACKEND = "sccl"
++HCCL_BACKEND = "hccl"
++MCCL_BACKEND = "mccl"
+ 
+ DEFAULT_AML_MASTER_PORT = "54965"
+ DEFAULT_AML_NCCL_SOCKET_IFNAME = "^docker0,lo"
+@@ -18,7 +19,7 @@ DEFAULT_AML_NCCL_SOCKET_IFNAME = "^docker0,lo"
+ #########################################
+ # Comms Logger. By default, this feature is not enabled.
+ # Users can configure in ds_config.json as below example:
+-COMMS_LOGGER_FORMAT = '''
++COMMS_LOGGER_FORMAT = """
+ The Comms Logger can be specified as:
+ "comms_logger": {
+   "enabled": true,
+@@ -27,7 +28,7 @@ The Comms Logger can be specified as:
+   "debug": false,
+   "prof_ops": ["all_reduce", "custom_all_reduce_name"]
+ }
+-'''
++"""
+ COMMS_LOGGER = "comms_logger"
+ 
+ # Comms logger enable signal
+diff --git a/deepspeed/comm/torch.py b/deepspeed/comm/torch.py
+index 39e3f65f..d2b1b5d7 100755
+--- a/deepspeed/comm/torch.py
++++ b/deepspeed/comm/torch.py
+@@ -3,17 +3,20 @@
+ 
+ # DeepSpeed Team
+ 
++import inspect
++import os
++
++from packaging import version
++
+ import deepspeed
+ from deepspeed import utils
+-from packaging import version
+-import inspect
++from deepspeed.utils.torch import required_torch_version
+ 
+-from .utils import *
++from ..runtime import compiler
+ from .backend import *
+ from .comm import *
+-from ..runtime import compiler
+-from deepspeed.utils.torch import required_torch_version
+-import os
++from .reduce_op import ReduceOp
++from .utils import *
+ 
+ DS_COMM_ALL_GATHER_OFF = False
+ DS_COMM_REDUCE_SCATTER_OFF = False
+@@ -33,24 +36,32 @@ def build_shm_op():
+     if builder is None or not deepspeed.ops.__compatible_ops__[builder.NAME]:
+         return None
+     shm_cpp_module = builder.load()
+-    print(f'DeepSpeed {builder.absolute_name()} built successfully')
++    print(f"DeepSpeed {builder.absolute_name()} built successfully")
+     return shm_cpp_module
+ 
+ 
+ def has_coalescing_manager():
+-    has_c10d = hasattr(torch.distributed, 'distributed_c10d')
+-    return has_c10d and hasattr(torch.distributed.distributed_c10d, '_coalescing_manager')
++    has_c10d = hasattr(torch.distributed, "distributed_c10d")
++    return has_c10d and hasattr(
++        torch.distributed.distributed_c10d, "_coalescing_manager"
++    )
+ 
+ 
+ def has_all_reduce_coalesced():
+-    return hasattr(torch.distributed, "all_reduce_coalesced") and required_torch_version(min_version=1.13)
++    return hasattr(
++        torch.distributed, "all_reduce_coalesced"
++    ) and required_torch_version(min_version=1.13)
+ 
+ 
+ def get_coalescing_manager(group, device, reqs, async_op):
+     if required_torch_version(min_version=2.0, max_version=2.0):
+-        return torch.distributed.distributed_c10d._coalescing_manager(group, device=device, reqs=reqs)
++        return torch.distributed.distributed_c10d._coalescing_manager(
++            group, device=device, reqs=reqs
++        )
+     elif required_torch_version(min_version=2.1):
+-        return torch.distributed.distributed_c10d._coalescing_manager(group, device=device, async_ops=async_op)
++        return torch.distributed.distributed_c10d._coalescing_manager(
++            group, device=device, async_ops=async_op
++        )
+     else:
+         return torch.distributed.distributed_c10d._coalescing_manager(group, reqs)
+ 
+@@ -82,7 +93,7 @@ def reduce_comm_off(flag=False):
+     DS_COMM_REDUCE_OFF = flag
+ 
+ 
+-#assumption: all_gather and reduce scatter
++# assumption: all_gather and reduce scatter
+ ## are what we care about
+ def backward_comm_off(flag=False):
+     all_gather_comm_off(flag)
+@@ -90,21 +101,22 @@ def backward_comm_off(flag=False):
+ 
+ 
+ class Noop:
+-
+     def wait(self):
+         return None
+ 
+ 
+ class TorchBackend(Backend):
+     """
+-        A light-weight wrapper class for torch.distributed API.
+-        Only a subset of functions are wrapped. Once the init_process_group
+-        is initialized, standard torch.distributed.* can be used directly
+-        so no need to wrap all the functions. We can keep adding wrappers as
+-        needed.
++    A light-weight wrapper class for torch.distributed API.
++    Only a subset of functions are wrapped. Once the init_process_group
++    is initialized, standard torch.distributed.* can be used directly
++    so no need to wrap all the functions. We can keep adding wrappers as
++    needed.
+     """
+ 
+-    def __init__(self, backend, timeout, init_method, rank=-1, world_size=-1, name='torch'):
++    def __init__(
++        self, backend, timeout, init_method, rank=-1, world_size=-1, name="torch"
++    ):
+         super(TorchBackend, self).__init__()
+         self.shm_comm_op = build_shm_op()
+         self.has_all_reduce_coalesced = has_all_reduce_coalesced()
+@@ -134,6 +146,7 @@ class TorchBackend(Backend):
+         """
+         try:
+             from . import mori as _mori
++
+             _mori.init()
+         except Exception:
+             pass
+@@ -164,143 +177,196 @@ class TorchBackend(Backend):
+ 
+     def init_process_group(self, backend, timeout, init_method, rank, world_size):
+         if not torch.distributed.is_initialized():
+-            kwargs = dict(timeout=timeout, init_method=init_method, rank=rank, world_size=world_size)
++            kwargs = dict(
++                timeout=timeout,
++                init_method=init_method,
++                rank=rank,
++                world_size=world_size,
++            )
+ 
+             # 1. device_id arg was added in torch==2.3
+             # 2. setting device_id leads to hanging in 2.6.0<torch<2.7.1 https://github.com/pytorch/pytorch/issues/153960
+             # 3. device_id works and is needed for `cuda`, other accelerators may have issues at the moment. Therefore only do it for the `cuda` accelerator.
+-            if ('device_id' in inspect.signature(torch.distributed.init_process_group).parameters
+-                    and not (version.parse("2.6.0") < version.parse(torch.__version__) < version.parse("2.7.1"))
+-                    and get_accelerator().device_name() == 'cuda'):
+-                local_rank = int(os.environ.get('LOCAL_RANK', 0))
++            if (
++                "device_id"
++                in inspect.signature(torch.distributed.init_process_group).parameters
++                and not (
++                    version.parse("2.6.0")
++                    < version.parse(torch.__version__)
++                    < version.parse("2.7.1")
++                )
++                and get_accelerator().device_name() == "cuda"
++            ):
++                local_rank = int(os.environ.get("LOCAL_RANK", 0))
+                 kwargs.update(device_id=get_accelerator().device(local_rank))
+             torch.distributed.init_process_group(backend, **kwargs)
+ 
+-        self.using_mpi = torch.distributed.get_backend() == 'mpi'
++        self.using_mpi = torch.distributed.get_backend() == "mpi"
+ 
+     @disable_compiler_collective
+-    def all_reduce(self, tensor, op=torch.distributed.ReduceOp.SUM, group=None, async_op=False):
++    def all_reduce(
++        self, tensor, op=torch.distributed.ReduceOp.SUM, group=None, async_op=False
++    ):
+         op = self._reduce_op(op)
+-        return torch.distributed.all_reduce(tensor=tensor, op=op, group=group, async_op=async_op)
++        return torch.distributed.all_reduce(
++            tensor=tensor, op=op, group=group, async_op=async_op
++        )
+ 
+     def inference_all_reduce(self, tensor, op, group=None):
+-        use_ds_op = hasattr(torch.ops, 'deepspeed') and hasattr(torch.ops.deepspeed, 'inference_all_reduce_')
++        use_ds_op = hasattr(torch.ops, "deepspeed") and hasattr(
++            torch.ops.deepspeed, "inference_all_reduce_"
++        )
+         world_size = torch.distributed.get_world_size(group=group)
+         if world_size <= 1:
+             return tensor
+         if not use_ds_op:
+             op = self._reduce_op(op)
+-            return torch.distributed.all_reduce(tensor=tensor, op=op, group=group, async_op=False)
++            return torch.distributed.all_reduce(
++                tensor=tensor, op=op, group=group, async_op=False
++            )
+         else:
+             return torch.ops.deepspeed.inference_all_reduce_(tensor)
+ 
+     @disable_compiler_collective
+-    def all_reduce_coalesced(self, tensors, op=torch.distributed.ReduceOp.SUM, group=None, async_op=False):
+-        """ proxy func to torch.distributed.all_reduce_coalesced,
++    def all_reduce_coalesced(
++        self, tensors, op=torch.distributed.ReduceOp.SUM, group=None, async_op=False
++    ):
++        """proxy func to torch.distributed.all_reduce_coalesced,
+         which is included in PyTorch 1.13 and above
+         """
+         if not self.has_all_reduce_coalesced:
+-            raise RuntimeError(f"Current torch version does not have all_reduce_coalesced "
+-                               f"api (torch.__version__: {torch.__version__})")
++            raise RuntimeError(
++                f"Current torch version does not have all_reduce_coalesced "
++                f"api (torch.__version__: {torch.__version__})"
++            )
+         op = self._reduce_op(op)
+-        return torch.distributed.all_reduce_coalesced(tensors=tensors, op=op, group=group, async_op=async_op)
++        return torch.distributed.all_reduce_coalesced(
++            tensors=tensors, op=op, group=group, async_op=async_op
++        )
+ 
+     @disable_compiler_collective
+     def reduce(self, tensor, dst, op=ReduceOp.SUM, group=None, async_op=False):
+         if DS_COMM_REDUCE_OFF:
+-            if int(os.getenv('RANK', '0')) == 0:
++            if int(os.getenv("RANK", "0")) == 0:
+                 utils.logger.warning("REDUCE is OFF")
+             return Noop()
+-        return torch.distributed.reduce(tensor=tensor, dst=dst, op=self._reduce_op(op), group=group, async_op=async_op)
++        return torch.distributed.reduce(
++            tensor=tensor,
++            dst=dst,
++            op=self._reduce_op(op),
++            group=group,
++            async_op=async_op,
++        )
+ 
+     @disable_compiler_collective
+-    def reduce_scatter(self, output, input_list, op=ReduceOp.SUM, group=None, async_op=False):
++    def reduce_scatter(
++        self, output, input_list, op=ReduceOp.SUM, group=None, async_op=False
++    ):
+         if DS_COMM_REDUCE_SCATTER_OFF:
+-            if int(os.getenv('RANK', '0')) == 0:
++            if int(os.getenv("RANK", "0")) == 0:
+                 utils.logger.warning("REDUCE SCATTER  is OFF")
+             return Noop()
+         else:
+-            return torch.distributed.reduce_scatter(output=output,
+-                                                    input_list=input_list,
+-                                                    op=self._reduce_op(op),
+-                                                    group=group,
+-                                                    async_op=async_op)
++            return torch.distributed.reduce_scatter(
++                output=output,
++                input_list=input_list,
++                op=self._reduce_op(op),
++                group=group,
++                async_op=async_op,
++            )
+ 
+     @disable_compiler_collective
+     def broadcast(self, tensor, src, group=None, async_op=False):
+         if DS_COMM_BROADCAST_OFF:
+-            if int(os.getenv('RANK', '0')) == 0:
++            if int(os.getenv("RANK", "0")) == 0:
+                 utils.logger.warning("BROADCAST  is OFF")
+             return Noop()
+         else:
+-            return torch.distributed.broadcast(tensor=tensor, src=src, group=group, async_op=async_op)
++            return torch.distributed.broadcast(
++                tensor=tensor, src=src, group=group, async_op=async_op
++            )
+ 
+     @disable_compiler_collective
+     def broadcast_object_list(self, object_list, src, group=None, device=None):
+-        return torch.distributed.broadcast_object_list(object_list=object_list, src=src, group=group, device=device)
++        return torch.distributed.broadcast_object_list(
++            object_list=object_list, src=src, group=group, device=device
++        )
+ 
+     @disable_compiler_collective
+     def all_gather(self, tensor_list, tensor, group=None, async_op=False):
+         if DS_COMM_ALL_GATHER_OFF:
+-            if int(os.getenv('RANK', '0')) == 0:
++            if int(os.getenv("RANK", "0")) == 0:
+                 utils.logger.warning("All Gather is OFF")
+             return Noop()
+         else:
+-            return torch.distributed.all_gather(tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op)
++            return torch.distributed.all_gather(
++                tensor_list=tensor_list, tensor=tensor, group=group, async_op=async_op
++            )
+ 
+     @disable_compiler_collective
+-    def all_gather_into_tensor(self, output_tensor, input_tensor, group=None, async_op=False):
++    def all_gather_into_tensor(
++        self, output_tensor, input_tensor, group=None, async_op=False
++    ):
+         # Transparent SDMA fast-path on AMD/ROCm: when the mori backend is
+         # available and the call is on the WORLD process group, route
+         # through mori_cpp.AllGatherIntoTensor.  Any condition that makes
+         # SDMA unsafe (non-WORLD group, oversized shard, unsupported dtype,
+         # mori unavailable) yields None and we fall through to RCCL/NCCL.
+         from . import mori as _mori
+-        sdma_work = _mori.allgather_into_tensor(input_tensor, output_tensor, group=group)
++
++        sdma_work = _mori.allgather_into_tensor(
++            input_tensor, output_tensor, group=group
++        )
+         if sdma_work is not None:
+             return sdma_work
+         if self.has_all_gather_into_tensor():
+-            return self.all_gather_function(output_tensor=output_tensor,
+-                                            input_tensor=input_tensor,
+-                                            group=group,
+-                                            async_op=async_op)
++            return self.all_gather_function(
++                output_tensor=output_tensor,
++                input_tensor=input_tensor,
++                group=group,
++                async_op=async_op,
++            )
+ 
+     @disable_compiler_collective
+     def all_gather_base(self, output_tensor, input_tensor, group=None, async_op=False):
+         if DS_COMM_ALL_GATHER_OFF:
+-            if int(os.getenv('RANK', '0')) == 0:
++            if int(os.getenv("RANK", "0")) == 0:
+                 utils.logger.warning("All Gather is OFF")
+             return Noop()
+         else:
+             if self.has_allgather_base:
+-                return torch.distributed.distributed_c10d._all_gather_base(output_tensor=output_tensor,
+-                                                                           input_tensor=input_tensor,
+-                                                                           group=group,
+-                                                                           async_op=async_op)
++                return torch.distributed.distributed_c10d._all_gather_base(
++                    output_tensor=output_tensor,
++                    input_tensor=input_tensor,
++                    group=group,
++                    async_op=async_op,
++                )
+             else:
+-                utils.logger.warning("unable to find torch.distributed._all_gather_base. will fall back to "
+-                                     "torch.distributed.reduce_scatter which will result in suboptimal performance. "
+-                                     "please consider upgrading your pytorch installation.")
++                utils.logger.warning(
++                    "unable to find torch.distributed._all_gather_base. will fall back to "
++                    "torch.distributed.reduce_scatter which will result in suboptimal performance. "
++                    "please consider upgrading your pytorch installation."
++                )
+                 pass
+ 
+     @disable_compiler_collective
+-    def all_gather_coalesced(self, output_tensors, input_tensors, group=None, async_op=False):
++    def all_gather_coalesced(
++        self, output_tensors, input_tensors, group=None, async_op=False
++    ):
+         """"""
+         assert len(output_tensors) == len(input_tensors), ""
+-        if hasattr(torch.distributed.distributed_c10d, '_all_gather_base_coalesced'):
++        if hasattr(torch.distributed.distributed_c10d, "_all_gather_base_coalesced"):
+             # customized PyTorch
+-            return torch.distributed.distributed_c10d._all_gather_base_coalesced(output_tensors,
+-                                                                                 input_tensors,
+-                                                                                 group=group,
+-                                                                                 async_op=async_op)
++            return torch.distributed.distributed_c10d._all_gather_base_coalesced(
++                output_tensors, input_tensors, group=group, async_op=async_op
++            )
+         elif has_coalescing_manager():
+             reqs = []
+             with get_coalescing_manager(group, input_tensors[0].device, reqs, async_op):
+                 for output, input in zip(output_tensors, input_tensors):
+-                    handle = torch.distributed.distributed_c10d.all_gather_into_tensor(output,
+-                                                                                       input,
+-                                                                                       group=group,
+-                                                                                       async_op=True)
++                    handle = torch.distributed.distributed_c10d.all_gather_into_tensor(
++                        output, input, group=group, async_op=True
++                    )
+                     reqs.append(handle)
+             if async_op:
+                 return reqs[-1]
+@@ -309,40 +375,56 @@ class TorchBackend(Backend):
+ 
+     @disable_compiler_collective
+     def all_gather_object(self, object_list, obj, group=None):
+-        return torch.distributed.all_gather_object(object_list=object_list, obj=obj, group=group)
++        return torch.distributed.all_gather_object(
++            object_list=object_list, obj=obj, group=group
++        )
+ 
+     @disable_compiler_collective
+-    def reduce_scatter_tensor(self, output_tensor, input_tensor, op=ReduceOp.SUM, group=None, async_op=False):
++    def reduce_scatter_tensor(
++        self, output_tensor, input_tensor, op=ReduceOp.SUM, group=None, async_op=False
++    ):
+         if self.has_reduce_scatter_tensor():
+-            return self.reduce_scatter_function(output_tensor,
+-                                                input_tensor,
+-                                                op=self._reduce_op(op),
+-                                                group=group,
+-                                                async_op=async_op)
++            return self.reduce_scatter_function(
++                output_tensor,
++                input_tensor,
++                op=self._reduce_op(op),
++                group=group,
++                async_op=async_op,
++            )
+         else:
+-            utils.logger.warning("unable to find torch.distributed.reduce_scatter_tensor. will fall back to "
+-                                 "torch.distributed.reduce_scatter which will result in suboptimal performance. "
+-                                 "please consider upgrading your pytorch installation.")
++            utils.logger.warning(
++                "unable to find torch.distributed.reduce_scatter_tensor. will fall back to "
++                "torch.distributed.reduce_scatter which will result in suboptimal performance. "
++                "please consider upgrading your pytorch installation."
++            )
+             pass
+ 
+     @disable_compiler_collective
+-    def all_to_all_single(self,
+-                          output,
+-                          input,
+-                          output_split_sizes=None,
+-                          input_split_sizes=None,
+-                          group=None,
+-                          async_op=False):
+-        return torch.distributed.all_to_all_single(output=output,
+-                                                   input=input,
+-                                                   output_split_sizes=output_split_sizes,
+-                                                   input_split_sizes=input_split_sizes,
+-                                                   group=group,
+-                                                   async_op=async_op)
++    def all_to_all_single(
++        self,
++        output,
++        input,
++        output_split_sizes=None,
++        input_split_sizes=None,
++        group=None,
++        async_op=False,
++    ):
++        return torch.distributed.all_to_all_single(
++            output=output,
++            input=input,
++            output_split_sizes=output_split_sizes,
++            input_split_sizes=input_split_sizes,
++            group=group,
++            async_op=async_op,
++        )
+ 
+     @disable_compiler_collective
+-    def all_to_all(self, output_tensor_list, input_tensor_list, group=None, async_op=False):
+-        return torch.distributed.all_to_all(output_tensor_list, input_tensor_list, group=group, async_op=async_op)
++    def all_to_all(
++        self, output_tensor_list, input_tensor_list, group=None, async_op=False
++    ):
++        return torch.distributed.all_to_all(
++            output_tensor_list, input_tensor_list, group=group, async_op=async_op
++        )
+ 
+     @disable_compiler_collective
+     def send(self, tensor, dst, group=None, tag=0):
+@@ -362,31 +444,46 @@ class TorchBackend(Backend):
+ 
+     @disable_compiler_collective
+     def gather(self, tensor, gather_list=None, dst=0, group=None, async_op=False):
+-        return torch.distributed.gather(tensor=tensor,
+-                                        gather_list=gather_list,
+-                                        dst=dst,
+-                                        group=group,
+-                                        async_op=async_op)
++        return torch.distributed.gather(
++            tensor=tensor,
++            gather_list=gather_list,
++            dst=dst,
++            group=group,
++            async_op=async_op,
++        )
+ 
+     @disable_compiler_collective
+     def scatter(self, tensor, scatter_list=None, src=0, group=None, async_op=False):
+-        return torch.distributed.scatter(tensor=tensor,
+-                                         scatter_list=scatter_list,
+-                                         src=src,
+-                                         group=group,
+-                                         async_op=async_op)
++        return torch.distributed.scatter(
++            tensor=tensor,
++            scatter_list=scatter_list,
++            src=src,
++            group=group,
++            async_op=async_op,
++        )
+ 
+     @disable_compiler_collective
+-    def barrier(self, group=torch.distributed.GroupMember.WORLD, async_op=False, device_ids=None):
++    def barrier(
++        self, group=torch.distributed.GroupMember.WORLD, async_op=False, device_ids=None
++    ):
+         if group is None:
+             group = torch.distributed.GroupMember.WORLD
+-        return torch.distributed.barrier(group=group, async_op=async_op, device_ids=device_ids)
++        return torch.distributed.barrier(
++            group=group, async_op=async_op, device_ids=device_ids
++        )
+ 
+     @disable_compiler_collective
+-    def monitored_barrier(self, group=torch.distributed.GroupMember.WORLD, timeout=None, wait_all_ranks=False):
++    def monitored_barrier(
++        self,
++        group=torch.distributed.GroupMember.WORLD,
++        timeout=None,
++        wait_all_ranks=False,
++    ):
+         if group is None:
+             group = torch.distributed.GroupMember.WORLD
+-        return torch.distributed.monitored_barrier(group=group, timeout=timeout, wait_all_ranks=wait_all_ranks)
++        return torch.distributed.monitored_barrier(
++            group=group, timeout=timeout, wait_all_ranks=wait_all_ranks
++        )
+ 
+     def get_rank(self, group=None):
+         return torch.distributed.get_rank(group=group)
+@@ -405,7 +502,9 @@ class TorchBackend(Backend):
+ 
+     def get_global_rank(self, group, group_rank):
+         if hasattr(torch.distributed.distributed_c10d, "get_global_rank"):
+-            from torch.distributed.distributed_c10d import get_global_rank as _get_global_rank
++            from torch.distributed.distributed_c10d import (
++                get_global_rank as _get_global_rank,
++            )
+         else:
+             from torch.distributed.distributed_c10d import _get_global_rank
+         return _get_global_rank(group, group_rank)
+@@ -417,9 +516,9 @@ class TorchBackend(Backend):
+         return torch.distributed.destroy_process_group(group=group)
+ 
+     def _reduce_op(self, op):
+-        '''
+-            Helper function. If the op provided is not a torch.dist.ReduceOp, convert it and return
+-        '''
++        """
++        Helper function. If the op provided is not a torch.dist.ReduceOp, convert it and return
++        """
+         if not isinstance(op, torch.distributed.ReduceOp):
+             if op == ReduceOp.SUM:
+                 op = torch.distributed.ReduceOp.SUM
+@@ -441,22 +540,38 @@ class TorchBackend(Backend):
+ 
+     def init_device_mesh(self, mesh_shape, mesh_dim_names):
+         if not required_torch_version(min_version=2.2):
+-            raise RuntimeError(f"Current torch version does not have device mesh"
+-                               f"api (torch.__version__: {torch.__version__})")
++            raise RuntimeError(
++                f"Current torch version does not have device mesh"
++                f"api (torch.__version__: {torch.__version__})"
++            )
+         if not required_torch_version(max_version=2.4):
+-            return torch.distributed.device_mesh.init_device_mesh(get_accelerator().device_name(),
+-                                                                  mesh_shape,
+-                                                                  mesh_dim_names=mesh_dim_names)
++            return torch.distributed.device_mesh.init_device_mesh(
++                get_accelerator().device_name(),
++                mesh_shape,
++                mesh_dim_names=mesh_dim_names,
++            )
+         else:
+-            return torch.distributed.device_mesh.init_device_mesh(get_accelerator().current_device_name(),
+-                                                                  mesh_shape,
+-                                                                  mesh_dim_names=mesh_dim_names)
++            return torch.distributed.device_mesh.init_device_mesh(
++                get_accelerator().current_device_name(),
++                mesh_shape,
++                mesh_dim_names=mesh_dim_names,
++            )
+ 
+     def enable_symm_mem_for_group(self, group_name):
+         if not required_torch_version(min_version=2.5):
+-            raise RuntimeError(f"Torch version must be 2.5 or higher to use symmetric memory. "
+-                               f"Current version: {torch.__version__}")
++            raise RuntimeError(
++                f"Torch version must be 2.5 or higher to use symmetric memory. "
++                f"Current version: {torch.__version__}"
++            )
+         from torch.distributed._symmetric_memory import enable_symm_mem_for_group
++
++        if not required_torch_version(min_version=2.5):
++            raise RuntimeError(
++                f"Torch version must be 2.5 or higher to use symmetric memory. "
++                f"Current version: {torch.__version__}"
++            )
++        from torch.distributed._symmetric_memory import enable_symm_mem_for_group
++
+         return enable_symm_mem_for_group(group_name)
+ 
+ 
+diff --git a/deepspeed/runtime/zero/linear.py b/deepspeed/runtime/zero/linear.py
+index 033cb774..d06e1458 100644
+--- a/deepspeed/runtime/zero/linear.py
++++ b/deepspeed/runtime/zero/linear.py
+@@ -88,7 +88,9 @@ class LinearFunctionForZeroStage3(torch.autograd.Function):
+             # fused op is marginally faster
+             ret = torch.addmm(bias, input, weight.t())
+         else:
+-            output = input.matmul(weight.t())
++            print(input.shape, input.dtype, weight.shape, weight.dtype)
++            weight_ = weight.to(input)
++            output = input.matmul(weight_.t())
+             if bias is not None:
+                 output += bias
+             ret = output
+diff --git a/deepspeed/runtime/zero/partitioned_param_coordinator.py b/deepspeed/runtime/zero/partitioned_param_coordinator.py
+index 7d9476a3..1f8b8941 100644
+--- a/deepspeed/runtime/zero/partitioned_param_coordinator.py
++++ b/deepspeed/runtime/zero/partitioned_param_coordinator.py
+@@ -245,6 +245,7 @@ class PartitionedParameterCoordinator:
+ 
+         if not self.is_complete_trace():  # not self.trace_complete:
+             # Make sure that recorded submodule orders are identical across ranks
++            print("__submodule_order", self.__submodule_order)
+             assert_ints_same_as_other_ranks([m.ds_id for m in self.__submodule_order])
+ 
+             if self.is_record_trace():
+diff --git a/op_builder/all_ops.py b/op_builder/all_ops.py
+index ff11ca18..39120dad 100644
+--- a/op_builder/all_ops.py
++++ b/op_builder/all_ops.py
+@@ -3,9 +3,10 @@
+ 
+ # DeepSpeed Team
+ 
++import importlib
+ import os
+ import pkgutil
+-import importlib
++
+ try:
+     # during installation time accelerator is visible, otherwise return deepspeed.accelerator
+     from accelerator import get_accelerator
+@@ -19,12 +20,14 @@ op_builder_dir = get_accelerator().op_builder_dir()
+ op_builder_module = importlib.import_module(op_builder_dir)
+ __op_builders__ = []
+ 
+-for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(op_builder_module.__file__)]):
++for _, module_name, _ in pkgutil.iter_modules(
++    [os.path.dirname(op_builder_module.__file__)]
++):
+     # avoid self references
+-    if module_name != 'all_ops' and module_name != 'builder':
++    if module_name != "all_ops" and module_name != "builder":
+         module = importlib.import_module("{}.{}".format(op_builder_dir, module_name))
+         for member_name in module.__dir__():
+-            if member_name.endswith('Builder'):
++            if member_name.endswith("Builder"):
+                 # append builder to __op_builders__ list
+                 builder = get_accelerator().create_op_builder(member_name)
+                 __op_builders__.append(builder)
+diff --git a/op_builder/musa/__init__.py b/op_builder/musa/__init__.py
+new file mode 100644
+index 00000000..415025c8
+--- /dev/null
++++ b/op_builder/musa/__init__.py
+@@ -0,0 +1,7 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++"""Copyright The Microsoft DeepSpeed Team"""
++
++from .not_implemented import NotImplementedBuilder
+diff --git a/op_builder/musa/async_io.py b/op_builder/musa/async_io.py
+new file mode 100644
+index 00000000..782e8c93
+--- /dev/null
++++ b/op_builder/musa/async_io.py
+@@ -0,0 +1,104 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++
++import shutil
++import subprocess
++
++from .builder import MUSAOpBuilder
++
++
++class AsyncIOBuilder(MUSAOpBuilder):
++    BUILD_VAR = "DS_BUILD_AIO"
++    NAME = "async_io"
++
++    def __init__(self):
++        super().__init__(name=self.NAME)
++
++    def absolute_name(self):
++        return f'deepspeed.ops.aio.{self.NAME}_op'
++
++    def sources(self):
++        return [
++            'csrc/aio/py_lib/deepspeed_py_copy.cpp', 'csrc/aio/py_lib/py_ds_aio.cpp',
++            'csrc/aio/py_lib/deepspeed_py_aio.cpp', 'csrc/aio/py_lib/deepspeed_py_aio_handle.cpp',
++            'csrc/aio/py_lib/deepspeed_aio_thread.cpp', 'csrc/aio/common/deepspeed_aio_utils.cpp',
++            'csrc/aio/common/deepspeed_aio_common.cpp', 'csrc/aio/common/deepspeed_aio_types.cpp',
++            'csrc/aio/py_lib/deepspeed_pin_tensor.cpp', 'csrc/aio/py_lib/deepspeed_py_io_handle.cpp',
++            'csrc/aio/py_lib/deepspeed_aio_op_desc.cpp', 'csrc/aio/py_lib/deepspeed_cpu_op.cpp'
++        ]
++
++    def include_paths(self):
++        args = super().include_paths()
++        args += ['csrc/aio/py_lib', 'csrc/aio/common']
++        return args
++
++    def cxx_args(self):
++        args = super().cxx_args()
++        # -O0 for improved debugging, since performance is bound by I/O
++        CPU_ARCH = self.cpu_arch()
++        SIMD_WIDTH = self.simd_width()
++        import torch  # Keep this import here to avoid errors when building DeepSpeed wheel without torch installed
++        TORCH_MAJOR, TORCH_MINOR = map(int, torch.__version__.split('.')[0:2])
++        if TORCH_MAJOR >= 2 and TORCH_MINOR >= 1:
++            CPP_STD = '-std=c++17'
++        else:
++            CPP_STD = '-std=c++14'
++        return args + [
++            '-g',
++            '-Wall',
++            '-O0',
++            CPP_STD,
++            '-shared',
++            '-fPIC',
++            '-Wno-reorder',
++            CPU_ARCH,
++            '-fopenmp',
++            SIMD_WIDTH,
++            '-laio',
++        ]
++
++    def extra_ldflags(self):
++        args = super().extra_ldflags()
++        return args + ['-laio']
++
++    def check_for_libaio_pkg(self):
++        libs = dict(
++            dpkg=["-l", "libaio-dev", "apt"],
++            pacman=["-Q", "libaio", "pacman"],
++            rpm=["-q", "libaio-devel", "yum"],
++        )
++
++        found = False
++        for pkgmgr, data in libs.items():
++            flag, lib, tool = data
++            path = shutil.which(pkgmgr)
++            if path is not None:
++                cmd = [pkgmgr, flag, lib]
++                result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
++                if result.wait() == 0:
++                    found = True
++                else:
++                    self.warning(f"{self.NAME}: please install the {lib} package with {tool}")
++                break
++        return found
++
++    def is_compatible(self, verbose=False):
++        # Check for the existence of libaio by using distutils
++        # to compile and link a test program that calls io_submit,
++        # which is a function provided by libaio that is used in the async_io op.
++        # If needed, one can define -I and -L entries in CFLAGS and LDFLAGS
++        # respectively to specify the directories for libaio.h and libaio.so.
++        aio_compatible = self.has_function('io_pgetevents', ('aio', ))
++        if verbose and not aio_compatible:
++            self.warning(f"{self.NAME} requires the dev libaio .so object and headers but these were not found.")
++
++            # Check for the libaio package via known package managers
++            # to print suggestions on which package to install.
++            self.check_for_libaio_pkg()
++
++            self.warning(
++                "If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found."
++            )
++        return super().is_compatible(verbose) and aio_compatible
+diff --git a/op_builder/musa/builder.py b/op_builder/musa/builder.py
+new file mode 100644
+index 00000000..f700eef7
+--- /dev/null
++++ b/op_builder/musa/builder.py
+@@ -0,0 +1,88 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++
++import os
++from contextlib import suppress
++from json import load as load_json
++from pathlib import Path
++
++with suppress(ImportError):
++    import torch_musa
++
++try:
++    # is op_builder from deepspeed or a 3p version? this should only succeed if it's deepspeed
++    # if successful this also means we're doing a local install and not JIT compile path
++    from op_builder import __deepspeed__  # noqa: F401 # type: ignore
++    from op_builder.builder import OpBuilder
++except ImportError:
++    from deepspeed.ops.op_builder.builder import OpBuilder
++
++
++def _get_musa_path():
++    if "MUSA_HOME" in os.environ and os.path.exists(os.environ["MUSA_HOME"]):
++        return os.environ["MUSA_HOME"]
++    return None
++
++
++def _get_musa_version(name=""):
++    musa_path = _get_musa_path()
++    if musa_path is None:
++        message = "MUSA_HOME is not defined, unable to compile MUSA op(s)"
++        raise ValueError(message)
++
++    with Path(musa_path).joinpath("version.json").open("r") as version_file:
++        versions = load_json(version_file)
++
++    return versions["musa_toolkits"]["version"]
++
++
++class MUSAOpBuilder(OpBuilder):
++    _musa_path = None
++    _torch_musa_path = None
++    _musa_version = None
++
++    def __init__(self, name):
++        super().__init__(name)
++        self._musa_path = _get_musa_path()
++        self._torch_musa_path = str(Path(torch_musa.__file__).parent)
++        try:
++            self._musa_version = _get_musa_version(self.name)
++        except Exception:
++            print(f"{self.name} MUSA is missing, ops cannot be compiled!")
++
++    def include_paths(self):
++        paths = super().include_paths()
++        paths += [
++            os.path.join(self._musa_path, "include"),
++            os.path.join(self._torch_musa_path, "include"),
++        ]
++        return paths
++
++    def cxx_args(self):
++        args = super().cxx_args()
++        args += ["-O3", "-std=c++17", "-g", "-Wno-reorder", "-fopenmp"]
++        args += [
++            "-fstack-protector-all",
++            "-Wl,-z,relro,-z,now,-z,noexecstack",
++            "-Wl,--disable-new-dtags,--rpath",
++        ]
++        args += [
++            self.cpu_arch(),
++            self.simd_width(),
++            "-L" + os.path.join(self._musa_path, "lib"),
++            "-L" + os.path.join(self._torch_musa_path, "lib"),
++        ]
++        return args
++
++    def extra_ldflags(self):
++        flags = super().extra_ldflags()
++        flags += [
++            "-L" + os.path.join(self._musa_path, "lib"),
++            "-lmusart",
++            "-L" + os.path.join(self._torch_musa_path, "lib"),
++            "-lmusa_python",
++            "-lmusa_kernels",
++        ]
++        return flags
+diff --git a/op_builder/musa/cpu_adagrad.py b/op_builder/musa/cpu_adagrad.py
+new file mode 100644
+index 00000000..3285fd28
+--- /dev/null
++++ b/op_builder/musa/cpu_adagrad.py
+@@ -0,0 +1,25 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++
++from .builder import MUSAOpBuilder
++
++
++class CPUAdagradBuilder(MUSAOpBuilder):
++    BUILD_VAR = "DS_BUILD_CPU_ADAGRAD"
++    NAME = "cpu_adagrad"
++
++    def __init__(self):
++        super().__init__(name=self.NAME)
++
++    def absolute_name(self):
++        return f'deepspeed.ops.adagrad.{self.NAME}_op'
++
++    def sources(self):
++        return ['csrc/adagrad/cpu_adagrad.cpp']
++
++    def include_paths(self):
++        args = super().include_paths()
++        args += ['csrc/includes']
++        return args
+diff --git a/op_builder/musa/cpu_adam.py b/op_builder/musa/cpu_adam.py
+new file mode 100644
+index 00000000..4e17f441
+--- /dev/null
++++ b/op_builder/musa/cpu_adam.py
+@@ -0,0 +1,25 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++
++from .builder import MUSAOpBuilder
++
++
++class CPUAdamBuilder(MUSAOpBuilder):
++    BUILD_VAR = "DS_BUILD_CPU_ADAM"
++    NAME = "cpu_adam"
++
++    def __init__(self):
++        super().__init__(name=self.NAME)
++
++    def absolute_name(self):
++        return f'deepspeed.ops.adam.{self.NAME}_op'
++
++    def sources(self):
++        return ['csrc/adam/cpu_adam.cpp', 'csrc/adam/cpu_adam_impl.cpp']
++
++    def include_paths(self):
++        args = super().include_paths()
++        args += ['csrc/includes']
++        return args
+diff --git a/op_builder/musa/cpu_lion.py b/op_builder/musa/cpu_lion.py
+new file mode 100644
+index 00000000..4ab9cd8f
+--- /dev/null
++++ b/op_builder/musa/cpu_lion.py
+@@ -0,0 +1,25 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++
++from .builder import MUSAOpBuilder
++
++
++class CPULionBuilder(MUSAOpBuilder):
++    BUILD_VAR = "DS_BUILD_CPU_LION"
++    NAME = "cpu_lion"
++
++    def __init__(self):
++        super().__init__(name=self.NAME)
++
++    def absolute_name(self):
++        return f'deepspeed.ops.lion.{self.NAME}_op'
++
++    def sources(self):
++        return ['csrc/lion/cpu_lion.cpp', 'csrc/lion/cpu_lion_impl.cpp']
++
++    def include_paths(self):
++        args = super().include_paths()
++        args += ['csrc/includes']
++        return args
+diff --git a/op_builder/musa/not_implemented.py b/op_builder/musa/not_implemented.py
+new file mode 100644
+index 00000000..477dfcd9
+--- /dev/null
++++ b/op_builder/musa/not_implemented.py
+@@ -0,0 +1,24 @@
++# Copyright (c) Microsoft Corporation.
++# SPDX-License-Identifier: Apache-2.0
++
++# DeepSpeed Team
++
++from .builder import MUSAOpBuilder
++
++
++class NotImplementedBuilder(MUSAOpBuilder):
++    BUILD_VAR = "DS_BUILD_NOT_IMPLEMENTED"
++    NAME = "deepspeed_not_implemented"
++
++    def __init__(self, name=None):
++        name = self.NAME if name is None else name
++        super().__init__(name=name)
++
++    def absolute_name(self):
++        return f"deepspeed.ops.comm.{self.NAME}_op"
++
++    def load(self, verbose=True):
++        raise ValueError("This op had not been implemented on MUSA backend.")
++
++    def sources(self):
++        return []
+-- 
+2.34.1
+
