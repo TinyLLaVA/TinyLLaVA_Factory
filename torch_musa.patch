@@ -1,0 +1,581 @@
+From ce373c88298ec5cbafe0cc5af7e019ba4dcbc6f3 Mon Sep 17 00:00:00 2001
+From: example <example@example.com>
+Date: Wed, 30 Sep 2026 23:59:06 +0800
+Subject: [PATCH] temporary
+
+---
+ CMakeLists.txt                                |   4 +-
+ torch_musa/csrc/aten/linalg/MUSASolver.cpp    |  10 +-
+ torch_musa/csrc/aten/musa/MUSAGraph.cpp       |   7 +-
+ .../csrc/aten/musa/MublasHandlePool.cpp       |   2 +-
+ torch_musa/csrc/aten/ops/Activation.cpp       |  31 +++---
+ torch_musa/csrc/aten/ops/LayerNorm.cpp        |   3 +-
+ torch_musa/csrc/aten/ops/Loss.cpp             | 104 ++++++++++--------
+ torch_musa/csrc/aten/ops/Matmul.cpp           |  21 +++-
+ .../csrc/aten/ops/musa/ExtraUnaryOps.mu       |  46 ++++++++
+ .../csrc/aten/ops/musa/InternalHelpers.mu     |   8 ++
+ .../aten/ops/musa/unimplemented_functions.cpp |  41 +++++++
+ .../aten/ops/musa/unimplemented_functions.h   |   2 +
+ .../csrc/aten/quantized/TensorShape.cpp       |   2 +-
+ torch_musa/csrc/aten/utils/Utils.cpp          |   2 +-
+ 14 files changed, 200 insertions(+), 83 deletions(-)
+ create mode 100644 torch_musa/csrc/aten/ops/musa/ExtraUnaryOps.mu
+ create mode 100644 torch_musa/csrc/aten/ops/musa/InternalHelpers.mu
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c70b154..e1f8d19 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -36,10 +36,10 @@ if(env_cxx_standard GREATER -1)
+             "Please remove -std=c++ settings in your environment.")
+ endif()
+ 
+-set(CMAKE_CXX_STANDARD 17
++set(CMAKE_CXX_STANDARD 20
+     CACHE STRING
+           "The C++ standard whose features are requested to build this target.")
+-set(CMAKE_C_STANDARD 11
++set(CMAKE_C_STANDARD 17
+     CACHE STRING
+           "The C standard whose features are requested to build this target.")
+ 
+diff --git a/torch_musa/csrc/aten/linalg/MUSASolver.cpp b/torch_musa/csrc/aten/linalg/MUSASolver.cpp
+index ac49d89..e0196c8 100644
+--- a/torch_musa/csrc/aten/linalg/MUSASolver.cpp
++++ b/torch_musa/csrc/aten/linalg/MUSASolver.cpp
+@@ -11,7 +11,7 @@ namespace at::musa::solver {
+ #define TORCH_MUSOLVER_CHECK TORCH_MUSABLAS_CHECK
+ 
+ #define musolverDnDgetrf_bufferSize(handle, m, n, dA, ldda, lwork) \
+-  musolverDgetrf_bufferSize((m), (n), true, reinterpret_cast<size_t*>((lwork)))
++  musolverDgetrf_bufferSize((m), (n), true, (lwork))
+ #define musolverDnDgetrf(handle, m, n, dA, ldda, dataPtr, ipiv, info) \
+   musolverDgetrf(                                                     \
+       (handle),                                                       \
+@@ -23,7 +23,7 @@ namespace at::musa::solver {
+       (info),                                                         \
+       static_cast<void*>((dataPtr)))
+ #define musolverDnSgetrf_bufferSize(handle, m, n, dA, ldda, lwork) \
+-  musolverSgetrf_bufferSize((m), (n), true, reinterpret_cast<size_t*>((lwork)))
++  musolverSgetrf_bufferSize((m), (n), true, (lwork))
+ #define musolverDnSgetrf(handle, m, n, dA, ldda, dataPtr, ipiv, info) \
+   musolverSgetrf(                                                     \
+       (handle),                                                       \
+@@ -35,7 +35,7 @@ namespace at::musa::solver {
+       (info),                                                         \
+       static_cast<void*>((dataPtr)))
+ #define musolverDnZgetrf_bufferSize(handle, m, n, dA, ldda, lwork) \
+-  musolverZgetrf_bufferSize((m), (n), true, reinterpret_cast<size_t*>((lwork)))
++  musolverZgetrf_bufferSize((m), (n), true, (lwork))
+ #define musolverDnZgetrf(handle, m, n, dA, ldda, dataPtr, ipiv, info) \
+   musolverZgetrf(                                                     \
+       (handle),                                                       \
+@@ -47,7 +47,7 @@ namespace at::musa::solver {
+       (info),                                                         \
+       static_cast<void*>((dataPtr)))
+ #define musolverDnCgetrf_bufferSize(handle, m, n, dA, ldda, lwork) \
+-  musolverCgetrf_bufferSize((m), (n), true, reinterpret_cast<size_t*>((lwork)))
++  musolverCgetrf_bufferSize((m), (n), true, (lwork))
+ #define musolverDnCgetrf(handle, m, n, dA, ldda, dataPtr, ipiv, info) \
+   musolverCgetrf(                                                     \
+       (handle),                                                       \
+@@ -432,4 +432,4 @@ void potrfBatched<c10::complex<double>>(
+       info,
+       batchSize));
+ }
+-} // namespace at::musa::solver
+\ No newline at end of file
++} // namespace at::musa::solver
+diff --git a/torch_musa/csrc/aten/musa/MUSAGraph.cpp b/torch_musa/csrc/aten/musa/MUSAGraph.cpp
+index e32246e..f9f19f3 100644
+--- a/torch_musa/csrc/aten/musa/MUSAGraph.cpp
++++ b/torch_musa/csrc/aten/musa/MUSAGraph.cpp
+@@ -7,6 +7,7 @@
+ #include <iostream>
+ #include "torch_musa/csrc/aten/musa/MUSAGraph.h"
+ #include "torch_musa/csrc/core/MUSACachingAllocator.h"
++#include "unimplemented_functions.h"
+ namespace at {
+ 
+ struct Generator;
+@@ -142,8 +143,7 @@ void MUSAGraph::capture_begin(
+       capture_dev_, mempool_id_, [this](musaStream_t stream) {
+         musaStreamCaptureStatus status;
+         CaptureId_t stream_capture_id;
+-        AT_MUSA_CHECK(musaStreamGetCaptureInfo_v2(
+-            stream, &status, &stream_capture_id, nullptr, nullptr, nullptr));
++        AT_MUSA_CHECK(musaStreamGetCaptureInfo(stream, &status, &stream_capture_id));
+         return status ==
+             musaStreamCaptureStatus::musaStreamCaptureStatusActive &&
+             stream_capture_id == capture_id_;
+@@ -165,8 +165,7 @@ void MUSAGraph::capture_begin(
+   AT_MUSA_CHECK(musaStreamBeginCapture(capture_stream_, capture_mode));
+ 
+   musaStreamCaptureStatus status;
+-  AT_MUSA_CHECK(musaStreamGetCaptureInfo_v2(
+-      stream, &status, &capture_id_, nullptr, nullptr, nullptr));
++  AT_MUSA_CHECK(musaStreamGetCaptureInfo(stream, &status, &capture_id_));
+   TORCH_INTERNAL_ASSERT(
+       status == musaStreamCaptureStatus::musaStreamCaptureStatusActive);
+ }
+diff --git a/torch_musa/csrc/aten/musa/MublasHandlePool.cpp b/torch_musa/csrc/aten/musa/MublasHandlePool.cpp
+index 16adb2d..430bef7 100644
+--- a/torch_musa/csrc/aten/musa/MublasHandlePool.cpp
++++ b/torch_musa/csrc/aten/musa/MublasHandlePool.cpp
+@@ -108,7 +108,7 @@ mublasHandle_t getCurrentMUSABlasHandle() {
+   //   MUBLAS_MATH_MODE_TP32_TENSOR));
+   // }
+ 
+-  TORCH_MUSABLAS_CHECK(mublasSetMathMode(handle, MUBLAS_DEFAULT_MATH));
++  TORCH_MUSABLAS_CHECK(mublasSetMathMode(handle, MUBLAS_MATH_MODE_DEFAULT));
+   return handle;
+ }
+ 
+diff --git a/torch_musa/csrc/aten/ops/Activation.cpp b/torch_musa/csrc/aten/ops/Activation.cpp
+index 99f48fc..f934cde 100644
+--- a/torch_musa/csrc/aten/ops/Activation.cpp
++++ b/torch_musa/csrc/aten/ops/Activation.cpp
+@@ -23,6 +23,13 @@
+ 
+ #include <limits>
+ 
++namespace at {
++  namespace native {
++    void is_inf_kernel_musa(const float* input, bool* result, size_t n_elements);
++    void is_nan_kernel_musa(const float* input, bool* result, size_t n_elements);
++  }
++}
++
+ namespace at {
+ namespace musa {
+ 
+@@ -711,14 +718,10 @@ at::Tensor IsNan(const at::Tensor& self) {
+   }
+ 
+   return _AT_DISPATCH_INF_TYPES(self.scalar_type(), "isnan", [&]() {
+-    at::Tensor result =
+-        at::empty_like(self, self.options().dtype(at::ScalarType::Bool));
+-    auto in = CreateMUTensor(self);
+-    auto out = CreateMUTensor(result);
+-    muHandle& h = GetMudnnHandle();
+-    ::musa::dnn::Unary op;
+-    CHECK_MUDNN_STATUS(op.SetMode(UNARY_MODE::IS_NAN), "SetMode");
+-    CHECK_MUDNN_STATUS(op.Run(h, out, in), "Run isnan");
++    auto result = at::empty_like(self, self.options().dtype(at::ScalarType::Bool)).contiguous();
++    auto input = self.contiguous();
++    auto n_elements = input.numel();
++    at::native::is_nan_kernel_musa(input.data_ptr<float>(), result.mutable_data_ptr<bool>(), n_elements);
+     return result;
+   });
+ }
+@@ -738,14 +741,10 @@ at::Tensor IsInf(const at::Tensor& self) {
+   }
+ 
+   return _AT_DISPATCH_INF_TYPES(self.scalar_type(), "isinf", [&]() {
+-    at::Tensor result =
+-        at::empty_like(self, self.options().dtype(at::ScalarType::Bool));
+-    auto in = CreateMUTensor(self);
+-    auto out = CreateMUTensor(result);
+-    muHandle& h = GetMudnnHandle();
+-    ::musa::dnn::Unary op;
+-    CHECK_MUDNN_STATUS(op.SetMode(UNARY_MODE::IS_INF), "SetMode");
+-    CHECK_MUDNN_STATUS(op.Run(h, out, in), "Run isinf");
++    auto result = at::empty_like(self, self.options().dtype(at::ScalarType::Bool)).contiguous();
++    auto input = self.contiguous();
++    auto n_elements = input.numel();
++    at::native::is_inf_kernel_musa(input.data_ptr<float>(), result.mutable_data_ptr<bool>(), n_elements);
+     return result;
+   });
+ }
+diff --git a/torch_musa/csrc/aten/ops/LayerNorm.cpp b/torch_musa/csrc/aten/ops/LayerNorm.cpp
+index b40d07b..034db29 100644
+--- a/torch_musa/csrc/aten/ops/LayerNorm.cpp
++++ b/torch_musa/csrc/aten/ops/LayerNorm.cpp
+@@ -151,8 +151,7 @@ std::tuple<Tensor, Tensor, Tensor> NativeLayerNorm(
+             mt_rstd,
+             mt_input,
+             mt_gamma,
+-            mt_beta,
+-            InternalMemAlloc),
++            mt_beta),
+         "Run");
+   }
+   return std::make_tuple(std::move(output), std::move(mean), std::move(rstd));
+diff --git a/torch_musa/csrc/aten/ops/Loss.cpp b/torch_musa/csrc/aten/ops/Loss.cpp
+index d3ebc07..97a5b0a 100644
+--- a/torch_musa/csrc/aten/ops/Loss.cpp
++++ b/torch_musa/csrc/aten/ops/Loss.cpp
+@@ -1,3 +1,4 @@
++#include <c10/util/SmallBuffer.h>
+ #include <ATen/Config.h>
+ #include <ATen/ExpandUtils.h>
+ #include <ATen/NamedTensorUtils.h>
+@@ -6,6 +7,11 @@
+ #include <ATen/core/op_registration/adaption.h>
+ #include <ATen/native/Resize.h>
+ #include <torch/library.h>
++#include <limits>
++#include "ATen/core/Reduction.h"
++#include "ATen/ops/log_softmax.h"
++#include "ATen/ops/ones.h"
++#include "ATen/ops/softmax.h"
+ 
+ #ifndef AT_PER_OPERATOR_HEADERS
+ #include <ATen/Functions.h>
+@@ -564,6 +570,17 @@ int64_t CrossEntropyLoss2dChoice(
+   return 0;
+ }
+ 
++static inline Tensor broadcast_weight(Tensor weight, Tensor input) {
++  Tensor weight_ = weight;
++  if (input.dim() > 1) {
++    auto broadcast_shape = SmallBuffer<int64_t, 5>(input.dim());
++    std::fill(broadcast_shape.begin(), broadcast_shape.end(), 1);
++    broadcast_shape[1] = weight.size(0);
++    weight_ = weight.view(broadcast_shape);
++  }
++  return weight_;
++}
++
+ Tensor FusedCrossEntropyLoss2dFwd(
+     const Tensor& self,
+     const Tensor& target,
+@@ -576,39 +593,44 @@ Tensor FusedCrossEntropyLoss2dFwd(
+       "FusedCrossEntropyLoss2dFwd input and target's shapes don't match");
+   const auto device_guard = c10::musa::MUSAGuard(self.device());
+ 
+-  at::Tensor wt = weight.value_or(Tensor());
+-  at::Tensor output = at::empty({}, self.options());
+-  if (reduction == Reduction::None) {
+-    output.resize_({self.size(0)});
++  const auto class_dim = self.dim() == 1 ? 0 : 1;
++  const auto n_classes = self.size(class_dim);
++
++  at::Tensor wt = weight.value_or(at::ones({1}, self.options()).view({n_classes}));
++
++  TORCH_CHECK(
++    wt.dim() == 1 && wt.numel() == n_classes,
++    "cross_entropy: weight tensor should be defined for all ",
++    n_classes,
++    " classes, but got shape: ",
++    wt.sizes()
++  );
++
++  auto input = at::log_softmax(self, class_dim, self.scalar_type());
++  Tensor target_;
++  if (label_smoothing > 0.0) {
++    TORCH_CHECK(label_smoothing <= 1.0, "label_smoothing must be less than or equals to 1.0. Got: ", label_smoothing);
++    target_ = target.multiply(1 - label_smoothing).add(label_smoothing / n_classes);
++  } else {
++    target_ = target;
+   }
+ 
+-  muHandle& h = GetMudnnHandle();
++  Tensor weight_ = broadcast_weight(wt, input);
+ 
+-  ::musa::dnn::CrossEntropyLoss loss;
+-  ::musa::dnn::CrossEntropyLoss::ReductionMode mode;
+   switch (reduction) {
+     case Reduction::Mean:
+-      mode = ::musa::dnn::CrossEntropyLoss::ReductionMode::MEAN;
+-      break;
++      if (input.sym_numel() == 0) {
++        return -(input.multiply(target_).multiply(weight_)).sum().fill_(std::numeric_limits<double>::quiet_NaN());
++      } else {
++        return -(input.multiply(target_).multiply(weight_)).sum().multiply(n_classes / input.sym_numel());
++      }
+     case Reduction::Sum:
+-      mode = ::musa::dnn::CrossEntropyLoss::ReductionMode::SUM;
+-      break;
++      return -(input.multiply(target_).multiply(weight_)).sum();
++    case Reduction::None:
++      return -(input.multiply(target_).multiply(weight_)).sum(class_dim);
+     default:
+-      mode = ::musa::dnn::CrossEntropyLoss::ReductionMode::NONE;
+-      break;
++      TORCH_CHECK(false, "Invalid reduction type encountered in cross_entropy: ", reduction);
+   }
+-
+-  muTensor in = CreateMUTensor(self.contiguous());
+-  muTensor lab = CreateMUTensor(target.contiguous());
+-  muTensor w = wt.numel() > 0 ? CreateMUTensor(wt) : muTensor();
+-  muTensor out = CreateMUTensor(output);
+-  CHECK_MUDNN_STATUS(loss.SetReductionMode(mode), "SetReductionMode");
+-  CHECK_MUDNN_STATUS(
+-      loss.SetLabelSmoothing(label_smoothing), "SetLabelSmoothing");
+-  CHECK_MUDNN_STATUS(loss.SetIgnoreIndex(ignore_index), "SetIgnoreIndex");
+-  CHECK_MUDNN_STATUS(loss.Run(h, out, in, lab, w, InternalMemAlloc), "Run");
+-
+-  return output;
+ }
+ 
+ Tensor FusedCrossEntropyLoss2dBwd(
+@@ -621,45 +643,35 @@ Tensor FusedCrossEntropyLoss2dBwd(
+     double label_smoothing) {
+   const auto device_guard = c10::musa::MUSAGuard(self.device());
+ 
+-  at::Tensor wt = weight.value_or(Tensor());
++  const auto class_dim = self.dim() == 1 ? 0 : 1;
++  const auto n_classes = self.size(class_dim);
++
++  at::Tensor wt = weight.value_or(at::ones({1}, self.options()).view({n_classes}));
++  at::Tensor weight_ = broadcast_weight(wt, self).multiply_(target).multiply_(-1);
++
+   at::Tensor grad_input = at::empty_like(
+       self, self.options().memory_format(at::MemoryFormat::Contiguous));
+ 
+-  muHandle& h = GetMudnnHandle();
++  auto intermediate_softmax = at::softmax(self, class_dim, self.scalar_type());
+ 
+-  ::musa::dnn::CrossEntropyLoss loss;
+-  ::musa::dnn::CrossEntropyLoss::ReductionMode mode;
+   switch (reduction) {
+     case Reduction::Mean:
+-      mode = ::musa::dnn::CrossEntropyLoss::ReductionMode::MEAN;
+       TORCH_CHECK(
+           grad_output.numel() == 1,
+           "CrossEntropyBwd with reduction mean requires grad_output.numel() == 1");
++      weight_.multiply_(n_classes / self.sym_numel());
+       break;
+     case Reduction::Sum:
+-      mode = ::musa::dnn::CrossEntropyLoss::ReductionMode::SUM;
+       TORCH_CHECK(
+           grad_output.numel() == 1,
+           "CrossEntropyBwd with reduction sum requires grad_output.numel() == 1");
+       break;
+     default:
+-      mode = ::musa::dnn::CrossEntropyLoss::ReductionMode::NONE;
+-      break;
++      TORCH_CHECK(reduction != Reduction::None, "Invalid reduction type encountered in cross_entropy: ", reduction);
++      return intermediate_softmax.multiply(weight_);
+   }
+ 
+-  muTensor grad = CreateMUTensor(grad_output.contiguous());
+-  muTensor in = CreateMUTensor(self.contiguous());
+-  muTensor lab = CreateMUTensor(target.contiguous());
+-  muTensor w = wt.numel() > 0 ? CreateMUTensor(wt) : muTensor();
+-  muTensor grad_in = CreateMUTensor(grad_input);
+-  CHECK_MUDNN_STATUS(loss.SetReductionMode(mode), "SetReductionMode");
+-  CHECK_MUDNN_STATUS(
+-      loss.SetLabelSmoothing(label_smoothing), "SetLabelSmoothing");
+-  CHECK_MUDNN_STATUS(loss.SetIgnoreIndex(ignore_index), "SetIgnoreIndex");
+-  CHECK_MUDNN_STATUS(
+-      loss.RunBwd(h, grad_in, in, grad, lab, w, InternalMemAlloc), "RunBwd");
+-
+-  return grad_input;
++  return weight_.subtract(intermediate_softmax.multiply(weight_.sum(class_dim)));
+ }
+ 
+ } // namespace musa
+diff --git a/torch_musa/csrc/aten/ops/Matmul.cpp b/torch_musa/csrc/aten/ops/Matmul.cpp
+index 6a87cb1..8eaffb6 100644
+--- a/torch_musa/csrc/aten/ops/Matmul.cpp
++++ b/torch_musa/csrc/aten/ops/Matmul.cpp
+@@ -1,6 +1,8 @@
+ #include <ATen/Config.h>
+ #include <ATen/native/Resize.h>
+ #include <torch/library.h>
++#include "ATen/ops/empty.h"
++#include "ATen/ops/empty_like.h"
+ 
+ #ifndef AT_PER_OPERATOR_HEADERS
+ #include <ATen/Functions.h>
+@@ -522,14 +524,23 @@ Tensor& ScaledMatmulOut(
+   CHECK_MUDNN_STATUS(
+       op.SetComputeMode(at::musa::GetComputeModeFromCtx(mat1.scalar_type())),
+       "SetComputeMode");
++
++  // intermediate full_scale = sa * sb
++  auto full_scale_ = at::empty({scale_a.size(0), scale_b.size(1)}, scale_a.options().dtype(ScalarType::Float));
++  auto full_scale = CreateMUTensor(full_scale_);
++  CHECK_MUDNN_STATUS(op.Run(h, full_scale, sa, sb, InternalMemAlloc), "Intermediate: full_scale");
++
++  // intermediate axb
+   CHECK_MUDNN_STATUS(op.SetTranspose(trans_l, trans_r), "SetTranspose");
++  CHECK_MUDNN_STATUS(op.Run(h, rst, lmt, rmt, InternalMemAlloc), "Intermediate: axb");
+ 
+-  ::musa::dnn::MatMulLtParam param;
+-  CHECK_MUDNN_STATUS(param.SetScale(sa, sb, muTensor(), sr), "SetScale");
+-  CHECK_MUDNN_STATUS(param.SetAmaxD(amax_), "SetAmax");
++  // intermediate full_multiply
++  auto full_multiply_ = at::empty_like(out);
++  auto full_multiply = CreateMUTensor(full_multiply_);
++  CHECK_MUDNN_STATUS(op.SetTranspose(false, false), "SetTranspose");
++  CHECK_MUDNN_STATUS(op.Run(h, full_multiply, full_scale, rst, InternalMemAlloc), "Intermediate: full_multiply");
+ 
+-  CHECK_MUDNN_STATUS(
+-      op.RunLt(h, rst, lmt, rmt, rst, bmt, param, InternalMemAlloc), "RunLt");
++  CHECK_MUDNN_STATUS(op.Run(h, rst, full_multiply, sr, InternalMemAlloc), "Run");
+ 
+   return out;
+ }
+diff --git a/torch_musa/csrc/aten/ops/musa/ExtraUnaryOps.mu b/torch_musa/csrc/aten/ops/musa/ExtraUnaryOps.mu
+new file mode 100644
+index 0000000..4f1079d
+--- /dev/null
++++ b/torch_musa/csrc/aten/ops/musa/ExtraUnaryOps.mu
+@@ -0,0 +1,46 @@
++#define TORCH_ASSERT_NO_OPERATORS
++#include <cmath>
++#include <ATen/Dispatch.h>
++#include <ATen/native/DispatchStub.h>
++#include <ATen/native/Fill.h>
++#include <ATen/native/TensorIterator.h>
++#include <c10/core/Scalar.h>
++#include <ATen/native/musa/Loops.muh>
++
++#include "torch_musa/csrc/aten/utils/Utils.h"
++
++namespace {
++  static constexpr const size_t BlockSize = 256;
++  static inline constexpr size_t get_grid_size(size_t n) { return (n + BlockSize - 1) / BlockSize; }
++}
++
++namespace at::native {
++
++template<typename T>
++__global__ void vectorIsNaN_musa(const T* input, bool* output, size_t n) {
++  int idx = blockIdx.x * blockDim.x + threadIdx.x;
++  if (idx < n) {
++    output[idx] = std::isnan(input[idx]);
++  }
++}
++template __global__ void vectorIsNaN_musa<>(const float* input, bool* output, size_t n);
++template __global__ void vectorIsNaN_musa<>(const double* input, bool* output, size_t n);
++
++template<typename T>
++__global__ void vectorIsInf_musa(const T* input, bool* output, size_t n) {
++  int idx = blockIdx.x * blockDim.x + threadIdx.x;
++  if (idx < n) {
++    output[idx] = std::isinf(input[idx]);
++  }
++}
++template __global__ void vectorIsInf_musa<>(const float* input, bool* output, size_t n);
++template __global__ void vectorIsInf_musa<>(const double* input, bool* output, size_t n);
++
++void is_nan_kernel_musa(const float* input, bool* result, size_t n_elements) {
++  vectorIsNaN_musa<<<get_grid_size(n_elements), BlockSize>>>(input, result, n_elements);
++}
++void is_inf_kernel_musa(const float* input, bool* result, size_t n_elements) {
++  vectorIsInf_musa<<<get_grid_size(n_elements), BlockSize>>>(input, result, n_elements);
++}
++
++} // namespace at::native
+diff --git a/torch_musa/csrc/aten/ops/musa/InternalHelpers.mu b/torch_musa/csrc/aten/ops/musa/InternalHelpers.mu
+new file mode 100644
+index 0000000..8567d96
+--- /dev/null
++++ b/torch_musa/csrc/aten/ops/musa/InternalHelpers.mu
+@@ -0,0 +1,8 @@
++namespace torch_musa_internal {
++  __global__ void __noop_kernel() { }
++
++  void submit_noop(musaStream_t stream) {
++    __noop_kernel<<<1,1,0,stream>>>();
++  }
++
++}
+diff --git a/torch_musa/csrc/aten/ops/musa/unimplemented_functions.cpp b/torch_musa/csrc/aten/ops/musa/unimplemented_functions.cpp
+index 18967a5..18647f9 100644
+--- a/torch_musa/csrc/aten/ops/musa/unimplemented_functions.cpp
++++ b/torch_musa/csrc/aten/ops/musa/unimplemented_functions.cpp
+@@ -1,12 +1,51 @@
+ #include <c10/util/Exception.h>
+ 
+ #include <musa_runtime_api.h>
++#include <unistd.h>
+ 
+ #include "torch_musa/csrc/aten/ops/musa/unimplemented_functions.h"
+ 
++#include <algorithm>
++#include <concepts>
++
++#define assert_musa_call(function, ...)                                  \
++  do {                                                                   \
++    auto result = function(__VA_ARGS__);                                 \
++    if (result != musaSuccess) {                                         \
++      std::string error_message(                                         \
++          "assertion failed: expect this call to success but failed: "); \
++      error_message.append(#function);                                   \
++      error_message.append(", code: ");                                  \
++      error_message.append(std::to_string(static_cast<int>(result)));    \
++      C10_THROW_ERROR(ErrorAlwaysShowCppStacktrace, error_message);      \
++    }                                                                    \
++  } while (false)
++
++namespace torch_musa_internal {
++  void submit_noop(musaStream_t stream);
++}
++
+ namespace c10 {
+ namespace musa {
+ 
++__host__ musaError_t musaStreamIsCapturing(
++    musaStream_t stream,
++    enum musaStreamCaptureStatus* pCaptureStatus) {
++  auto result = musaStreamBeginCapture(
++      stream, musaStreamCaptureMode::musaStreamCaptureModeThreadLocal);
++  if (result == musaSuccess) {
++    *pCaptureStatus = musaStreamCaptureStatus::musaStreamCaptureStatusNone;
++    musaGraph_t graph;
++    torch_musa_internal::submit_noop(stream);
++    assert_musa_call(musaStreamSynchronize, stream);
++    assert_musa_call(musaStreamEndCapture, stream, &graph);
++    assert_musa_call(musaGraphDestroy, graph);
++  } else {
++    *pCaptureStatus = musaStreamCaptureStatus::musaStreamCaptureStatusActive;
++  }
++  return musaSuccess;
++}
++
+ __host__ musaError_t
+ musaThreadExchangeStreamCaptureMode(enum musaStreamCaptureMode* mode) {
+   C10_THROW_ERROR(
+@@ -80,3 +119,5 @@ __host__ musaError_t musaMemPoolSetAttribute(
+ 
+ } // namespace musa
+ } // namespace c10
++
++#undef assert_musa_call
+diff --git a/torch_musa/csrc/aten/ops/musa/unimplemented_functions.h b/torch_musa/csrc/aten/ops/musa/unimplemented_functions.h
+index 1fd65e7..170ec66 100644
+--- a/torch_musa/csrc/aten/ops/musa/unimplemented_functions.h
++++ b/torch_musa/csrc/aten/ops/musa/unimplemented_functions.h
+@@ -6,6 +6,8 @@
+ namespace c10 {
+ namespace musa {
+ 
++__host__ musaError_t musaStreamIsCapturing(musaStream_t, enum musaStreamCaptureStatus*);
++
+ __host__ musaError_t
+ musaThreadExchangeStreamCaptureMode(enum musaStreamCaptureMode* mode);
+ 
+diff --git a/torch_musa/csrc/aten/quantized/TensorShape.cpp b/torch_musa/csrc/aten/quantized/TensorShape.cpp
+index bb44721..7f46c0a 100644
+--- a/torch_musa/csrc/aten/quantized/TensorShape.cpp
++++ b/torch_musa/csrc/aten/quantized/TensorShape.cpp
+@@ -270,7 +270,7 @@ Tensor CatQuantizedMusaImpl(
+   }
+ 
+   CHECK_MUDNN_STATUS(
+-      out_.SetQuantizationInfo(scale_m), "Set quantization info");
++      out_.SetQuantizationInfo({scale_m}), "Set quantization info");
+ 
+   // run mudnn op
+   at::musa::muHandle& h = at::GetMudnnHandle();
+diff --git a/torch_musa/csrc/aten/utils/Utils.cpp b/torch_musa/csrc/aten/utils/Utils.cpp
+index 5051ae4..35e163a 100644
+--- a/torch_musa/csrc/aten/utils/Utils.cpp
++++ b/torch_musa/csrc/aten/utils/Utils.cpp
+@@ -149,7 +149,7 @@ void SetMudnnQuantizationInfo(
+       "which requires zero_point == 0, got: ",
+       zero_points);
+   float scales_ = static_cast<float>(scales);
+-  CHECK_MUDNN_STATUS(self.SetQuantizationInfo(scales_), "SetQuantizationInfo");
++  CHECK_MUDNN_STATUS(self.SetQuantizationInfo({scales_}), "SetQuantizationInfo");
+ }
+ 
+ muTensor CreateMUTensorByCompressDim(const Tensor& t) {
+-- 
+2.34.1
+
