@@ -2,18 +2,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from tinyllava.data.processor import BaseProcessor
+from tinyllava.data.processor import TinyLlavaProcessor
 
 
 def test_siglip_uses_patch_only_image_token_count():
     vision_config = SimpleNamespace(model_type="siglip_vision_model")
 
-    assert BaseProcessor._get_num_additional_image_tokens(vision_config) == 0
+    assert TinyLlavaProcessor._get_num_additional_image_tokens(vision_config) == 0
 
 
 def test_patch_only_backbone_requires_full_feature_selection():
     with pytest.raises(ValueError, match="vision_feature_select_strategy='full'"):
-        BaseProcessor._validate_image_feature_configuration(
+        TinyLlavaProcessor._validate_image_feature_configuration(
             num_additional_image_tokens=0,
             vision_feature_select_strategy="default",
         )

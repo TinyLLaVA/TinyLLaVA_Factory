@@ -7,7 +7,7 @@ from transformers.image_utils import load_image
 
 from tinyllava.data.image_payload import add_image_payloads
 from tinyllava.data.message_format import normalize_content
-from tinyllava.data.processor import BaseProcessor
+from tinyllava.data.processor import TinyLlavaProcessor
 from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
 
 
@@ -22,7 +22,7 @@ def build_processor_from_model(
         raise ValueError(
             "`image_processor` must be provided unless `model.processor.image_processor` exists."
         )
-    return BaseProcessor.from_model(
+    return TinyLlavaProcessor.from_model(
         tokenizer=tokenizer,
         image_processor=image_processor,
         model=model,

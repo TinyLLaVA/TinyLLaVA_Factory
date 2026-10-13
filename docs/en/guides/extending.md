@@ -28,7 +28,7 @@ payloads. Keep dataset-specific path handling in the adapter.
 Add API directives to the relevant [reference page](../reference/data.md) when
 introducing public interfaces.
 
-## Vision models and I-MoF
+## Vision models and MoF
 
 Native CLIP, SigLIP, DINOv2 and other compatible HF vision backbones load through
 `AutoVisionTowerModel`, which combines project and native HF mapping names.
@@ -45,17 +45,22 @@ of Multimodal LLMs](https://arxiv.org/abs/2401.06209) (CVPR 2024).
 method. Its upstream `mof_mlp.py` implements **I-MoF**: separate CLIP and DINOv2
 MLPs followed by spatial token interleaving. The migrated implementation retains
 that behavior, including the shared CLIP-preprocessed image for both branches.
-This differs from A-MoF, which mixes features before projection.
+A-MoF is also supported: set the vision config's `fusion_strategy="additive"`
+and `alpha` to mix `alpha * CLIP + (1 - alpha) * DINOv2` before a shared connector.
+This requires equal branch feature widths and token layouts; addition itself
+does not align unequal token counts. Select an ordinary connector, such as MLP,
+for A-MoF. `MofConnector` implements the separate-branch I-MoF path.
 
 - `MofVisionConfig` stores both branch configs; `MofVisionModel` has HF
   construction and save/load behavior, without downloads during construction.
 - Branches must share patch size, channel count and depth. DINOv2 interpolates
-  its positions to the CLIP input resolution. Branch hidden widths may differ.
+  its positions to the CLIP input resolution. Branch hidden widths may differ in interleaved mode.
 - `MofConnector` projects each branch independently and produces tokens in
   `clip_0, dino_0, clip_1, dino_1, ...` order. Multiple selected hidden layers
   remain separate per branch before projection.
 - `TinyLlavaProcessor` obtains placeholder counts from the connector config's
-  `get_output_sequence_length` method. MoF maps N selected tokens to 2N;
+  `get_output_sequence_length` method. I-MoF maps N selected tokens to 2M,
+  where M is the common output length of the two branch connectors;
   its name does not appear in processor selection or token expansion.
 - All connectors receive `vision_hidden_size`, `text_hidden_size` and
   `vision_feature_layer`. Each connector validates its own input contract and
@@ -82,6 +87,33 @@ MoF stores the two packed feature widths in its own connector config as
 `vision_hidden_size`. Ordinary connectors receive only the input width,
 not the vision model config. Change the two widths when using other branches.
 
+`clip_config` and `dinov2_config` inside `MofConnectorConfig` independently select
+registered connector types through `AutoConnectorModel`. Configure MLP settings
+inside each branch rather than on the outer MoF config. For example:
+
+```yaml
+model_type: mof__tlf_connector
+vision_hidden_sizes: [1024, 1024]
+clip_config:
+  model_type: resampler__tlf_connector
+  num_queries: 32
+dinov2_config:
+  model_type: qformer__tlf_connector
+  num_queries: 32
+```
+
+Both output lengths must match for interleaving. Learned queries do not inherently
+preserve spatial patch correspondence; this combination is an experiment, not
+the paper's spatial I-MoF recipe. The default branch connectors remain independent
+MLPs. Both current vision branches retain CLS at index zero: `default` removes
+both CLS features before the connectors; `full` retains them. For additive MoF,
+the corresponding CLS features mix before selection. Register-token variants
+are outside this CLIP + ordinary DINOv2 configuration.
+
+To create an A-MoF checkpoint, pass `fusion_strategy="additive", alpha=0.5` to
+`MofVisionModel.from_pretrained_components`, then select a shared connector such
+as `configs/connectors/mlp2x_gelu.yaml`. Its length rule determines the final token count.
+
 Then select both the vision tower and its connector explicitly:
 
 ```bash
@@ -101,6 +133,96 @@ processor lazily. Direct HF `AutoProcessor` loading of a custom processor requir
 an explicit `TinyLlavaProcessor` import to register its class.
 The local tests cover small-model numerical behavior and save/load round trips;
 they do not establish reproduction of the paper's benchmark scores.
+
+### Other multi-encoder designs
+
+| Design | Fusion | Implication for extension |
+| --- | --- | --- |
+| [Prismatic](https://arxiv.org/abs/2402.07865) | DINOv2 + SigLIP patch features concatenate by channel; see the [implementation](https://github.com/TRI-ML/prismatic-vlms/blob/main/prismatic/models/backbones/vision/dinosiglip_vit.py) | Equal spatial grids can use channel-packed features, with separate branch preprocessing |
+| [BRAVE](https://brave-vlms.epfl.ch/) | Project encoder features to a common width, concatenate along the sequence, then query with MEQ-Former | Different input sequence lengths can feed a fixed-length output |
+| [Cambrian-1](https://cambrian-mllm.github.io/cambrian-1/) | Spatial Vision Aggregator queries local regions across multiple encoders and can aggregate again within the LLM | Requires explicit spatial layout and potentially changes to the language-model path |
+
+The present MoF packing remains an aligned two-branch implementation. A future
+multi-VT interface should preserve each branch's preprocessing, token layout,
+and feature selection until its chosen fusion operation. Equal input lengths
+are a constraint of this packing, not a universal multi-VT requirement.
+
+
+## Vision and connector token lengths
+
+`ComponentProcessorMixin` persists `vision_config` and `connector_config`.
+`TinyLlavaProcessor` combines this mixin with HF `LlavaProcessor`.
+For each processed image, `replace_image_token` first checks whether the vision
+config defines `get_output_sequence_length`. If present, that method receives
+the image processor's output and the image index; otherwise the processor uses
+HF `LlavaProcessor.replace_image_token`. The resulting selected-feature count
+then passes through the connector's length rule.
+
+```mermaid
+flowchart LR
+    I[Processed image inputs] --> V{VT config has a length method?}
+    V -->|Yes| C[VT config method]
+    V -->|No| H[HF LlavaProcessor]
+    C --> N[Selected feature count]
+    H --> N
+    N --> K[Connector config length rule]
+    K --> T[Image placeholders]
+```
+
+The optional vision-config method has this signature:
+
+```python
+def get_output_sequence_length(
+    self,
+    image_inputs: dict,
+    image_idx: int,
+    *,
+    vision_feature_select_strategy: str,
+) -> int:
+    # Example for a custom tower whose selected features form this grid.
+    return int(image_inputs["image_grid_thw"][image_idx].prod())
+```
+
+Return the non-negative integer number of features **after feature selection,
+before the connector**. The example assumes the image processor supplies the grid
+and the tower's selection preserves those patches. A real implementation must
+account for its own selection policy, padding and extra tokens. It must agree
+with the features actually passed to the connector. MoF's vision features are
+packed by channel, so its vision count is N; its connector produces 2N.
+
+Register custom config types in `VISION_TOWER_CONFIG_MAPPING`, with unique model
+types, so the method is restored with a saved processor. Runtime registrations
+must be repeated in a new process. Native HF config classes are not patched or
+replaced, and there is no dispatch by custom vision-model name in this path.
+
+The private `_get_num_multimodal_tokens` query is not used by the current training
+or generation flow. It continues to estimate ordinary LLaVA-compatible inputs.
+For a custom vision length rule it raises `NotImplementedError` on size-only
+queries: original image dimensions alone cannot reconstruct arbitrary processed
+metadata. Use actual processed inputs, or implement an estimator in a specialized
+processor when a consumer needs one. Hook exceptions propagate rather than
+silently falling back to the LLaVA formula.
+
+### Survey of common vision architectures
+
+The following engineering survey was checked against Transformers in October
+2026. It distinguishes vision features from the surrounding VLM's merger and
+prompt layout; it is not a claim that all these architectures run in TinyLLaVA.
+
+| Family | Relevant token behavior | Consequence for the length contract |
+| --- | --- | --- |
+| [CLIP](https://huggingface.co/docs/transformers/model_doc/clip), plain DINOv2 | Regular patch grid plus CLS | HF fallback fits; `default` removes CLS |
+| [SigLIP](https://huggingface.co/docs/transformers/model_doc/siglip) | Patch sequence without CLS | HF fallback fits with `full` selection and zero additional tokens |
+| [DINOv2 with registers](https://github.com/huggingface/transformers/blob/main/src/transformers/models/dinov2_with_registers/modeling_dinov2_with_registers.py), [DINOv3 ViT](https://huggingface.co/docs/transformers/model_doc/dinov3) | CLS, register tokens, then patches | Construction counts `1 + num_register_tokens`; current `default` removes only CLS, retaining registers |
+| [SigLIP2 NaFlex](https://github.com/huggingface/transformers/blob/main/src/transformers/models/siglip2/modeling_siglip2.py) | Patchified padded inputs, spatial shapes and attention masks | A grid or valid-token count must agree with actual feature selection; counting valid patches alone does not remove padded features |
+| [Qwen3-VL](https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3_vl/processing_qwen3_vl.py) | Grid-based patches followed by spatial merging | Separate the pre-merger count from merger reduction; positional and model-forward integration also need adaptation |
+| [InternVL](https://github.com/huggingface/transformers/blob/main/src/transformers/models/internvl/processing_internvl.py) | Multiple image tiles, per-tile downsampling, image boundary markers | Tile count and connector operation scope must be explicit; prompt markers remain processor-owned |
+| [LLaVA-NeXT](https://github.com/huggingface/transformers/blob/main/src/transformers/models/llava_next/processing_llava_next.py), [Pixtral](https://github.com/huggingface/transformers/blob/main/src/transformers/models/pixtral/processing_pixtral.py) | Unpadding/newline features or row/end markers affect the packed sequence | A length hook alone does not implement the architecture's feature packing or placeholder pattern |
+
+The native register-token case is covered with tiny randomly initialized DINOv2
+and DINOv3 models: placeholder counts are compared with actual feature lengths.
+The custom hook is tested with grid metadata, multiple connector rules and
+processor save/load. Dynamic-resolution VLM integrations remain separate work.
 
 ## Custom image processors
 
@@ -145,12 +267,43 @@ A new input pipeline, such as video, can implement an independent HF
 project `AutoProcessor.register(MyConfig, MyProcessor)`.
 `AutoProcessor.from_config(config, **kwargs)` selects the class and passes only
 `kwargs` to its constructor. Pass processor-specific settings explicitly.
-`BaseProcessor` inherits HF `LlavaProcessor` and provides connector configuration, serialization, and
-`get_output_sequence_length`. `BaseProcessor.from_model` assembles the image
-processor/tokenizer settings, synchronizes image tokens and model embeddings,
-and selects the concrete class through Auto. New processors can inherit this
-base to reuse LLaVA image-token expansion and override its behavior. Independent
-non-LLaVA processors can still register directly with Auto. The old `creation.py` entry point is removed.
+`ComponentProcessorMixin` provides configuration serialization and two opt-in
+helpers: `get_vision_output_sequence_length(image_inputs, image_idx, **kwargs)`
+returns the custom VT count, or `None` when the concrete processor should use its
+native calculation; `get_output_sequence_length(input_length)` applies the
+connector rule, preserving the input length when no connector is configured.
+The mixin does not expand placeholders or impose LLaVA feature selection.
+
+Compose it before the native HF class, as in
+`TinyLlavaProcessor(ComponentProcessorMixin, LlavaProcessor)`. A concrete class
+must explicitly declare its sub-processors and serializable settings in
+`__init__`: HF uses that signature to discover and reload processor components.
+It also decides when to call the helpers. For example, Qwen3-VL's native image
+count already includes its spatial merger; applying another connector rule
+requires an explicit architectural decision. Video timestamps and delimiters
+remain the native processor's responsibility.
+
+`TinyLlavaProcessor` owns LLaVA placeholder expansion, default length estimates,
+and `from_model`. The latter synchronizes image tokens and model embeddings,
+then constructs the registered processor through Auto with LLaVA-specific
+arguments. Other architectures should construct their registered processor with
+their own arguments. The old `processing_base.py` and `creation.py` entry points
+are removed.
+
+```mermaid
+classDiagram
+    ComponentProcessorMixin <|-- TinyLlavaProcessor
+    LlavaProcessor <|-- TinyLlavaProcessor
+    ComponentProcessorMixin : vision_config / connector_config
+    ComponentProcessorMixin : get_vision_output_sequence_length()
+    ComponentProcessorMixin : get_output_sequence_length()
+    ComponentProcessorMixin : to_dict()
+    LlavaProcessor : native image preprocessing
+    TinyLlavaProcessor : replace_image_token()
+    TinyLlavaProcessor : _get_num_multimodal_tokens()
+    TinyLlavaProcessor : from_model()
+```
+
 
 For lazy package extensions, add config and processor class names to
 `PROCESSOR_CONFIG_MAPPING_NAMES` and `PROCESSOR_MAPPING_NAMES`, and their full

@@ -1,14 +1,15 @@
-"""CLIP + DINOv2 branches for Interleaved Mixture-of-Features.
+"""CLIP + DINOv2 branches for Additive and Interleaved Mixture-of-Features.
 
 Source: Tong et al., Eyes Wide Shut? (CVPR 2024), arXiv:2401.06209.
-The connector applies separate projections and interleaves the resulting tokens.
+Additive MoF mixes features before a shared connector. Interleaved MoF packs
+branches by channel for separate connectors and subsequent token interleaving.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from os import PathLike
-from typing import Any
+from typing import Any, Literal
 
 import torch
 from torch import nn
@@ -25,7 +26,7 @@ class MofVisionOutput(BaseModelOutputWithPooling):
 
 
 class MofVisionModel(PreTrainedModel):
-    """Return HF model outputs with CLIP/DINOv2 channels packed at each layer.
+    """Return HF outputs with CLIP/DINOv2 features mixed or packed at each layer.
 
     Construction from config performs no downloads. Use
     `from_pretrained_components` to assemble pretrained branches, then
@@ -50,7 +51,9 @@ class MofVisionModel(PreTrainedModel):
     ):
         super().__init__(config)
         self.clip = (
-            clip if clip is not None else AutoModel.from_config(config.clip_config)
+            clip
+            if clip is not None
+            else AutoModel.from_config(config.clip_config)
         )
         self.dinov2 = (
             dinov2
@@ -68,6 +71,8 @@ class MofVisionModel(PreTrainedModel):
         *,
         clip_model_name_or_path: str | PathLike[str],
         dinov2_model_name_or_path: str | PathLike[str],
+        fusion_strategy: Literal["interleaved", "additive"] = "interleaved",
+        alpha: float = 0.5,
         clip_loading_kwargs: dict[str, Any] | None = None,
         dinov2_loading_kwargs: dict[str, Any] | None = None,
     ) -> MofVisionModel:
@@ -77,7 +82,12 @@ class MofVisionModel(PreTrainedModel):
         dinov2 = Dinov2Model.from_pretrained(
             dinov2_model_name_or_path, **(dinov2_loading_kwargs or {})
         )
-        config = MofVisionConfig(clip_config=clip.config, dinov2_config=dinov2.config)
+        config = MofVisionConfig(
+            clip_config=clip.config,
+            dinov2_config=dinov2.config,
+            fusion_strategy=fusion_strategy,
+            alpha=alpha,
+        )
         return cls(config, clip=clip, dinov2=dinov2)
 
     def forward(
@@ -110,20 +120,29 @@ class MofVisionModel(PreTrainedModel):
         hidden_states = None
         if output_hidden_states:
             hidden_states = tuple(
-                torch.cat((clip_state, dino_state), dim=-1)
+                self._combine_features(clip_state, dino_state)
                 for clip_state, dino_state in zip(
                     clip.hidden_states, dinov2.hidden_states, strict=True
                 )
             )
         output = MofVisionOutput(
-            last_hidden_state=torch.cat(
-                (clip.last_hidden_state, dinov2.last_hidden_state), dim=-1
+            last_hidden_state=self._combine_features(
+                clip.last_hidden_state, dinov2.last_hidden_state
             ),
             hidden_states=hidden_states,
             clip_attentions=clip.attentions,
             dinov2_attentions=dinov2.attentions,
         )
         return output if return_dict else output.to_tuple()
+
+    def _combine_features(
+        self, clip: torch.Tensor, dinov2: torch.Tensor
+    ) -> torch.Tensor:
+        # Both branches retain CLS at index zero. LLaVA's subsequent default
+        # selection removes this position from both branches simultaneously.
+        if self.config.fusion_strategy == "additive":
+            return self.config.alpha * clip + (1.0 - self.config.alpha) * dinov2
+        return torch.cat((clip, dinov2), dim=-1)
 
 
 AutoModel.register(MofVisionConfig, MofVisionModel)

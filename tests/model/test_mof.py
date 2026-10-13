@@ -94,7 +94,15 @@ def test_mof_connector_projects_branches_then_interleaves_multiple_layers():
     vision.clip_config.hidden_size = 2
     vision.dinov2_config.hidden_size = 1
     connector = MofConnector(
-        MofConnectorConfig(depth=1, bias=False, vision_hidden_sizes=(2, 1)),
+        MofConnectorConfig(
+            vision_hidden_sizes=(2, 1),
+            clip_config={"model_type": "mlp__tlf_connector", "depth": 1, "bias": False},
+            dinov2_config={
+                "model_type": "mlp__tlf_connector",
+                "depth": 1,
+                "bias": False,
+            },
+        ),
         vision_hidden_size=3,
         text_hidden_size=1,
         vision_feature_layer=[-2, -1],
@@ -182,3 +190,184 @@ def test_mof_connector_config_rejects_invalid_branch_widths(
 ) -> None:
     with pytest.raises(ValueError, match="two positive integers"):
         MofConnectorConfig(vision_hidden_sizes=widths)
+
+
+@pytest.mark.parametrize("alpha", [0.0, 0.25, 1.0])
+def test_additive_mixes_each_layer_before_connector(alpha: float) -> None:
+    base = tiny_vision_config()
+    base.dinov2_config.hidden_size = base.clip_config.hidden_size
+    config = MofVisionConfig(
+        clip_config=base.clip_config,
+        dinov2_config=base.dinov2_config,
+        fusion_strategy="additive",
+        alpha=alpha,
+    )
+    model = MofVisionModel(config).eval()
+    pixels = torch.randn(1, 3, 16, 16)
+    with torch.no_grad():
+        output = model(pixels, output_hidden_states=True)
+        clip = model.clip(pixels, output_hidden_states=True)
+        dino = model.dinov2(pixels, output_hidden_states=True)
+    assert config.hidden_size == 16
+    torch.testing.assert_close(
+        output.last_hidden_state,
+        alpha * clip.last_hidden_state + (1 - alpha) * dino.last_hidden_state,
+    )
+    for actual, clip_layer, dino_layer in zip(
+        output.hidden_states, clip.hidden_states, dino.hidden_states, strict=True
+    ):
+        torch.testing.assert_close(
+            actual, alpha * clip_layer + (1 - alpha) * dino_layer
+        )
+
+
+@pytest.mark.parametrize("strategy", ["default", "full"])
+@pytest.mark.parametrize("fusion", ["interleaved", "additive"])
+def test_mof_cls_selection_and_additive_checkpoint(tmp_path, strategy, fusion) -> None:
+    config = tiny_config(vision_feature_select_strategy=strategy)
+    if fusion == "additive":
+        vision = config.vision_config
+        vision.dinov2_config.hidden_size = vision.clip_config.hidden_size
+        config = tiny_config(
+            vision_feature_select_strategy=strategy,
+            connector_config={"model_type": "mlp__tlf_connector"},
+        )
+        config.vision_config = MofVisionConfig(
+            clip_config=vision.clip_config,
+            dinov2_config=vision.dinov2_config,
+            fusion_strategy="additive",
+            alpha=0.25,
+        )
+    model = TinyLlavaForConditionalGeneration(config).eval()
+    pixels = torch.randn(1, 3, 16, 16)
+    vt = model.model.vision_tower
+    with torch.no_grad():
+        clip = vt.clip(pixels, output_hidden_states=True).hidden_states[-2]
+        dino = vt.dinov2(pixels, output_hidden_states=True).hidden_states[-2]
+        # Each real backbone has CLS at index zero, followed by four patches.
+        assert clip.shape[1] == dino.shape[1] == 5
+        if strategy == "default":
+            clip, dino = clip[:, 1:], dino[:, 1:]
+        connector = model.model.multi_modal_projector
+        if fusion == "additive":
+            expected = connector(0.25 * clip + 0.75 * dino)
+        else:
+            expected = torch.stack(
+                (connector.clip(clip), connector.dinov2(dino)), dim=2
+            )
+            expected = expected.flatten(1, 2)
+        actual = model.get_image_features(pixels).pooler_output[0]
+    torch.testing.assert_close(actual, expected[0])
+    ids = torch.tensor([[1] + [63] * expected.shape[1] + [2]])
+    output = model(input_ids=ids, pixel_values=pixels, labels=ids)
+    output.loss.backward()
+    assert vt.clip.embeddings.patch_embedding.weight.grad is not None
+    assert vt.dinov2.embeddings.patch_embeddings.projection.weight.grad is not None
+    if fusion == "additive":
+        model.save_pretrained(tmp_path)
+        restored = TinyLlavaForConditionalGeneration.from_pretrained(tmp_path).eval()
+        assert restored.config.vision_config.alpha == 0.25
+        with torch.no_grad():
+            torch.testing.assert_close(
+                restored(input_ids=ids, pixel_values=pixels).logits, output.logits
+            )
+
+
+def test_mof_heterogeneous_connectors_round_trip_and_length(tmp_path) -> None:
+    from tinyllava.model.connector.qformer import QFormerConnectorConfig
+    from tinyllava.model.connector.resampler import ResamplerConnectorConfig
+
+    config = tiny_config(
+        connector_config=MofConnectorConfig(
+            vision_hidden_sizes=(16, 8),
+            clip_config=ResamplerConnectorConfig(
+                num_queries=3,
+                num_hidden_layers=1,
+                hidden_size=8,
+                num_attention_heads=2,
+                head_dim=4,
+                intermediate_size=16,
+            ),
+            dinov2_config=QFormerConnectorConfig(
+                num_queries=3,
+                num_hidden_layers=1,
+                hidden_size=8,
+                num_attention_heads=2,
+                intermediate_size=16,
+            ),
+        ),
+    )
+    assert config.connector_config.get_output_sequence_length(4) == 6
+    model = TinyLlavaForConditionalGeneration(config).eval()
+    from PIL import Image
+    from transformers import CLIPImageProcessor
+
+    from tests.data.test_auto_vision_processing import tokenizer
+    from tinyllava.data.processor import AutoProcessor, TinyLlavaProcessor
+
+    processor = TinyLlavaProcessor.from_model(
+        tokenizer=tokenizer(),
+        image_processor=CLIPImageProcessor(
+            size={"shortest_edge": 16}, crop_size={"height": 16, "width": 16}
+        ),
+        model=model,
+    )
+    inputs = processor(
+        text="hello <image> hello",
+        images=Image.new("RGB", (16, 16)),
+        return_tensors="pt",
+    )
+    ids, pixels = inputs.input_ids, inputs.pixel_values
+    assert ids.eq(processor.image_token_id).sum().item() == 6
+    output = model(**inputs, labels=ids)
+    output.loss.backward()
+    connector = model.model.multi_modal_projector
+    assert any(p.grad is not None for p in connector.clip.parameters())
+    assert any(p.grad is not None for p in connector.dinov2.parameters())
+    model.save_pretrained(tmp_path)
+    restored = TinyLlavaForConditionalGeneration.from_pretrained(tmp_path).eval()
+    processor.save_pretrained(tmp_path)
+    restored_processor = AutoProcessor.from_pretrained(tmp_path)
+    assert restored_processor.get_output_sequence_length(4) == 6
+    assert isinstance(
+        restored.config.connector_config.clip_config, ResamplerConnectorConfig
+    )
+    assert isinstance(
+        restored.config.connector_config.dinov2_config, QFormerConnectorConfig
+    )
+    with torch.no_grad():
+        torch.testing.assert_close(
+            restored(input_ids=ids, pixel_values=pixels).logits, output.logits
+        )
+
+
+def test_interleaved_rejects_different_projected_lengths() -> None:
+    config = MofConnectorConfig(
+        vision_hidden_sizes=(2, 2),
+        dinov2_config={
+            "model_type": "resampler__tlf_connector",
+            "num_queries": 3,
+            "hidden_size": 4,
+            "num_hidden_layers": 1,
+            "num_attention_heads": 1,
+            "head_dim": 4,
+            "intermediate_size": 8,
+        },
+    )
+    with pytest.raises(ValueError, match="equal branch output lengths"):
+        config.get_output_sequence_length(4)
+    model = MofConnector(
+        config, vision_hidden_size=4, text_hidden_size=4, vision_feature_layer=-2
+    )
+    with pytest.raises(ValueError, match="equal branch output shapes"):
+        model(torch.randn(1, 4, 4))
+
+
+def test_additive_rejects_different_widths() -> None:
+    config = tiny_vision_config()
+    with pytest.raises(ValueError, match="matching branch hidden sizes"):
+        MofVisionConfig(
+            clip_config=config.clip_config,
+            dinov2_config=config.dinov2_config,
+            fusion_strategy="additive",
+        )

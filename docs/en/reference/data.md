@@ -13,7 +13,7 @@ the collator pads tokens and concatenates image tensors.
     options:
       members: [DataCollatorForMultimodalSFT, build_labels]
 
-::: tinyllava.data.processor.processing_base.BaseProcessor
+::: tinyllava.data.processor.processing_mixins.ComponentProcessorMixin
 
 ::: tinyllava.data.chat_template.loading.resolve_chat_template
 

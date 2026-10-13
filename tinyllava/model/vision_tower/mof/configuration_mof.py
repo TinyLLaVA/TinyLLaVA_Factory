@@ -1,7 +1,8 @@
-"""Configuration for the CLIP + DINOv2 vision branches of I-MoF."""
+"""Configuration for aligned CLIP + DINOv2 Mixture-of-Features."""
 
 from __future__ import annotations
 
+from typing import Literal
 
 from huggingface_hub.dataclasses import strict
 from transformers import AutoConfig, CLIPVisionConfig, Dinov2Config, PreTrainedConfig
@@ -9,18 +10,21 @@ from transformers import AutoConfig, CLIPVisionConfig, Dinov2Config, PreTrainedC
 
 @strict
 class MofVisionConfig(PreTrainedConfig):
-    """Describe aligned vision branches; their features are packed by channel.
+    """Describe aligned branches for additive or interleaved MoF.
 
     Both branches consume the same CLIP-preprocessed image, as in the upstream
     TinyLLaVA implementation. Matching patch sizes and depths preserve spatial
     and hidden-layer correspondence. Projection and token interleaving belong
-    to the MoF connector.
+    to the MoF connector. Additive MoF instead mixes equal-width features
+    before a shared connector, with alpha weighting the CLIP branch.
     """
 
     model_type = "mof__tlf_vision_tower"
     sub_configs = {"clip_config": CLIPVisionConfig, "dinov2_config": Dinov2Config}
     num_additional_image_tokens = 1
 
+    fusion_strategy: Literal["interleaved", "additive"] = "interleaved"
+    alpha: float = 0.5
     clip_config: dict | CLIPVisionConfig | None = None
     dinov2_config: dict | Dinov2Config | None = None
 
@@ -53,6 +57,15 @@ class MofVisionConfig(PreTrainedConfig):
         for name in ("patch_size", "num_hidden_layers", "num_channels"):
             if getattr(self.clip_config, name) != getattr(self.dinov2_config, name):
                 raise ValueError(f"MoF branches must have matching {name}.")
+        if self.fusion_strategy not in {"interleaved", "additive"}:
+            raise ValueError("fusion_strategy must be 'interleaved' or 'additive'.")
+        if not 0.0 <= self.alpha <= 1.0:
+            raise ValueError("alpha must be between 0 and 1.")
+        if (
+            self.fusion_strategy == "additive"
+            and self.hidden_sizes[0] != self.hidden_sizes[1]
+        ):
+            raise ValueError("Additive MoF requires matching branch hidden sizes.")
         super().__post_init__(**kwargs)
 
     @property
@@ -61,6 +74,8 @@ class MofVisionConfig(PreTrainedConfig):
 
     @property
     def hidden_size(self) -> int:
+        if self.fusion_strategy == "additive":
+            return self.clip_config.hidden_size
         return sum(self.hidden_sizes)
 
     @property

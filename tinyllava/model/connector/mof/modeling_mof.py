@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from ..mlp.configuration_mlp import MLPConnectorConfig
-from ..mlp.modeling_mlp import MLPConnector
+from ..auto.modeling_auto import AutoConnectorModel
 from ..modeling_base import BaseConnectorModel
 from .configuration_mof import MofConnectorConfig
 
@@ -30,20 +29,14 @@ class MofConnector(BaseConnectorModel):
         self.vision_hidden_sizes = config.vision_hidden_sizes
         if sum(self.vision_hidden_sizes) != self.vision_hidden_size:
             raise ValueError("vision_hidden_sizes must sum to vision_hidden_size")
-        branch_config = MLPConnectorConfig(
-            depth=config.depth,
-            act=config.act,
-            bias=config.bias,
-            hidden_size=config.hidden_size,
-        )
-        self.clip = MLPConnector(
-            branch_config,
+        self.clip = AutoConnectorModel.from_config(
+            config.clip_config,
             vision_hidden_size=self.vision_hidden_sizes[0],
             text_hidden_size=text_hidden_size,
             vision_feature_layer=vision_feature_layer,
         )
-        self.dinov2 = MLPConnector(
-            branch_config,
+        self.dinov2 = AutoConnectorModel.from_config(
+            config.dinov2_config,
             vision_hidden_size=self.vision_hidden_sizes[1],
             text_hidden_size=text_hidden_size,
             vision_feature_layer=vision_feature_layer,
@@ -55,6 +48,11 @@ class MofConnector(BaseConnectorModel):
         branches = [layer.split(self.vision_hidden_sizes, dim=-1) for layer in layers]
         clip = self.clip(torch.cat([branch[0] for branch in branches], dim=-1))
         dinov2 = self.dinov2(torch.cat([branch[1] for branch in branches], dim=-1))
+        if clip.shape != dinov2.shape:
+            raise ValueError(
+                "Interleaved MoF requires equal branch output shapes, "
+                f"got {tuple(clip.shape)} and {tuple(dinov2.shape)}."
+            )
         return torch.stack((clip, dinov2), dim=2).flatten(1, 2)
 
 

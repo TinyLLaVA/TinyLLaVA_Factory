@@ -1,5 +1,12 @@
 model_type: mof__tlf_connector
-depth: 2
-act: gelu
-bias: true
 vision_hidden_sizes: [1024, 1024]
+clip_config:
+  model_type: mlp__tlf_connector
+  depth: 2
+  act: gelu
+  bias: true
+dinov2_config:
+  model_type: mlp__tlf_connector
+  depth: 2
+  act: gelu
+  bias: true
