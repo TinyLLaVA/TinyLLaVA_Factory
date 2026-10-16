@@ -24,7 +24,7 @@ class LoraTrainingStrategy(BaseTrainingStrategy):
         self,
         model: TinyLlavaForConditionalGeneration,
     ) -> TinyLlavaForConditionalGeneration:
-        lora_kwargs = dict(getattr(self.training_arguments, "peft_config", {}))
+        lora_kwargs = dict(self.tuning.peft)
         if "target_modules" not in lora_kwargs:
             lora_kwargs["target_modules"] = _default_lora_target_modules(
                 model,
@@ -36,14 +36,16 @@ class LoraTrainingStrategy(BaseTrainingStrategy):
         )
         if self.always_add_adapter or getattr(model, "peft_config", None) is None:
             log("Adding LoRA adapters...")
-            model = cast(TinyLlavaForConditionalGeneration, get_peft_model(model, lora_config))
+            model = cast(
+                TinyLlavaForConditionalGeneration, get_peft_model(model, lora_config)
+            )
         return model
 
     def lora_skip_modules(self) -> list[str]:
         module_tune_types = {
-            "multi_modal_projector": self.training_arguments.tune_type_connector,
-            "vision_tower": self.training_arguments.tune_type_vision_tower,
-            "language_model": self.training_arguments.tune_type_llm,
+            "multi_modal_projector": self.tuning.tune_type_connector,
+            "vision_tower": self.tuning.tune_type_vision_tower,
+            "language_model": self.tuning.tune_type_llm,
         }
         return [
             module_name

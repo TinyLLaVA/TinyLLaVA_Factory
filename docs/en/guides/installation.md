@@ -19,7 +19,7 @@ additional platform requirements.
 
 ## Attention and precision
 
-Use `training.precision` (`auto`, `bf16`, `fp16`, or `fp32`) and
+Use `training.runtime.precision` (`auto`, `bf16`, `fp16`, or `fp32`) and
 `model.attn_implementation` in training YAML. FlashAttention is optional: install
 it only if you select that backend and have a compatible CUDA/PyTorch toolchain.
 The Qwen2 legacy fine-tuning recipe selects SDPA.
@@ -27,7 +27,7 @@ The Qwen2 legacy fine-tuning recipe selects SDPA.
 ## Check the entry points
 
 ```bash
-python -m tinyllava.eval.single_turn --help
+python -m tinyllava.cli single-turn --help
 python -m tinyllava.serve.app --help
 ```
 

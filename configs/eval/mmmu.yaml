@@ -1,4 +1,5 @@
-dataset: mmmu
+benchmark: mmmu
+data: mmmu
 generation:
   temperature: 0.0
   top_p: null

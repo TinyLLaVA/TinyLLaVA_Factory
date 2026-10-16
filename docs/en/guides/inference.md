@@ -3,16 +3,24 @@
 Use a composite checkpoint with its saved tokenizer and image processor.
 
 ```bash
-python -m tinyllava.eval.single_turn \
+python -m tinyllava.cli single-turn \
   --model-path output/my-finetune \
   --image-file tinyllava/serve/examples/waterview.jpg \
   --query "Describe the image." \
-  --temperature 0 --max_new_tokens 128
+  --temperature 0 --max-new-tokens 128
 ```
 
 The CLI currently spells its checkpoint option `--model-path`; evaluation YAML
 uses `model.model_name_or_path`. Repeat `--image-file` for multiple images when
 the selected model/processor supports that input.
+
+## Multi-turn terminal chat
+
+Run `chat` to retain conversation history across prompts. Attach images with `--image-file` on startup or `/image PATH` before a later prompt. `/reset` clears history and pending images; `/exit` ends the session.
+
+```bash
+python -m tinyllava.cli chat --model-path output/my-finetune
+```
 
 ## Python
 

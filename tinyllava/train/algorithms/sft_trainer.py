@@ -112,6 +112,7 @@ class ModalityLengthGroupedSampler(Sampler[int]):
         generator: Random generator to use directly, overriding epoch-based seeding.
         seed: Base seed; without a generator, each epoch uses `seed + epoch`.
     """
+
     def __init__(
         self,
         *,
@@ -172,9 +173,7 @@ class TinyLlavaTrainer(Trainer):
         lengths = train_dataset.modality_lengths
         return ModalityLengthGroupedSampler(
             batch_size=self.args.train_batch_size,
-            world_size=(
-                self.args.world_size * self.args.gradient_accumulation_steps
-            ),
+            world_size=(self.args.world_size * self.args.gradient_accumulation_steps),
             lengths=lengths,
             seed=(
                 self.args.data_seed

@@ -1,4 +1,5 @@
-dataset: scienceqa
+benchmark: scienceqa
+data: scienceqa
 generation:
   temperature: 0.0
   top_p: null

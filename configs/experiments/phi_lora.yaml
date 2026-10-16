@@ -1,11 +1,9 @@
+algorithm: sft
 model: phi
 stages:
   pretrain:
-    recipe: pretrain
-    dataset: llava_558k
-    model:
-      model_max_length: 3072
-      attn_implementation: flash_attention_2
+    data: llava_558k
+    training: pretrain
   finetune:
-    recipe: lora_finetune
-    dataset: llava_665k
+    data: llava_665k
+    training: lora_finetune

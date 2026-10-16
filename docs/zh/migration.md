@@ -132,6 +132,9 @@ Auto 分派解决类如何被选中；新 backbone 仍须满足组合模型对�
 
 ## 兼容性与迁移
 
+v2.0 尚未发布，开发过程中的配置与内部 API 调整不保留兼容分支。
+最终破坏性变更统一记录在 [v2.0 发布日志](../../CHANGELOG.md)，配置按当前 schema 校验。
+
 v2 改变了扩展和配置接口。原始实验可通过 `legacy/v1` 使用，复现时应采用独立环境；历史 `doc` 分支保留 v1 Sphinx 文档。
 
 | 已有资产 | 迁移动作 |
@@ -148,10 +151,10 @@ v2 改变了扩展和配置接口。原始实验可通过 `legacy/v1` 使用，�
 ### 建议迁移步骤
 
 1. **保留基线。** 记录原始环境、模型资产、输入格式、数据划分、训练与生成设置，以及一小组固定样本的输出，保留原 checkpoint。
-2. **选择新实验。** 从 `configs/experiments/` 开始，配合 `configs/models/`、`configs/data/`、`configs/recipes/` 下的预设。加载权重前先检查解析后的配置：
+2. **选择新实验。** 从 `configs/experiments/` 开始，配合 `configs/models/`、`configs/data/train/`、`configs/training/` 下的预设。加载权重前先检查解析后的配置：
 
    ```bash
-   python -m tinyllava.run --config configs/experiments/phi.yaml --dry-run
+   python -m tinyllava.cli train --config configs/experiments/phi.yaml --dry-run
    ```
 
 3. **验证输入与特征。** 检查适配和处理后的样本，包括用户问题、assistant mask、图像 token 数、特征选择策略、连接器长度与截断。

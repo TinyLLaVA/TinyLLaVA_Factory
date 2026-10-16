@@ -3,22 +3,26 @@ from unittest.mock import patch
 
 import pytest
 
-from tinyllava.configuration import load_train_config, training_stages
-from tinyllava.utils.config import build_train_arguments, parse_train_config
+from tinyllava.train.workflow import training_stages
+from tinyllava.train.train import train
+from tinyllava.hparams.training import build_training_arguments as build_arguments
+from tinyllava.utils.config import load_config
 
 ROOT = Path(__file__).parents[2]
-FINETUNE_CONFIGS = sorted((ROOT / "configs" / "train").glob("*finetune.yaml"))
+FINETUNE_CONFIGS = [
+    ROOT / f"configs/experiments/{name}.yaml"
+    for name in ("phi", "phi_lora", "phi_qlora")
+]
 
 
-def test_parse_train_config_accepts_deepspeed_launcher_arguments(tmp_path):
+def test_worker_accepts_deepspeed_launcher_arguments(tmp_path):
     config_path = tmp_path / "train.yaml"
-    config_path.write_text("training:\n  output_dir: output/test\n", encoding="utf-8")
+    config_path.write_text(
+        "training:\n  saving:\n    output_dir: output/test\n", encoding="utf-8"
+    )
 
-    with patch(
-        "tinyllava.utils.config.build_train_arguments",
-        side_effect=lambda config: config,
-    ):
-        config = parse_train_config(
+    with patch("tinyllava.train.algorithms.sft.run") as run:
+        train(
             [
                 "--config",
                 str(config_path),
@@ -28,29 +32,27 @@ def test_parse_train_config_accepts_deepspeed_launcher_arguments(tmp_path):
             ]
         )
 
-    assert config["training"]["deepspeed"] == "configs/deepspeed/zero3.json"
-    assert config["training"]["local_rank"] == 2
+    config = run.call_args.args[0]
+    assert config["training"]["runtime"]["deepspeed"] == "configs/deepspeed/zero3.json"
+    assert config["training"]["runtime"]["local_rank"] == 2
 
 
 def test_launcher_arguments_override_yaml_and_dotlist_values(tmp_path):
     config_path = tmp_path / "train.yaml"
     config_path.write_text(
         "training:\n"
-        "  output_dir: output/test\n"
-        "  deepspeed: yaml.json\n"
-        "  local_rank: 0\n",
+        "  saving:\n    output_dir: output/test\n"
+        "  runtime:\n    deepspeed: yaml.json\n"
+        "    local_rank: 0\n",
         encoding="utf-8",
     )
 
-    with patch(
-        "tinyllava.utils.config.build_train_arguments",
-        side_effect=lambda config: config,
-    ):
-        config = parse_train_config(
+    with patch("tinyllava.train.algorithms.sft.run") as run:
+        train(
             [
                 "--config",
                 str(config_path),
-                "training.deepspeed=dotlist.json",
+                "training.runtime.deepspeed=dotlist.json",
                 "--deepspeed",
                 "cli.json",
                 "--local-rank",
@@ -58,8 +60,9 @@ def test_launcher_arguments_override_yaml_and_dotlist_values(tmp_path):
             ]
         )
 
-    assert config["training"]["deepspeed"] == "cli.json"
-    assert config["training"]["local_rank"] == 3
+    config = run.call_args.args[0]
+    assert config["training"]["runtime"]["deepspeed"] == "cli.json"
+    assert config["training"]["runtime"]["local_rank"] == 3
 
 
 def test_precision_is_resolved_before_deepspeed_auto_values(tmp_path):
@@ -70,18 +73,20 @@ def test_precision_is_resolved_before_deepspeed_auto_values(tmp_path):
         encoding="utf-8",
     )
 
-    _, _, training_args = build_train_arguments(
+    arguments = build_arguments(
         {
             "training": {
-                "output_dir": str(tmp_path / "output"),
-                "precision": "bf16",
-                "deepspeed": str(deepspeed_path),
-                "use_cpu": True,
+                "saving": {"output_dir": str(tmp_path / "output")},
+                "runtime": {
+                    "precision": "bf16",
+                    "deepspeed": str(deepspeed_path),
+                    "use_cpu": True,
+                },
             }
         }
     )
 
-    config = training_args.hf_deepspeed_config.config
+    config = arguments.training.hf_deepspeed_config.config
     assert config["bf16"]["enabled"] is True
     assert config["fp16"]["enabled"] is False
 
@@ -92,20 +97,20 @@ def test_precision_is_resolved_before_deepspeed_auto_values(tmp_path):
     ids=lambda path: path.stem,
 )
 def test_finetune_configs_load_composite_pretraining_checkpoints(config_path):
-    config = load_train_config(config_path)
+    config = training_stages(config_path)[-1][1]
     model = config["model"]
 
     assert model["pretrained_model_name_or_path"]
     assert "language_model_name_or_path" not in model
     assert "vision_model_name_or_path" not in model
-    assert "connector_config" not in model
+    assert "connector" not in model
 
 
 def test_share_second_pretraining_stage_loads_base_checkpoint():
     stages = training_stages(ROOT / "configs/experiments/phi_share.yaml")
     assert (
         stages[1][1]["model"]["pretrained_model_name_or_path"]
-        == stages[0][1]["training"]["output_dir"]
+        == stages[0][1]["training"]["saving"]["output_dir"]
     )
     assert "language_model_name_or_path" not in stages[1][1]["model"]
 
@@ -120,12 +125,12 @@ def test_parse_data_source_options_from_yaml(tmp_path):
         "  split: train[:10%]\n"
         "  cache_dir: /tmp/data-cache\n"
         "training:\n"
-        "  output_dir: /tmp/train-output\n"
-        "  use_cpu: true\n"
-        "  report_to: []\n"
+        "  saving:\n    output_dir: /tmp/train-output\n"
+        "  runtime:\n    use_cpu: true\n"
+        "  logging:\n    report_to: []\n"
     )
-    _, data, _ = parse_train_config(["--config", str(config_path)])
-    assert data.dataset_name_or_path == "parquet"
-    assert data.data_files == {"train": ["part-1.parquet", "part-2.parquet"]}
-    assert data.split == "train[:10%]"
-    assert data.cache_dir == "/tmp/data-cache"
+    arguments = build_arguments(load_config(config_path))
+    assert arguments.data.dataset_name_or_path == "parquet"
+    assert arguments.data.data_files == {"train": ["part-1.parquet", "part-2.parquet"]}
+    assert arguments.data.split == "train[:10%]"
+    assert arguments.data.cache_dir == "/tmp/data-cache"

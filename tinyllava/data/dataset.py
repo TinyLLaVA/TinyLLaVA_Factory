@@ -27,7 +27,7 @@ from .image_payload import (
 from .message_format import normalize_messages
 from .readers import is_json_array, iter_json_array, read_first_json_array_item
 from .readers import json_array as json_array_reader
-from ..utils.arguments import DataArguments
+from ..hparams.arguments import DataArguments
 from ..utils.logging import get_logger
 
 

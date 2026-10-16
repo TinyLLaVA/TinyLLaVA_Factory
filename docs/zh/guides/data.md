@@ -6,7 +6,11 @@
 
 数据默认存放在 `datasets/`，标注位于 `datasets/text_files/`，评测输入位于 `datasets/eval/`。保留原标注中的图片相对路径，例如 `datasets/coco/train2017/`、`datasets/gqa/images/`、`datasets/vg/VG_100K/`。预训练图片根目录为 `datasets/llava/llava_pretrain/images/`，665K 和 ShareGPT4V 的图片根目录为 `datasets/`。
 
-`configs/data/` 统一定义数据集，实验通过 `dataset: llava_558k`、`llava_665k`、`sharegpt4v_pretrain` 或 `sharegpt4v_finetune` 选择。添加一个 YAML 文件即可注册新名称。用 `dataset_dir=/path/to/data` 或 `TINYLLAVA_DATASET_DIR` 整体移动数据根目录。checkpoint、预测和计分结果统一写入 `output/`。
+`configs/data/train/` 统一定义数据集，用 `data.from=llava_558k` 选择。
+YAML 可以写 `data: llava_558k`，需要覆写时用 `data: {from: llava_558k, ...}`。
+文件名在训练数据预设目录查找，显式相对路径以声明它的文件为基准；命令行也支持 `data=llava_558k`。
+可选文件包括 `llava_665k.yaml`、`sharegpt4v_pretrain.yaml`、`sharegpt4v_finetune.yaml`；新增文件即可引用。
+用 `dataset_dir=/path/to/data` 或 `TINYLLAVA_DATASET_DIR` 整体移动数据根目录。checkpoint、预测和计分结果统一写入 `output/`。
 
 本机已从 `/data/vlm/llava_data` 硬链接 1,489,338 个文件，未链接 checkpoint 和已有评测结果。目录重新建立，文件共享原 inode；编辑标注或图片前先复制，避免修改共享源内容。LLaVA 558K、665K 和清洗后的 ShareGPT4V 微调集图片引用完整；ShareGPT4V 预训练集缺少 543,842 个图片引用，需补齐后再运行。完整本地统计见仓库 `datasets/README.md`。
 
@@ -36,7 +40,7 @@ data:
   dataset_adapter: auto
 ```
 
-`dataset_config_name` 对应 HF 的 `name`（子集）；`data_dir`、`revision`、`cache_dir` 传给上游 loader。直接指定单个文件时，其 split 为 `train`，可以使用 `train[:10%]` 等切片；此时不要再指定 `data_files`、`data_dir`、`dataset_config_name` 或 `revision`。需要这些选项时使用 builder 或目录入口。
+`dataset_config_name` 对应 HF 的 `experiment_name`（子集）；`data_dir`、`revision`、`cache_dir` 传给上游 loader。直接指定单个文件时，其 split 为 `train`，可以使用 `train[:10%]` 等切片；此时不要再指定 `data_files`、`data_dir`、`dataset_config_name` 或 `revision`。需要这些选项时使用 builder 或目录入口。
 
 直接传入的本地 JSON 数组由增量 reader 读取；通过 Hub、目录或 builder 选择的数组由上游 loader 读取，内存行为也由上游决定。训练使用可随机访问的 Arrow Dataset，以支持索引和模态分组，目前不提供 iterable streaming 训练。
 

@@ -28,12 +28,16 @@ dependencies = [
     "gradio>=6.26.0",
     "ninja",
     "numpy",
-    "omegaconf",
+    "omegaconf>=2.3,<2.4",
     "pillow",
+    "pyyaml>=6.0",
     "shortuuid",
     "tensorboardX",
     "tqdm",
 ]
+
+[project.scripts]
+tinyllava = "tinyllava.cli:main"
 
 [project.optional-dependencies]
 test = [

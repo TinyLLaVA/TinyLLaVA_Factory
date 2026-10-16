@@ -94,10 +94,10 @@ dinov2_config:
 通过现有配置入口显式选择视觉塔和对应 connector：
 
 ```bash
-python -m tinyllava.run --config configs/train/pretrain.yaml \
+python -m tinyllava.cli train --config configs/experiments/qwen2_instruct.yaml --steps pretrain \
   model.vision_model_name_or_path=output/mof-vision \
-  model.connector_config=configs/connectors/mof.yaml model.vision_feature_select_strategy=default \
-  name=qwen2_mof
+  model.connector.from=mof model.vision_feature_select_strategy=default \
+  experiment_name=qwen2_mof
 ```
 
 完整 checkpoint 保存两路视觉权重及投影。使用 `AutoVisionTowerModel` 按需加载
@@ -280,3 +280,17 @@ OpenELM 保留官方 `openelm` 类型以读取官方 checkpoint 配置。
 
 验证覆盖微型离线检查点、有/无缓存解码、左侧 padding、多模态训练及保存恢复；
 尚未进行完整预训练 OpenELM 的效果评估。
+
+## 训练算法
+
+在 `tinyllava/train/algorithms/` 新建算法模块，并在该包的 `__init__.py` 注册模块路径。
+SFT 是 `sft.py`，不需要为每个算法再建立一套配置基础设施。
+
+算法模块暴露 `SECTIONS`、`validate_config`、`prepare_config(config, world_size=...)`
+和 `run(config)`。常规 Trainer 算法直接复用 `hparams/training.py` 的通用实现；
+新的奖励或 rollout 配置段由对应算法自行校验。RL 的 batch 语义若不同，可替换
+`prepare_config`，而不修改共享的字段分组或启动器。
+
+保持配置准备与校验轻量；仅在 `run` 内导入训练器和加载模型。
+`train/workflow.py` 处理阶段依赖与进程启动，`train/strategy/` 处理参数更新策略。
+配置文件组合统一使用 `from` 特性，不在算法中加载模型、数据或 recipe YAML。

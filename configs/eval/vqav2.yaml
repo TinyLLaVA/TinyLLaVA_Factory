@@ -1,4 +1,5 @@
-dataset: vqav2
+benchmark: vqav2
+data: vqav2
 generation:
   temperature: 0.0
   top_p: null

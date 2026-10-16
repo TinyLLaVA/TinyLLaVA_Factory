@@ -5,9 +5,9 @@ groups samples by modality and length.
 
 ::: tinyllava.train.strategy.base.BaseTrainingStrategy
 
-::: tinyllava.train.modality_trainer.TinyLlavaTrainer
+::: tinyllava.train.algorithms.sft_trainer.TinyLlavaTrainer
 
-::: tinyllava.train.modality_trainer.ModalityLengthGroupedSampler
+::: tinyllava.train.algorithms.sft_trainer.ModalityLengthGroupedSampler
 
 ::: tinyllava.utils.checkpoint
     options:

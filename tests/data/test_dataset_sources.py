@@ -12,7 +12,7 @@ from PIL import Image
 
 import tinyllava.data.dataset as loading
 from tinyllava.data.image_payload import collect_sample_image_payloads
-from tinyllava.utils.arguments import DataArguments
+from tinyllava.hparams.arguments import DataArguments
 
 
 def rows():

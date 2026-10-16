@@ -1,0 +1,29 @@
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 4
+learning_rate: 2.0e-05
+num_train_epochs: 1
+runtime:
+  precision: auto
+  gradient_checkpointing: true
+saving:
+  save_strategy: steps
+  save_steps: 500
+  save_total_limit: 2
+  save_only_model: false
+  resume_from_checkpoint: auto
+evaluation:
+  eval_strategy: 'no'
+dataloader:
+  remove_unused_columns: false
+  dataloader_num_workers: 8
+scheduler:
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+logging:
+  logging_steps: 1
+  report_to: tensorboard
+tuning:
+  strategy: common
+  tune_type_llm: full
+  tune_type_vision_tower: frozen
+  tune_type_connector: full

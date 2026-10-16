@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
-from tinyllava.utils.arguments import ModelArguments
+from tinyllava.hparams.arguments import ModelArguments
 from tinyllava.utils.model_loading import (
     ComponentPaths,
     load_model_config,
@@ -109,3 +109,19 @@ def test_training_model_assembles_components_without_checkpoint():
         },
         vision_model_loading_kwargs={"cache_dir": "cache"},
     )
+
+
+def test_resolved_connector_overrides_reach_hf_model_config():
+    model_args = ModelArguments(
+        language_model_name_or_path="language-model",
+        vision_model_name_or_path="vision-model",
+        connector={"model_type": "mlp__tlf_connector", "depth": 3, "bias": False},
+    )
+    defaults = TinyLlavaConfig()
+    with patch(
+        "tinyllava.utils.model_loading.AutoConfig.from_pretrained",
+        side_effect=[defaults.text_config, defaults.vision_config],
+    ):
+        config = load_model_config(model_args, resolve_component_paths(model_args))
+    assert config.connector_config.depth == 3
+    assert config.connector_config.bias is False

@@ -8,11 +8,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
-
-from omegaconf import OmegaConf
 
 
 def devices(value: int | str | list[int | str]) -> list[str]:
@@ -32,65 +30,6 @@ def devices(value: int | str | list[int | str]) -> list[str]:
     if len(set(result)) != len(result) or "-1" in result:
         raise ValueError("devices must contain distinct GPU IDs")
     return result
-
-
-def stage_config(step: dict[str, Any]) -> dict[str, Any]:
-    config = OmegaConf.merge(OmegaConf.load(step["config"]), step.get("overrides", {}))
-    return OmegaConf.to_container(config, resolve=True)
-
-
-def _positive_int(value: object, name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise ValueError(f"{name} must be a positive integer")
-    return value
-
-
-def prepare_step(step: dict[str, Any]) -> dict[str, Any] | None:
-    if not isinstance(step, dict):
-        raise ValueError("Each workflow step must be a mapping")
-    kind = step.get("kind")
-    allowed = {
-        "train": {
-            "config",
-            "overrides",
-            "devices",
-            "distributed",
-            "master_port",
-            "global_batch_size",
-        },
-        "generate": {"config", "overrides", "devices", "shard"},
-        "command": {"args", "cwd", "mkdir"},
-    }
-    if kind not in allowed:
-        raise ValueError(f"Unknown step kind: {kind}")
-    unknown = set(step) - allowed[kind] - {"kind", "resolved"}
-    if unknown:
-        raise ValueError(f"Unknown {kind} step fields: {sorted(unknown)}")
-    if kind == "command":
-        if not isinstance(step.get("args"), list) or not step["args"]:
-            raise ValueError("command args must be a nonempty list")
-        return None
-    config = step["resolved"] if "resolved" in step else stage_config(step)
-    if step.get("distributed", False) or step.get("shard", False):
-        devices(step.get("devices", "auto"))
-    if kind == "train" and "global_batch_size" in step:
-        count = (
-            len(devices(step.get("devices", "auto")))
-            if step.get("distributed", False)
-            else 1
-        )
-        training = config.setdefault("training", {})
-        micro = _positive_int(
-            training.get("per_device_train_batch_size", 8),
-            "per_device_train_batch_size",
-        )
-        batch = _positive_int(step["global_batch_size"], "global_batch_size")
-        if batch % (count * micro):
-            raise ValueError(
-                f"Global batch {batch} is not divisible by {count} GPUs x micro batch {micro}"
-            )
-        training["gradient_accumulation_steps"] = batch // (count * micro)
-    return config
 
 
 def run_command(
@@ -152,78 +91,56 @@ def run_shards(commands: Sequence[list[str]], envs: Sequence[dict[str, str]]) ->
 
 def run_step(
     step: dict[str, Any],
-    config: dict[str, Any] | None,
-    directory: str | Path,
     *,
     dry_run: bool = False,
 ) -> None:
+    """Execute a generic command or filesystem preparation step."""
     kind = step["kind"]
-    if kind == "command":
+    if kind == "workspace":
+        print(f"Prepare workspace: {step}", flush=True)
         if not dry_run:
-            for path in step.get("mkdir", []):
-                Path(path).mkdir(parents=True, exist_ok=True)
-        run_command(step["args"], cwd=step.get("cwd"), dry_run=dry_run)
+            for directory in step.get("mkdir", []):
+                Path(directory).mkdir(parents=True, exist_ok=True)
+            for destination, source in step.get("symlinks", {}).items():
+                link = Path(destination)
+                if not link.exists():
+                    link.symlink_to(source, target_is_directory=True)
+            for destination, source in step.get("copies", {}).items():
+                shutil.copyfile(source, destination)
         return
+    if kind != "command":
+        raise ValueError(f"Unknown step kind: {kind}")
+    if not dry_run:
+        for path in step.get("mkdir", []):
+            Path(path).mkdir(parents=True, exist_ok=True)
+    run_command(step["args"], cwd=step.get("cwd"), dry_run=dry_run)
 
-    config_path = Path(directory) / "config.yaml"
-    OmegaConf.save(OmegaConf.create(config), config_path)
-    if dry_run:
-        print(OmegaConf.to_yaml(OmegaConf.create(config)), flush=True)
-    if kind == "train":
-        command = [sys.executable]
-        env = os.environ.copy()
-        if step.get("distributed", False):
-            gpu_ids = devices(step.get("devices", "auto"))
-            env["CUDA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
-            command += [
-                "-m",
-                "torch.distributed.run",
-                f"--nproc_per_node={len(gpu_ids)}",
-                f"--master_port={step.get('master_port', 29501)}",
-                "--module",
-                "tinyllava.train.train",
-            ]
-        else:
-            command += ["-m", "tinyllava.train.train"]
-        run_command(command + ["--config", str(config_path)], env=env, dry_run=dry_run)
-    elif not step.get("shard", False):
-        run_command(
-            [
-                sys.executable,
-                "-m",
-                "tinyllava.eval.batch_generation",
-                "--config",
-                str(config_path),
-            ],
-            dry_run=dry_run,
+
+def run_plan(
+    plan: list[tuple[str, dict[str, Any], dict[str, Any] | None]],
+    *,
+    steps: Sequence[str] | None = None,
+    dry_run: bool = False,
+    execute_step: Callable[..., None] | None = None,
+) -> None:
+    """Run selected stages in order, stopping immediately on failure.
+
+    Domain executors receive (step, config, temporary_directory, dry_run=...).
+    Without an executor, stages are generic commands or workspace operations.
+    """
+    names = [name for name, _, _ in plan]
+    selected = names if steps is None else steps
+    unknown = set(selected) - set(names)
+    if unknown or not selected:
+        raise ValueError(
+            f"Unknown or empty stage selection: {selected}; available: {names}"
         )
-    else:
-        gpu_ids = devices(step.get("devices", "auto"))
-        commands, envs, outputs = [], [], []
-        for index, gpu in enumerate(gpu_ids):
-            shard = OmegaConf.create(config)
-            output = str(Path(directory) / f"{index}.jsonl")
-            shard.runtime.num_chunks = len(gpu_ids)
-            shard.runtime.chunk_idx = index
-            shard.runtime.device = "cuda:0"
-            shard.output.answers_file = output
-            path = Path(directory) / f"{index}.yaml"
-            OmegaConf.save(shard, path)
-            commands.append(
-                [
-                    sys.executable,
-                    "-m",
-                    "tinyllava.eval.batch_generation",
-                    "--config",
-                    str(path),
-                ]
-            )
-            envs.append(dict(os.environ, CUDA_VISIBLE_DEVICES=gpu))
-            outputs.append(output)
-        if dry_run:
-            for command in commands:
-                run_command(command, dry_run=True)
-            print(f"Merge {len(outputs)} shards -> {config['output']['answers_file']}")
+    by_name = {name: (step, config) for name, step, config in plan}
+    for name in selected:
+        step, config = by_name[name]
+        print(f"Stage: {name}", flush=True)
+        if execute_step is None:
+            run_step(step, dry_run=dry_run)
         else:
-            run_shards(commands, envs)
-            merge_shards(outputs, config["output"]["answers_file"])
+            with tempfile.TemporaryDirectory(prefix="tinyllava-run-") as directory:
+                execute_step(step, config, directory, dry_run=dry_run)

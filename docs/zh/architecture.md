@@ -36,6 +36,16 @@ checkpoint 加载器返回模型及其 processor。生成助手编码对话、�
 
 数据集评测使用 `tinyllava.eval.batch_generation`，命令行推理使用 `tinyllava.eval.single_turn`，Web UI 使用 `tinyllava.serve.app`。
 
+## CLI 与执行职责
+
+`tinyllava.cli` 分发到训练、评测或对话入口。`utils/config.py` 统一展开递归 `from` 引用，使用 OmegaConf 合并配置；workflow 只处理运行时的阶段继承、checkpoint 和执行步骤。
+`hparams/training.py` 负责通用训练字段分组、校验、HF 参数适配与常规 batch 推导，
+`hparams/tuning.py` 定义参数更新策略。`train/algorithms/sft.py` 执行监督训练，
+`train/algorithms/sft_trainer.py` 提供 SFT 的 Trainer 与采样扩展；
+`train/strategy/` 提供冻结、LoRA 等策略。其他算法与 SFT 同属 `algorithms/`，
+可复用通用参数设施并替换自己的数据、batch 语义和训练循环。
+`runner.py` 只执行命令、管理进程和合并输出。评测任务各自定义数据适配、转换和评分步骤。
+
 ## 模块职责
 
 | 模块 | 职责 |
@@ -44,7 +54,8 @@ checkpoint 加载器返回模型及其 processor。生成助手编码对话、�
 | `tinyllava.data` | 数据适配器、processor 创建、模板与 collator |
 | `tinyllava.train` | 训练入口、调优策略和采样 |
 | `tinyllava.eval` | 生成、任务加载器与评测器 |
-| `tinyllava.utils` | 参数、配置、checkpoint 发现和模型加载 |
+| `tinyllava.hparams` | 共享参数类型、训练字段分组与校验 |
+| `tinyllava.utils` | YAML 组合、checkpoint 发现和模型加载 |
 | `tinyllava.serve` | 交互式 Web UI |
 
 实现细节见[扩展指南](guides/extending.md)和[API 参考](reference/model.md)。

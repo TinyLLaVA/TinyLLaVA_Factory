@@ -117,10 +117,10 @@ as `configs/connectors/mlp2x_gelu.yaml`. Its length rule determines the final to
 Then select both the vision tower and its connector explicitly:
 
 ```bash
-python -m tinyllava.run --config configs/train/pretrain.yaml \
+python -m tinyllava.cli train --config configs/experiments/qwen2_instruct.yaml --steps pretrain \
   model.vision_model_name_or_path=output/mof-vision \
-  model.connector_config=configs/connectors/mof.yaml model.vision_feature_select_strategy=default \
-  name=qwen2_mof
+  model.connector.from=mof model.vision_feature_select_strategy=default \
+  experiment_name=qwen2_mof
 ```
 
 The complete checkpoint includes both branches and projections. Use
@@ -340,3 +340,19 @@ assuming a particular language model's internal attribute name.
 Validation uses tiny offline checkpoints, cached versus uncached decoding,
 left padding, multimodal training, and checkpoint round trips. It does not
 constitute a full pretrained OpenELM quality evaluation.
+
+## Training algorithms
+
+Add an algorithm module under `tinyllava/train/algorithms/` and register its path
+in that package's `__init__.py`. SFT is `sft.py`; algorithms do not need their own
+configuration infrastructure.
+
+Modules expose `SECTIONS`, `validate_config`, `prepare_config(config, world_size=...)`,
+and `run(config)`. Conventional Trainer algorithms reuse `hparams/training.py`.
+Reward or rollout sections belong to their algorithm. An RL algorithm with
+different batch semantics can replace preparation without changing shared field
+grouping or the launcher.
+
+Keep validation and preparation lightweight; import trainers and load models only
+inside `run`. The workflow owns stage dependencies and launch, while
+`train/strategy/` owns parameter update policies. All file composition uses the shared `from` feature; algorithms do not load model, data, or recipe YAML files themselves.

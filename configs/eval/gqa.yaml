@@ -1,4 +1,5 @@
-dataset: gqa
+benchmark: gqa
+data: gqa
 generation:
   temperature: 0.0
   top_p: null

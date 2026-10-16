@@ -1,4 +1,5 @@
-dataset: mmvet
+benchmark: mmvet
+data: mmvet
 generation:
   temperature: 0.0
   top_p: null

@@ -1,3 +1,0 @@
-model: qwen2_instruct
-recipe: pretrain
-dataset: llava_558k

@@ -26,28 +26,28 @@ For the custom MMMU layout, use the
 export MODEL_PATH="$PWD/output/phi/finetune"
 export MODEL_NAME="my-finetune"
 export EVAL_DIR="${PWD}/datasets/eval"
-python -m tinyllava.run --config configs/eval/textvqa.yaml
+python -m tinyllava.cli eval --config configs/eval/textvqa.yaml
 ```
 
 To run only generation, or change the batch size:
 
 ```bash
-python -m tinyllava.eval.batch_generation \
+python -m tinyllava.cli eval --steps generate \
   --config configs/eval/textvqa.yaml \
-  runtime.batch_size=4 runtime.device=cuda:0
+  shard=false runtime.batch_size=4 runtime.device=cuda:0
 ```
 
 Evaluation YAML has `model`, `data`, `generation`, `runtime`, and `output`
-sections. For multi-GPU evaluation, launch one process per shard with its own
-`runtime.chunk_idx`, device, and `output.answers_file`; set the same
-`runtime.num_chunks` for all processes. Merge the answer files after every shard finishes.
+sections. For multi-GPU evaluation, use `shard=true devices=[0,1]`. The workflow
+assigns shard indices and devices, writes resolved worker configs, and merges
+answers after every worker succeeds.
 
 ## Legacy Qwen2 evaluation
 
 ```bash
 export MODEL_PATH="$PWD/output/qwen2_base_legacy/finetune"
 export MODEL_NAME="qwen2-base-legacy"
-python -m tinyllava.run --config configs/eval/scienceqa_qwen2_base_legacy.yaml
+python -m tinyllava.cli eval --config configs/eval/scienceqa_qwen2_base_legacy.yaml
 ```
 
 The workflow selects the legacy prompt, including a dedicated ScienceQA
@@ -61,4 +61,12 @@ answers to the benchmark evaluator to obtain the final score.
 
 GQA and VQAv2 workflows shard across `CUDA_VISIBLE_DEVICES` (or the `devices` override), then merge only after all workers succeed. Use `--steps generate` for generation only, or `--steps convert,score` to rerun downstream steps where available. `--dry-run` previews the workflow without loading models. Workflow overrides use `runtime.batch_size=4`; direct generation keeps `runtime.batch_size=4`.
 
-The default input root is `datasets/eval/`. Predictions and conversions are stored under `output/<experiment>/<stage>/eval/<benchmark>/` when evaluating a checkpoint under `output/`. Override `output_dir` for another result directory. MME runs its converter in an isolated output workspace; the dataset tree is used only as input. Benchmark input definitions are shared through `configs/data/eval/`.
+The default input root is `datasets/eval/`. Predictions and conversions are stored under `output/<experiment>/<stage>/eval/<benchmark>/` when evaluating a checkpoint under `output/`. Override `output_dir` for another result directory. MME runs its converter in an isolated output workspace; the dataset tree is used only as input. Benchmark input definitions live in `configs/data/eval/` and expose data fields directly.
+Evaluation entries use `data: gqa`, or `data.from` with overrides as below.
+Bare filenames select `configs/data/eval/`; custom relative files use `./name.yaml`:
+
+```yaml
+data:
+  from: gqa
+  image_folder: /path/to/gqa/images
+```

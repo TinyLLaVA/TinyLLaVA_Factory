@@ -85,16 +85,17 @@ After acquiring the dataset following the above data format, you can finetune ou
 Select the v2 composite checkpoint and data paths in the config or on the command line:
 
 ```bash
-python -m tinyllava.run --config configs/train/lora_finetune.yaml \
-  checkpoint=/path/to/v2-checkpoint \
-  data.dataset_name_or_path=/path/to/finetune.json \
-  data.image_folder=/path/to/images \
-  name=my-custom-lora
+python -m tinyllava.cli train --config configs/experiments/phi_lora.yaml --steps finetune \
+  stages.finetune.checkpoint=/path/to/v2-checkpoint \
+  stages.finetune.data.dataset_name_or_path=/path/to/finetune.json \
+  stages.finetune.data.image_folder=/path/to/images \
+  experiment_name=my-custom-lora
 ```
 
-For distributed training, invoke `tinyllava/train/train.py` with
-`torchrun` and the same
-`configs/train/lora_finetune.yaml` configuration.
+For distributed training, add `launcher.distributed=true launcher.devices=[0,1]`.
+The workflow resolves the configuration and launches the selected stage through
+`torchrun`. Reusable training settings live in `configs/training/lora_finetune.yaml`
+and are selected with `stages.finetune.training.from`.
 
 ## Evaluation with Custom Finetuned Model
 All of the models trained by TinyLLaVA Factory have the same evaluation procedure, no matter it is trained through custom finetune or through normal training. Please see the [Evaluation](https://tinyllava-factory.readthedocs.io/en/latest/Evaluation.html) section in our Doc.

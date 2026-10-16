@@ -1,4 +1,5 @@
-dataset: mme
+benchmark: mme
+data: mme
 generation:
   temperature: 0.0
   top_p: null

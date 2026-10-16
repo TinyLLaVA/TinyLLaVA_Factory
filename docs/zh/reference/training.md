@@ -4,9 +4,9 @@ strategy 应用调优策略并保存模型，可选采样器按模态与长度�
 
 ::: tinyllava.train.strategy.base.BaseTrainingStrategy
 
-::: tinyllava.train.modality_trainer.TinyLlavaTrainer
+::: tinyllava.train.algorithms.sft_trainer.TinyLlavaTrainer
 
-::: tinyllava.train.modality_trainer.ModalityLengthGroupedSampler
+::: tinyllava.train.algorithms.sft_trainer.ModalityLengthGroupedSampler
 
 ::: tinyllava.utils.checkpoint
     options:

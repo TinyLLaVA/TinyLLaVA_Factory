@@ -6,7 +6,7 @@ import pytest
 from tinyllava.data.dataset import load_training_dataset
 from tinyllava.data.readers import iter_json_array
 import tinyllava.data.readers.json_array as json_array_reader
-from tinyllava.utils.arguments import DataArguments
+from tinyllava.hparams.arguments import DataArguments
 
 
 def test_iter_json_array_streams_items_across_read_boundaries(tmp_path, monkeypatch):

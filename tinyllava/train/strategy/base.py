@@ -1,7 +1,8 @@
 from transformers import Trainer
 
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
-from tinyllava.utils.arguments import TrainingArguments
+from tinyllava.hparams.arguments import TrainingArguments
+from tinyllava.hparams.tuning import TuningArguments
 from tinyllava.utils.logging import log
 from tinyllava.utils.precision import training_torch_dtype
 
@@ -10,7 +11,8 @@ class BaseTrainingStrategy:
     """Apply component-tuning policies and save through the Hugging Face Trainer.
 
     Args:
-        training_arguments: Precision, component policies, and output settings.
+        training_arguments: Precision and output settings.
+        tuning: Component update policies and adapter settings.
 
     Attributes:
         supported_llm_tune_types (tuple[str, ...]): Supported language-model policies.
@@ -22,8 +24,9 @@ class BaseTrainingStrategy:
     supported_vision_tower_tune_types = ("frozen", "full", "partially-tune")
     supported_connector_tune_types = ("frozen", "full")
 
-    def __init__(self, training_arguments: TrainingArguments):
+    def __init__(self, training_arguments: TrainingArguments, tuning: TuningArguments):
         self.training_arguments = training_arguments
+        self.tuning = tuning
 
     def language_model_loading_kwargs(self) -> dict:
         """Return model-loading options using the resolved training precision."""
@@ -61,7 +64,7 @@ class BaseTrainingStrategy:
         self,
         model: TinyLlavaForConditionalGeneration,
     ) -> TinyLlavaForConditionalGeneration:
-        tune_type = self.training_arguments.tune_type_llm.lower()
+        tune_type = self.tuning.tune_type_llm.lower()
         self._require_tune_type(
             tune_type,
             component="LLM",
@@ -79,7 +82,7 @@ class BaseTrainingStrategy:
         self,
         model: TinyLlavaForConditionalGeneration,
     ) -> TinyLlavaForConditionalGeneration:
-        tune_type = self.training_arguments.tune_type_vision_tower.lower()
+        tune_type = self.tuning.tune_type_vision_tower.lower()
         self._require_tune_type(
             tune_type,
             component="vision tower",
@@ -90,12 +93,12 @@ class BaseTrainingStrategy:
         elif tune_type == "frozen":
             model.model.vision_tower.requires_grad_(False)
         elif tune_type == "partially-tune":
-            from_layer = self.training_arguments.tune_vision_tower_from_layer
+            from_layer = self.tuning.tune_vision_tower_from_layer
             if from_layer is None:
                 raise ValueError(
                     "tune_vision_tower_from_layer must be set when "
                     "tune_type_vision_tower='partially-tune'."
-            )
+                )
             if from_layer > -1:
                 log(f"Tune the vision tower from layer {from_layer}!")
                 for name, parameter in model.model.vision_tower.named_parameters():
@@ -112,7 +115,7 @@ class BaseTrainingStrategy:
         self,
         model: TinyLlavaForConditionalGeneration,
     ) -> TinyLlavaForConditionalGeneration:
-        tune_type = self.training_arguments.tune_type_connector.lower()
+        tune_type = self.tuning.tune_type_connector.lower()
         self._require_tune_type(
             tune_type,
             component="connector",

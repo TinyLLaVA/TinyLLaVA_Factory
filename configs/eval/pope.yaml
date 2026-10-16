@@ -1,4 +1,5 @@
-dataset: pope
+benchmark: pope
+data: pope
 generation:
   temperature: 0.0
   top_p: null

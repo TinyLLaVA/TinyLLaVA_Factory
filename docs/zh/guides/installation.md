@@ -15,10 +15,10 @@ GPU 训练前请选择与 CUDA 匹配的 PyTorch。DeepSpeed、bitsandbytes 和�
 
 ## 注意力与精度
 
-训练 YAML 用 `training.precision` 选择 `auto`、`bf16`、`fp16` 或 `fp32`，用 `model.attn_implementation` 选择注意力后端。FlashAttention 是可选依赖，仅在选择该后端且工具链兼容时安装；Qwen2 legacy 微调配置使用 SDPA。
+训练 YAML 用 `training.runtime.precision` 选择 `auto`、`bf16`、`fp16` 或 `fp32`，用 `model.attn_implementation` 选择注意力后端。FlashAttention 是可选依赖，仅在选择该后端且工具链兼容时安装；Qwen2 legacy 微调配置使用 SDPA。
 
 ```bash
-python -m tinyllava.eval.single_turn --help
+python -m tinyllava.cli single-turn --help
 python -m tinyllava.serve.app --help
 ```
 

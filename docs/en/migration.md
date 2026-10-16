@@ -258,6 +258,10 @@ resource cost. The current built-in task set is documented in
 
 ## Compatibility and migration
 
+v2.0 is unreleased. Intermediate configuration and internal API changes do not
+retain compatibility branches. Final breaking changes are recorded in the
+[v2.0 changelog](../../CHANGELOG.md); configuration is validated against the current schema.
+
 v2 changes extension and configuration interfaces. Original experiments remain
 available through `legacy/v1`; use a separate environment when reproducing them.
 The historical `doc` branch archives the v1 Sphinx documentation.
@@ -284,11 +288,11 @@ optimizer run are different operations.
    formatting, data split, training settings, generation settings, and a small
    fixed set of outputs. Keep the original checkpoint intact.
 2. **Choose the new experiment.** Start from `configs/experiments/`, with presets
-   in `configs/models/`, `configs/data/`, and `configs/recipes/`. Review the
+   in `configs/models/`, `configs/data/train/`, and `configs/training/`. Review the
    resolved configuration before loading weights:
 
    ```bash
-   python -m tinyllava.run --config configs/experiments/phi.yaml --dry-run
+   python -m tinyllava.cli train --config configs/experiments/phi.yaml --dry-run
    ```
 
 3. **Validate inputs and features.** Inspect samples after adaptation and

@@ -1,4 +1,5 @@
-dataset: textvqa
+benchmark: textvqa
+data: textvqa
 generation:
   temperature: 0.0
   top_p: null

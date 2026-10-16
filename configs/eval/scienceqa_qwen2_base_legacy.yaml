@@ -1,4 +1,5 @@
-dataset: scienceqa
+benchmark: scienceqa
+data: scienceqa
 model:
   model_name_or_path: ${oc.env:MODEL_PATH,output/qwen2_base_legacy/finetune}
 generation:

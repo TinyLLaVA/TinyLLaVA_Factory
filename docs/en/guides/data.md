@@ -31,10 +31,12 @@ For example, `coco/train2017/example.jpg` resolves relative to `data.image_folde
 
 ## Named datasets and storage
 
-Select a dataset with `dataset: llava_558k` or `dataset: llava_665k`. Their annotation
-and image paths are defined once in `configs/data/`. ShareGPT4V presets are
-`sharegpt4v_pretrain` and `sharegpt4v_finetune`. Add a YAML file there to register
-another dataset; its filename is the selector name.
+Select a dataset with `data.from=llava_558k` or
+`data.from=llava_665k`, or use `data=llava_558k` when only selecting a file.
+YAML supports `data: llava_558k` too. Bare filenames use the training-data
+preset directory; explicit relative paths use their declaring file's directory. Annotation and image paths are
+defined once in `configs/data/train/`; ShareGPT4V presets are `sharegpt4v_pretrain.yaml`
+and `sharegpt4v_finetune.yaml`. Add a YAML file and reference it to use another dataset.
 
 `dataset_dir` defaults to `datasets/`; override it per run or set
 `TINYLLAVA_DATASET_DIR`. Evaluation inputs live under `datasets/eval/`.
@@ -79,7 +81,7 @@ data:
   dataset_adapter: auto
 ```
 
-`dataset_config_name` maps to HF's `name` (subset); `data_dir`, `revision`, and
+`dataset_config_name` maps to HF's `experiment_name` (subset); `data_dir`, `revision`, and
 `cache_dir` are forwarded to the loader. A direct file defines a `train` split
 and accepts slices such as `train[:10%]`. For a direct file, omit `data_files`,
 `data_dir`, `dataset_config_name`, and `revision`; use a builder or directory

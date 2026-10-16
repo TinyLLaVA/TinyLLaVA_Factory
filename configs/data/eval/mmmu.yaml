@@ -1,4 +1,3 @@
-data:
-  adapter: mmmu
-  question_file: ${eval_dir}/MMMU/anns_for_eval.json
-  image_folder: ${eval_dir}/MMMU/all_images
+adapter: mmmu
+question_file: ${eval_dir}/MMMU/anns_for_eval.json
+image_folder: ${eval_dir}/MMMU/all_images

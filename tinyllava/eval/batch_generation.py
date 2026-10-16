@@ -15,8 +15,8 @@ from tinyllava.data.chat_template.loading import resolve_chat_template
 from tinyllava.eval.generation import generate_responses, load_images, make_user_message
 from tinyllava.eval.tasks.auto.loader_auto import AutoDatasetLoader
 from tinyllava.eval.tasks.loader_base import DatasetLoader
-from tinyllava.utils.arguments import EvalArguments
-from tinyllava.utils.config import parse_eval_config
+from tinyllava.hparams.arguments import EvalArguments
+from tinyllava.hparams.parser import parse_eval_arguments
 from tinyllava.utils.model_loading import load_tinyllava_checkpoint_bundle
 
 
@@ -121,7 +121,7 @@ def run_generation(
 
 
 def main() -> None:
-    run_generation(parse_eval_config())
+    run_generation(parse_eval_arguments())
 
 
 if __name__ == "__main__":

@@ -26,11 +26,10 @@ def _training_args(tune_type_llm: str):
 def test_frozen_llm_also_freezes_output_head():
     model = TinyModelStub()
 
-    BaseTrainingStrategy(_training_args("frozen"))(model)
+    BaseTrainingStrategy(SimpleNamespace(), _training_args("frozen"))(model)
 
     assert not any(
-        parameter.requires_grad
-        for parameter in model.model.language_model.parameters()
+        parameter.requires_grad for parameter in model.model.language_model.parameters()
     )
     assert not any(parameter.requires_grad for parameter in model.lm_head.parameters())
 
@@ -38,7 +37,9 @@ def test_frozen_llm_also_freezes_output_head():
 def test_full_llm_also_unfreezes_output_head():
     model = TinyModelStub().requires_grad_(False)
 
-    BaseTrainingStrategy(_training_args("full"))(model)
+    BaseTrainingStrategy(SimpleNamespace(), _training_args("full"))(model)
 
-    assert all(parameter.requires_grad for parameter in model.model.language_model.parameters())
+    assert all(
+        parameter.requires_grad for parameter in model.model.language_model.parameters()
+    )
     assert all(parameter.requires_grad for parameter in model.lm_head.parameters())

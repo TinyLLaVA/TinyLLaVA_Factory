@@ -20,7 +20,6 @@ import os
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 from typing import cast
 
 from .constants import RUNNING_LOG
@@ -47,16 +46,9 @@ def warning_rank0(self: logging.Logger, *args, **kwargs) -> None:
         self.warning(*args, **kwargs)
 
 
-@lru_cache(None)
-def warning_rank0_once(self: logging.Logger, *args, **kwargs) -> None:
-    if int(os.getenv("LOCAL_RANK", "0")) == 0:
-        self.warning(*args, **kwargs)
-
-
 setattr(logging.Logger, "info_rank0", info_rank0)
 setattr(logging.Logger, "debug_rank0", debug_rank0)
 setattr(logging.Logger, "warning_rank0", warning_rank0)
-setattr(logging.Logger, "warning_rank0_once", warning_rank0_once)
 
 
 class LoggerHandler(logging.Handler):
@@ -149,7 +141,9 @@ def log(message: str) -> None:
 
 def logger_setting(save_dir: str | None = None) -> Logger:
     logger = get_logger()
-    if save_dir is not None and not any(isinstance(handler, LoggerHandler) for handler in logger.handlers):
+    if save_dir is not None and not any(
+        isinstance(handler, LoggerHandler) for handler in logger.handlers
+    ):
         add_handler(LoggerHandler(save_dir))
     return logger
 
@@ -158,16 +152,12 @@ def log_trainable_params(model) -> None:
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     ratio = 100 * trainable_params / total_params if total_params else 0
-    log(f"Trainable params: {trainable_params} || all params: {total_params} || trainable%: {ratio:.4f}")
+    log(
+        f"Trainable params: {trainable_params} || all params: {total_params} || trainable%: {ratio:.4f}"
+    )
 
 
 def add_handler(handler: logging.Handler) -> None:
     r"""Add a handler to the root logger."""
     _configure_library_root_logger()
     _get_library_root_logger().addHandler(handler)
-
-
-def remove_handler(handler: logging.Handler) -> None:
-    r"""Remove a handler to the root logger."""
-    _configure_library_root_logger()
-    _get_library_root_logger().removeHandler(handler)

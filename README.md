@@ -101,21 +101,22 @@ Please refer to the [training data guide](docs/en/guides/data.md).
 #### 2. Train
 
 Models, datasets and training policies are defined independently in
-`configs/models/`, `configs/data/` and `configs/recipes/`. Experiments select them
-without repeating paths:
+`configs/models/`, `configs/data/train/` and `configs/training/`. Experiments select them
+using filenames such as `model: phi`, `data: llava_558k`, and
+`training: pretrain`. For inline overrides, use `from: phi` inside the node:
 
 ```bash
-python -m tinyllava.run --config configs/experiments/phi.yaml --dry-run
-python -m tinyllava.run --config configs/experiments/phi.yaml
+python -m tinyllava.cli train --config configs/experiments/phi.yaml --dry-run
+python -m tinyllava.cli train --config configs/experiments/phi.yaml
 ```
 
 Inputs default to `datasets/`. Outputs are inferred as `output/phi/pretrain/` and
 `output/phi/finetune/`; later stages automatically load the previous checkpoint.
-Stage names are arbitrary. Override `name=my-run` to create a separate experiment,
+Stage names are arbitrary. Override `experiment_name=my-run` to create a separate experiment,
 `dataset_dir=/path/to/data` to relocate inputs, or use `--steps finetune` to run one stage.
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 python -m tinyllava.run \
+CUDA_VISIBLE_DEVICES=0,1 python -m tinyllava.cli train \
   --config configs/experiments/qwen2_base_legacy.yaml
 ```
 
@@ -125,8 +126,8 @@ See the [configuration guide](configs/README.md) and [training guide](docs/en/gu
 #### 3. Evaluation
 
 ```bash
-python -m tinyllava.run --config configs/eval/textvqa.yaml \
-  model=output/phi/finetune runtime.batch_size=4
+python -m tinyllava.cli eval --config configs/eval/textvqa.yaml \
+  model.model_name_or_path=output/phi/finetune runtime.batch_size=4
 ```
 
 Benchmark inputs live under `datasets/eval/`; results are inferred under
@@ -189,7 +190,7 @@ python tinyllava/serve/app.py --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B
 ### CLI Inference
 We also support running inference with CLI. To use our model, run:
 ```bash
-python -m tinyllava.eval.single_turn \
+python -m tinyllava.cli single-turn \
     --model-path tinyllava/TinyLLaVA-Phi-2-SigLIP-3.1B \
     --image-file ./tinyllava/serve/examples/extreme_ironing.jpg \
     --query "What is unusual about this image?"

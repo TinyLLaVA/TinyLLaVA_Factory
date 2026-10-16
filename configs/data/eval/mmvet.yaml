@@ -1,4 +1,3 @@
-data:
-  adapter: vqa
-  question_file: ${eval_dir}/mm-vet/llava-mm-vet.jsonl
-  image_folder: ${eval_dir}/mm-vet/images
+adapter: vqa
+question_file: ${eval_dir}/mm-vet/llava-mm-vet.jsonl
+image_folder: ${eval_dir}/mm-vet/images

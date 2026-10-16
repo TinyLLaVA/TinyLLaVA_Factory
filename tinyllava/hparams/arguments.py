@@ -17,7 +17,7 @@ class ModelArguments:
         tokenizer_name_or_path: Tokenizer override; otherwise use the composite
             checkpoint or, during assembly, the language-model source.
         vision_model_name_or_path: Vision-tower source for component assembly.
-        connector_config: Connector YAML path used during component assembly.
+        connector: Resolved connector configuration mapping used during assembly.
         cache_dir: Hugging Face download cache directory.
         attn_implementation: Attention backend passed to the language model.
         model_max_length: Tokenizer length limit used by the SFT collator.
@@ -40,7 +40,7 @@ class ModelArguments:
         },
     )
     language_model_name_or_path: str | None = field(
-        default="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        default=None,
         metadata={"help": "Language model name or path."},
     )
     tokenizer_name_or_path: str | None = field(
@@ -53,9 +53,9 @@ class ModelArguments:
         default=None,
         metadata={"help": "Vision tower name or path."},
     )
-    connector_config: str | None = field(
+    connector: dict[str, Any] | None = field(
         default=None,
-        metadata={"help": "YAML config for the multimodal connector."},
+        metadata={"help": "Resolved configuration for the multimodal connector."},
     )
     cache_dir: str | None = field(
         default=None,
@@ -257,19 +257,7 @@ class EvalArguments:
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
-    """Extend Hugging Face TrainingArguments with component-tuning policies.
-
-    Attributes:
-        precision: `auto` selects BF16, FP16, then FP32 according to hardware support.
-            An explicit value sets the corresponding Trainer precision flags.
-        training_strategy: Registered strategy, such as `common`, `lora`, or `lora_int8`.
-        tune_type_llm: Language-model and LM-head policy supported by the strategy.
-        tune_type_vision_tower: Vision policy: `frozen`, `full`, or `partially-tune`.
-        tune_vision_tower_from_layer: First trainable encoder layer for partial tuning.
-        tune_type_connector: Connector policy supported by the selected strategy.
-        group_by_modality_length: Group image and text-only samples by signed length.
-        peft_config: Upstream `LoraConfig` fields used by LoRA strategies.
-    """
+    """Trainer runtime, optimization, precision, and sampling settings."""
 
     precision: Literal["auto", "fp32", "fp16", "bf16"] = field(
         default="auto",
@@ -280,60 +268,12 @@ class TrainingArguments(transformers.TrainingArguments):
             )
         },
     )
-    training_strategy: str = field(
-        default="common",
-        metadata={
-            "help": "Training strategy plugin name, for example 'common', 'lora', or 'lora_int8'."
-        },
-    )
-    tune_type_llm: str = field(
-        default="frozen",
-        metadata={
-            "help": (
-                "LLM tuning policy: 'frozen', 'full', or 'lora'. "
-                "The training_strategy selects the concrete plugin."
-            )
-        },
-    )
-    tune_type_vision_tower: str = field(
-        default="frozen",
-        metadata={
-            "help": (
-                "Vision tower tuning strategy: 'frozen' (no update), 'full' "
-                "(fine-tune all layers), 'partially-tune' (tune last N layers)."
-            )
-        },
-    )
-    tune_vision_tower_from_layer: int | None = field(
-        default=10,
-        metadata={
-            "help": (
-                "If tune_type_vision_tower='partially-tune', fine-tune from this "
-                "layer onwards. Higher number = deeper layers."
-            )
-        },
-    )
-    tune_type_connector: str = field(
-        default="full",
-        metadata={
-            "help": "Connector/projector tuning strategy: 'frozen', 'full', or 'lora'."
-        },
-    )
     group_by_modality_length: bool = field(
         default=False,
         metadata={
             "help": (
                 "Group multimodal and text-only samples by approximate length, "
                 "matching the legacy TinyLLaVA fine-tuning sampler."
-            )
-        },
-    )
-    peft_config: dict[str, Any] = field(
-        default_factory=dict,
-        metadata={
-            "help": (
-                "PEFT config domain passed to peft.LoraConfig for LoRA strategies. "
-                "Use upstream field names such as r, lora_alpha, lora_dropout, and bias."
             )
         },
     )

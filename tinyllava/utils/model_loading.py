@@ -13,8 +13,7 @@ from tinyllava.data.image_processor import AutoImageProcessor
 from tinyllava.data.processor import TinyLlavaProcessor
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
-from tinyllava.utils.arguments import ModelArguments
-from tinyllava.utils.config import load_connector_config
+from tinyllava.hparams.arguments import ModelArguments
 from tinyllava.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -157,7 +156,7 @@ def resolve_component_paths(model_args: ModelArguments) -> ComponentPaths:
             ComponentPathSource(
                 "connector",
                 None,
-                "created from model_args.connector_config",
+                "created from model_args.connector",
             ),
         ]
     )
@@ -187,7 +186,7 @@ def load_model_config(
     return TinyLlavaConfig(
         text_config=text_config,
         vision_config=vision_config,
-        connector_config=load_connector_config(model_args.connector_config),
+        connector_config=model_args.connector,
         vision_feature_layer=model_args.vision_feature_layer,
         vision_feature_select_strategy=model_args.vision_feature_select_strategy,
     )

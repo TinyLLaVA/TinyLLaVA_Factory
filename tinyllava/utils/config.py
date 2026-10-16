@@ -1,302 +1,206 @@
-import argparse
-import sys
-from collections.abc import Sequence
-from typing import Any
+"""YAML reference composition, resolved worker YAML, and mapping operations."""
 
+from __future__ import annotations
+
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any, Literal
+
+import yaml
 from omegaconf import DictConfig, OmegaConf
 
-from tinyllava.configuration import load_eval_config, load_train_config
-from tinyllava.utils.arguments import (
-    DataArguments,
-    EvalArguments,
-    EvalDataArguments,
-    EvalGenerationArguments,
-    EvalModelArguments,
-    EvalOutputArguments,
-    EvalRuntimeArguments,
-    ModelArguments,
-    TrainingArguments,
-)
 
-TRAIN_CONFIG_SECTIONS = ("model", "data", "training", "peft")
-EVAL_CONFIG_SECTIONS = ("model", "data", "generation", "runtime", "output")
+CONFIG_ROOT = Path(__file__).resolve().parents[2] / "configs"
+_PRESET_DIRS = {"model": "models", "connector": "connectors", "training": "training"}
 
 
-def parse_train_config(
-    args: Sequence[str] | None = None,
-) -> tuple[ModelArguments, DataArguments, TrainingArguments]:
-    """Load training YAML and apply command-line overrides.
+def compose_config(
+    path: str | Path,
+    overrides: Sequence[str] = (),
+    *,
+    data_kind: Literal["train", "eval"] = "train",
+) -> dict[str, Any]:
+    """Compose YAML references while leaving value interpolation unresolved.
 
-    Args:
-        args: Arguments including `--config PATH` and optional OmegaConf dotlist
-            overrides. `None` reads `sys.argv[1:]`. Distributed launcher arguments
-            `--deepspeed` and `--local_rank` override the corresponding YAML fields.
-
-    Returns:
-        Model, data, and training argument objects, in that order.
-
-    Examples:
-        ```python
-        model_args, data_args, training_args = parse_train_config([
-            "--config", "configs/train/pretrain.yaml",
-            "training.output_dir=output/example",
-        ])
-        ```
+    Any mapping can use ``from: path.yaml`` or a list of paths. Sources merge
+    left to right, then local fields, then CLI dotlist overrides. Bare filenames
+    at preset nodes use the corresponding directory under configs/. ``data_kind``
+    selects training or evaluation data presets. A preset name is shorthand for
+    its ``from`` mapping; references without a YAML suffix get ``.yaml`` appended.
+    Explicit relative paths are anchored
+    to their declaring YAML, or cwd for CLI overrides. Lists replace rather than
+    concatenate. Value interpolation is deferred until runtime paths are assigned.
     """
+    if data_kind not in ("train", "eval"):
+        raise ValueError(f"Unknown data preset kind: {data_kind!r}")
+    preset_dirs = {**_PRESET_DIRS, "data": f"data/{data_kind}"}
+    cache: dict[Path, dict[str, Any]] = {}
 
-    cli_args = list(sys.argv[1:] if args is None else args)
-    parsed_args = _parse_config_args(cli_args)
+    def read(source: Path, location: tuple = ()) -> dict[str, Any]:
+        if source not in cache:
+            content = source.read_text(encoding="utf-8")
+            if not isinstance(
+                yaml.compose(content, Loader=yaml.SafeLoader), yaml.MappingNode
+            ):
+                raise ValueError(f"Config must be a mapping: {source}")
+            config = OmegaConf.create(content)
+            cache[source] = OmegaConf.to_container(config, resolve=False)
+        return _anchor_references(
+            cache[source], source.parent, str(source), preset_dirs, location
+        )
 
-    config = load_train_config(parsed_args.config, parsed_args.overrides)
-    config = _merge_launcher_arguments(
-        config,
-        deepspeed=parsed_args.deepspeed,
-        local_rank=parsed_args.local_rank,
-    )
-    return build_train_arguments(config)
+    def inherit(node: dict, location: tuple, chain: tuple[Path, ...] = ()) -> dict:
+        # Expand only this mapping's sources. Nested references must wait until
+        # all overlays are merged, so replacing a source cannot leak old fields.
+        local = {key: value for key, value in node.items() if key != "from"}
+        sources = node.get("from", [])
+        sources = [sources] if isinstance(sources, str) else sources
+        bases = []
+        for reference in sources:
+            source = Path(reference)
+            if source in chain:
+                trace = " -> ".join(map(str, (*chain, source)))
+                raise ValueError(f"Circular config reference: {trace}")
+            try:
+                base = read(source, location)
+            except FileNotFoundError as error:
+                raise FileNotFoundError(
+                    f"Config reference not found: {source}"
+                ) from error
+            bases.append(inherit(base, location, (*chain, source)))
+        return merge_mappings(*bases, local)
+
+    def expand(
+        node: Any, location: tuple = (), ancestors: tuple[dict, ...] = ()
+    ) -> Any:
+        if isinstance(node, list):
+            return [
+                expand(value, (*location, index), ancestors)
+                for index, value in enumerate(node)
+            ]
+        if not isinstance(node, dict):
+            return node
+        if "from" in node:
+            # Compare the unexpanded mapping, not just filenames: the same file
+            # can occur at different nodes with different, finite local overlays.
+            if node in ancestors:
+                trace = " -> ".join(str(item["from"]) for item in (*ancestors, node))
+                raise ValueError(f"Circular config reference: {trace}")
+            ancestors = (*ancestors, node)
+            node = inherit(node, location)
+        return {
+            key: expand(value, (*location, key), ancestors)
+            for key, value in node.items()
+        }
+
+    path = Path(path).expanduser().resolve()
+    config = read(path)
+    # Normalize each override before merging: model=phi followed by
+    # model.model_max_length=4096 must retain both the reference and the field.
+    for override in overrides:
+        cli = _anchor_references(
+            OmegaConf.to_container(OmegaConf.from_dotlist([override]), resolve=False),
+            Path.cwd(),
+            "CLI overrides",
+            preset_dirs,
+        )
+        config = merge_mappings(config, cli)
+    return expand(config)
 
 
-def build_train_arguments(
-    config: dict[str, Any],
-) -> tuple[ModelArguments, DataArguments, TrainingArguments]:
-    """Validate training sections and construct typed arguments.
-
-    Args:
-        config: Mapping with `model`, `data`, `training`, and optional `peft` sections.
-            Top-level `peft` is passed to the training arguments as `peft_config`.
-
-    Returns:
-        Model, data, and training argument objects, in that order.
-
-    Raises:
-        ValueError: Sections are unknown or not mappings, PEFT settings are specified
-            twice, or argument validation fails.
-        TypeError: A section contains an unsupported argument name.
-    """
-    unknown_sections = sorted(set(config) - set(TRAIN_CONFIG_SECTIONS))
-    if unknown_sections:
-        raise ValueError(f"Unknown train config section(s): {unknown_sections}")
-
-    model_config = config.get("model") or {}
-    data_config = config.get("data") or {}
-    training_config = config.get("training") or {}
-    peft_config = config.get("peft") or {}
-
-    _require_mapping("model", model_config)
-    _require_mapping("data", data_config)
-    _require_mapping("training", training_config)
-    _require_mapping("peft", peft_config)
-
-    training_config = dict(training_config)
-    if peft_config:
-        if "peft_config" in training_config:
-            raise ValueError(
-                "Use either top-level 'peft' or 'training.peft_config', not both."
+def _anchor_references(
+    node: Any,
+    directory: Path,
+    label: str,
+    preset_dirs: dict[str, str],
+    location: tuple = (),
+) -> Any:
+    """Expand shorthand and preserve reference origins before mapping overlays."""
+    # A stage name is not a preset field, even if it is named "model" or "data".
+    field = location[-1] if location else None
+    is_stage = len(location) >= 2 and location[-2] == "stages"
+    preset = preset_dirs.get(field) if not is_stage else None
+    if preset is not None and isinstance(node, str) and "${" not in node:
+        node = {"from": node}
+    if isinstance(node, list):
+        return [
+            _anchor_references(value, directory, label, preset_dirs, (*location, index))
+            for index, value in enumerate(node)
+        ]
+    if not isinstance(node, dict):
+        return node
+    result = {}
+    for key, value in node.items():
+        if key != "from":
+            result[key] = _anchor_references(
+                value, directory, f"{label}.{key}", preset_dirs, (*location, key)
             )
-        training_config["peft_config"] = peft_config
-
-    return (
-        ModelArguments(**model_config),
-        DataArguments(**data_config),
-        TrainingArguments(**training_config),
-    )
-
-
-def parse_eval_config(args: Sequence[str] | None = None) -> EvalArguments:
-    """Load evaluation YAML and apply OmegaConf dotlist overrides.
-
-    Args:
-        args: Arguments including `--config PATH` and optional overrides.
-            `None` reads `sys.argv[1:]`.
-
-    Returns:
-        Validated model, data, generation, runtime, and output settings.
-    """
-
-    cli_args = list(sys.argv[1:] if args is None else args)
-    parsed_args = _parse_eval_config_args(cli_args)
-
-    return build_eval_arguments(
-        load_eval_config(parsed_args.config, parsed_args.overrides)
-    )
-
-
-def build_eval_arguments(config: dict[str, Any]) -> EvalArguments:
-    """Construct evaluation arguments and validate batching and generation limits.
-
-    Args:
-        config: Mapping with `model`, `data`, `generation`, `runtime`, and `output`
-            sections. Missing sections use their dataclass defaults.
-
-    Returns:
-        The grouped evaluation settings.
-
-    Raises:
-        ValueError: A section is unknown or not a mapping, a size is nonpositive,
-            or the shard index is outside the configured range.
-        TypeError: A section contains an unsupported argument name.
-    """
-    unknown_sections = sorted(set(config) - set(EVAL_CONFIG_SECTIONS))
-    if unknown_sections:
-        raise ValueError(f"Unknown eval config section(s): {unknown_sections}")
-
-    sections = {name: config.get(name) or {} for name in EVAL_CONFIG_SECTIONS}
-    for name, section in sections.items():
-        _require_mapping(name, section, config_kind="Eval")
-
-    result = EvalArguments(
-        model=EvalModelArguments(**sections["model"]),
-        data=EvalDataArguments(**sections["data"]),
-        generation=EvalGenerationArguments(**sections["generation"]),
-        runtime=EvalRuntimeArguments(**sections["runtime"]),
-        output=EvalOutputArguments(**sections["output"]),
-    )
-    _validate_eval_arguments(result)
+            continue
+        paths = [value] if isinstance(value, str) else value
+        if (
+            not isinstance(paths, list)
+            or not paths
+            or any(
+                not isinstance(item, str) or not item.strip() or "${" in item
+                for item in paths
+            )
+        ):
+            raise ValueError(
+                f"{label}.from must be a literal YAML path or a nonempty list of paths"
+            )
+        anchored = []
+        for item in paths:
+            root = (
+                CONFIG_ROOT / preset
+                if preset and Path(item).name == item
+                else directory
+            )
+            reference = Path(item).expanduser()
+            if reference.suffix.lower() not in (".yaml", ".yml"):
+                reference = reference.with_name(reference.name + ".yaml")
+            anchored.append(str((root / reference).resolve()))
+        result[key] = anchored[0] if isinstance(value, str) else anchored
     return result
 
 
-def load_connector_config(path: str | None) -> dict[str, Any] | None:
-    """Read a connector YAML configuration with a registered model-type key.
-
-    Args:
-        path: Connector YAML file, or `None` to use the model's default connector.
-
-    Returns:
-        The resolved configuration mapping, or `None` when no path is supplied.
-
-    Raises:
-        ValueError: The file is not a mapping or lacks `model_type`.
-    """
-    if path is None:
-        return None
-
-    connector_config = _load_config_mapping(path)
-    if "model_type" not in connector_config:
-        raise ValueError("connector_config must include a 'model_type' field.")
-    return connector_config
+def resolve_interpolations(config: dict[str, Any]) -> dict[str, Any]:
+    """Resolve runtime placeholders after stage paths have been assigned."""
+    return OmegaConf.to_container(OmegaConf.create(config), resolve=True)
 
 
-def _parse_config_args(args: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Train TinyLLaVA from a structured YAML config."
-    )
-    parser.add_argument(
-        "--config",
-        required=True,
-        help="Path to the root train YAML config.",
-    )
-    parser.add_argument(
-        "--deepspeed",
-        help=(
-            "DeepSpeed config path. This is equivalent to the "
-            "training.deepspeed YAML field."
-        ),
-    )
-    parser.add_argument(
-        "--local_rank",
-        "--local-rank",
-        type=int,
-        default=None,
-        help="Process-local rank injected by distributed launchers.",
-    )
-    parser.add_argument(
-        "overrides",
-        nargs="*",
-        help="OmegaConf dotlist overrides, for example training.output_dir=out.",
-    )
-    return parser.parse_args(args)
+def merge_mappings(*configs: dict[str, Any] | DictConfig) -> dict[str, Any]:
+    """Deep-merge left to right, preserving interpolation for the final pass."""
+    return OmegaConf.to_container(OmegaConf.merge(*configs), resolve=False)
 
 
-def _parse_eval_config_args(args: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Evaluate TinyLLaVA from a structured YAML config."
-    )
-    parser.add_argument(
-        "--config",
-        required=True,
-        help="Path to the root eval YAML config.",
-    )
-    parser.add_argument(
-        "overrides",
-        nargs="*",
-        help=(
-            "OmegaConf dotlist overrides, for example "
-            "runtime.chunk_idx=1 model.model_name_or_path=output/model."
-        ),
-    )
-    return parser.parse_args(args)
+def validate_name(value: object, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or not value
+        or Path(value).name != value
+        or value in (".", "..")
+    ):
+        raise ValueError(f"{label} must be a nonempty name without path separators")
+    return value
 
 
-def _load_config_mapping(path: str) -> dict[str, Any]:
-    config = OmegaConf.load(path)
-    return _to_plain_container(config)
-
-
-def _merge_overrides(config: dict[str, Any], overrides: list[str]) -> dict[str, Any]:
-    merged = OmegaConf.merge(config, OmegaConf.from_dotlist(overrides))
-    return _to_plain_container(merged)
-
-
-def _merge_launcher_arguments(
-    config: dict[str, Any],
-    *,
-    deepspeed: str | None,
-    local_rank: int | None,
-) -> dict[str, Any]:
-    """Merge compatibility arguments supplied by distributed launchers."""
-    if deepspeed is None and local_rank is None:
-        return config
-
-    training_config = config.get("training") or {}
-    _require_mapping("training", training_config)
-    training_config = dict(training_config)
-    if deepspeed is not None:
-        training_config["deepspeed"] = deepspeed
-    if local_rank is not None:
-        training_config["local_rank"] = local_rank
-
-    config = dict(config)
-    config["training"] = training_config
-    return config
-
-
-def _to_plain_container(config: DictConfig) -> dict[str, Any]:
-    plain = OmegaConf.to_container(config, resolve=True)
-    if not isinstance(plain, dict):
-        raise ValueError("Config must be a mapping.")
-    return plain
-
-
-def _validate_eval_arguments(config: EvalArguments) -> None:
-    if config.runtime.batch_size <= 0:
-        raise ValueError("runtime.batch_size must be positive")
-    if config.runtime.num_chunks <= 0:
-        raise ValueError("runtime.num_chunks must be positive")
-    if not 0 <= config.runtime.chunk_idx < config.runtime.num_chunks:
-        raise ValueError("runtime.chunk_idx must be in [0, runtime.num_chunks)")
-    if config.generation.max_new_tokens <= 0:
-        raise ValueError("generation.max_new_tokens must be positive")
-    if config.generation.num_beams <= 0:
-        raise ValueError("generation.num_beams must be positive")
-
-
-def _require_mapping(
-    section_name: str,
-    section: Any,
-    *,
-    config_kind: str = "Train",
+def validate_fields(
+    config: dict[str, Any], sections: Sequence[str], metadata: set[str], kind: str
 ) -> None:
-    if not isinstance(section, dict):
-        raise ValueError(
-            f"{config_kind} config section '{section_name}' must be a mapping."
-        )
+    unknown = set(config) - set(sections) - metadata
+    if unknown:
+        raise ValueError(f"Unknown {kind} config fields: {sorted(unknown)}")
 
 
-__all__ = [
-    "EVAL_CONFIG_SECTIONS",
-    "build_train_arguments",
-    "build_eval_arguments",
-    "load_connector_config",
-    "parse_eval_config",
-    "parse_train_config",
-]
+def load_config(path: str | Path, overrides: Sequence[str] = ()) -> dict[str, Any]:
+    """Read a mapping, apply field overrides, and resolve interpolation.
+
+    This helper preserves the supplied schema; it does not expand presets or
+    supply business defaults.
+    """
+    config = OmegaConf.load(path)
+    if not OmegaConf.is_dict(config):
+        raise ValueError(f"Config must be a mapping: {path}")
+    if overrides:
+        config = merge_mappings(config, OmegaConf.from_dotlist(list(overrides)))
+    return resolve_interpolations(config)

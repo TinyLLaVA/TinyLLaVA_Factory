@@ -3,14 +3,22 @@
 使用保存了 tokenizer 和 image processor 的组合 checkpoint。
 
 ```bash
-python -m tinyllava.eval.single_turn \
+python -m tinyllava.cli single-turn \
   --model-path output/my-finetune \
   --image-file tinyllava/serve/examples/waterview.jpg \
   --query "Describe the image." \
-  --temperature 0 --max_new_tokens 128
+  --temperature 0 --max-new-tokens 128
 ```
 
 CLI checkpoint 选项目前为 `--model-path`，评测 YAML 则为 `model.model_name_or_path`。模型与 processor 支持多图时可重复传入 `--image-file`。
+
+## 终端多轮对话
+
+`chat` 在轮次之间保留对话历史。启动时用 `--image-file` 添加图像，对话中用 `/image PATH` 为下一轮添加图像。`/reset` 清空历史和待发送图像，`/exit` 退出。
+
+```bash
+python -m tinyllava.cli chat --model-path output/my-finetune
+```
 
 ## Python 接口
 

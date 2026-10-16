@@ -1,14 +1,17 @@
 from pathlib import Path
 
 import pytest
+from omegaconf import OmegaConf
 
-from tinyllava.utils.config import build_eval_arguments, parse_eval_config
+from tinyllava.eval.workflow import load_eval_config
+
+from tinyllava.hparams.parser import build_eval_arguments, parse_eval_arguments
 
 
 CONFIG_DIR = Path(__file__).parents[2] / "configs" / "eval"
 
 
-def test_parse_eval_config_applies_dotlist_overrides(tmp_path):
+def test_parse_eval_arguments_applies_dotlist_overrides(tmp_path):
     config_file = tmp_path / "eval.yaml"
     config_file.write_text(
         """
@@ -27,7 +30,7 @@ output:
         encoding="utf-8",
     )
 
-    config = parse_eval_config(
+    config = parse_eval_arguments(
         [
             "--config",
             str(config_file),
@@ -51,7 +54,9 @@ def test_benchmark_configs_are_valid(config_file, monkeypatch, tmp_path):
     monkeypatch.setenv("MODEL_NAME", "test-model")
     monkeypatch.setenv("EVAL_DIR", str(tmp_path / "eval"))
 
-    config = parse_eval_config(["--config", str(config_file)])
+    resolved_path = tmp_path / "resolved.yaml"
+    OmegaConf.save(OmegaConf.create(load_eval_config(config_file)), resolved_path)
+    config = parse_eval_arguments(["--config", str(resolved_path)])
 
     assert config.model.model_name_or_path == "output/test-model"
     assert config.model.model_id == "test-model"

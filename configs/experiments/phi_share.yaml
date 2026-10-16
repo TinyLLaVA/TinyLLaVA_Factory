@@ -1,15 +1,16 @@
+algorithm: sft
 model:
-  name: phi
+  from: phi
   model_max_length: 3072
 stages:
   base_pretrain:
-    recipe: pretrain
-    dataset: llava_558k
+    data: llava_558k
+    training: pretrain
   pretrain:
-    recipe: finetune
-    dataset: sharegpt4v_pretrain
+    data: sharegpt4v_pretrain
     training:
+      from: finetune
       gradient_accumulation_steps: 8
   finetune:
-    recipe: finetune
-    dataset: sharegpt4v_finetune
+    data: sharegpt4v_finetune
+    training: finetune

@@ -2,11 +2,11 @@ import torch
 from datasets import Dataset as HFDataset
 
 from tinyllava.data.dataset import ProcessorSFTDataset
-from tinyllava.train.modality_trainer import (
+from tinyllava.train.algorithms.sft_trainer import (
     ModalityLengthGroupedSampler,
     get_modality_length_grouped_indices,
 )
-from tinyllava.utils.arguments import DataArguments
+from tinyllava.hparams.arguments import DataArguments
 
 
 def test_processor_dataset_exposes_signed_modality_lengths():

@@ -1,4 +1,0 @@
-model: qwen2_instruct
-recipe: lora_finetune
-dataset: llava_665k
-from: pretrain

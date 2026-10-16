@@ -1,8 +1,9 @@
+algorithm: sft
 model: phi
 stages:
   pretrain:
-    recipe: pretrain
-    dataset: llava_558k
+    data: llava_558k
+    training: pretrain
   finetune:
-    recipe: finetune
-    dataset: llava_665k
+    data: llava_665k
+    training: finetune

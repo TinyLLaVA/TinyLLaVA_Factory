@@ -1,96 +1,32 @@
-from __future__ import annotations
+"""Training worker: read resolved YAML and execute the selected algorithm."""
 
-from tinyllava.data.chat_template.loading import resolve_chat_template
-from tinyllava.data.dataset import make_supervised_data_module
-from tinyllava.data.image_processor import AutoImageProcessor
-from tinyllava.data.processor import TinyLlavaProcessor
-from tinyllava.train.modality_trainer import TinyLlavaTrainer
-from tinyllava.train.strategy import get_training_strategy
-from tinyllava.utils.checkpoint import resolve_resume_checkpoint
-from tinyllava.utils.config import parse_train_config
-from tinyllava.utils.deepspeed import (
-    configure_zero3_gradient_checkpointing,
-)
-from tinyllava.utils.logging import log_trainable_params, logger_setting
-from tinyllava.utils.model_loading import (
-    load_model_config,
-    load_tokenizer,
-    load_training_model,
-    resolve_component_paths,
-)
-from tinyllava.utils.precision import (
-    cast_model_to_training_dtype,
-    resolve_training_precision,
-)
+import argparse
+from collections.abc import Sequence
+
+from tinyllava.train.algorithms import get_algorithm
+from tinyllava.utils.config import load_config, merge_mappings
 
 
-def train() -> None:
-    model_args, data_args, training_args = parse_train_config()
-    logger_setting(getattr(training_args, "output_dir", None))
-    configure_zero3_gradient_checkpointing(training_args)
+def train(args: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", required=True, help="Resolved training YAML.")
+    parser.add_argument("--deepspeed", help="Override training.runtime.deepspeed.")
+    parser.add_argument("--local_rank", "--local-rank", type=int, default=None)
+    parser.add_argument("overrides", nargs="*", help="OmegaConf dotlist overrides.")
+    options = parser.parse_args(args)
 
-    paths = resolve_component_paths(model_args)
-    model_config = load_model_config(model_args, paths)
-    resolve_training_precision(training_args, model_config)
-    training_strategy = get_training_strategy(training_args.training_strategy)(
-        training_args
-    )
-    language_model_loading_kwargs = training_strategy.language_model_loading_kwargs()
-    model = load_training_model(
-        model_args,
-        paths,
-        model_config,
-        language_model_loading_kwargs=language_model_loading_kwargs,
-    )
-    tokenizer = load_tokenizer(model_args, paths)
-    model.tokenizer = tokenizer
-
-    image_processor = AutoImageProcessor.from_pretrained(
-        paths.image_processor,
-        cache_dir=model_args.cache_dir,
-    )
-    processor = TinyLlavaProcessor.from_model(
-        tokenizer=tokenizer,
-        image_processor=image_processor,
-        model=model,
-        chat_template=resolve_chat_template(
-            chat_template=model_args.chat_template,
-            chat_template_path=model_args.chat_template_path,
-        ),
-    )
-
-    # Processor creation can resize embeddings and the output head. Apply the
-    # tuning policy and dtype normalization after all model mutations are done.
-    model = training_strategy(model)
-    model = cast_model_to_training_dtype(model, training_args)
-    original_use_cache = getattr(model.config, "use_cache", None)
-    if training_args.gradient_checkpointing and original_use_cache is not None:
-        model.config.use_cache = False
-
-    # Only the local main process builds a missing Arrow cache. Other workers
-    # wait here and then open the completed cache instead of contending for the
-    # same datasets file lock.
-    with training_args.main_process_first(desc="build the training dataset cache"):
-        data_module = make_supervised_data_module(
-            processor=processor,
-            data_args=data_args,
-        )
-
-    log_trainable_params(model)
-    trainer = TinyLlavaTrainer(
-        model=model,
-        processing_class=processor,
-        args=training_args,
-        **data_module,
-    )
-    resume_checkpoint = resolve_resume_checkpoint(training_args)
-
-    try:
-        trainer.train(resume_from_checkpoint=resume_checkpoint)
-    finally:
-        if original_use_cache is not None:
-            model.config.use_cache = original_use_cache
-    training_strategy.save(model, trainer)
+    config = load_config(options.config, options.overrides)
+    runtime = {
+        key: value
+        for key, value in {
+            "deepspeed": options.deepspeed,
+            "local_rank": options.local_rank,
+        }.items()
+        if value is not None
+    }
+    if runtime:
+        config = merge_mappings(config, {"training": {"runtime": runtime}})
+    get_algorithm(config.get("algorithm", "sft")).run(config)
 
 
 if __name__ == "__main__":

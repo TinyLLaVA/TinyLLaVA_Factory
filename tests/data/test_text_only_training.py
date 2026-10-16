@@ -5,8 +5,8 @@ import torch
 from torch import nn
 
 from tinyllava.data.dataset import make_supervised_data_module
-from tinyllava.train.modality_trainer import TinyLlavaTrainer
-from tinyllava.utils.arguments import DataArguments, TrainingArguments
+from tinyllava.train.algorithms.sft_trainer import TinyLlavaTrainer
+from tinyllava.hparams.arguments import DataArguments, TrainingArguments
 from tinyllava.utils.constants import IGNORE_INDEX
 
 

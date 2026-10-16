@@ -7,7 +7,7 @@ from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Split
 from transformers import PreTrainedTokenizerFast
 
-from tinyllava.configuration import load_train_config, training_stages
+from tinyllava.train.workflow import training_stages
 from tinyllava.data.chat_template import inject_tinyllava_anchors
 from tinyllava.data.chat_template.loading import resolve_chat_template
 
@@ -75,14 +75,6 @@ def test_llava_preserves_questions_history_and_assistant_mask():
 
 @pytest.mark.parametrize("preset", ["phi", "openelm"])
 def test_presets_without_native_templates_use_llava(preset):
-    for recipe in ("pretrain", "finetune"):
-        config = load_train_config(
-            ROOT / f"configs/train/{recipe}.yaml", [f"model={preset}"]
-        )
-        assert (
-            config["model"]["chat_template_path"]
-            == "configs/chat_templates/llava.jinja"
-        )
     for path in (ROOT / "configs/experiments").glob(f"{preset}*.yaml"):
         for _, config, _ in training_stages(path):
             assert (

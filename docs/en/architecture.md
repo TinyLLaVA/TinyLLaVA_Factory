@@ -48,6 +48,20 @@ Use `tinyllava.eval.batch_generation` for datasets,
 `tinyllava.eval.single_turn` for command-line inference, and
 `tinyllava.serve.app` for the Web UI.
 
+## CLI and execution responsibilities
+
+`tinyllava.cli` dispatches training, evaluation, and conversation entry points.
+`utils/config.py` implements recursive `from` references with OmegaConf merging; workflows only
+resolve runtime stage inheritance, checkpoints, and execution steps.
+`hparams/training.py` owns common training groups, validation, HF argument adaptation,
+and conventional batch derivation; `hparams/tuning.py` defines update policies.
+`train/algorithms/sft.py` runs supervised training and `sft_trainer.py` contains
+its Trainer and sampler extensions. `train/strategy/` implements freezing and LoRA.
+Other algorithms belong beside SFT inside `algorithms/`, reusing shared parameters
+while replacing their data, batch semantics, or loop. `runner.py` only executes
+commands, manages processes, and merges outputs. Evaluation tasks own their
+adapters, conversion, and scoring steps.
+
 ## Module responsibilities
 
 | Module | Responsibility |
@@ -56,7 +70,8 @@ Use `tinyllava.eval.batch_generation` for datasets,
 | `tinyllava.data` | Dataset adapters, processor creation, templates, and collator |
 | `tinyllava.train` | Training entry point, tuning strategies, and sampling |
 | `tinyllava.eval` | Generation, task loaders, and evaluators |
-| `tinyllava.utils` | Arguments, configuration, checkpoint discovery, and loading |
+| `tinyllava.hparams` | Shared argument types, grouped training settings, and validation |
+| `tinyllava.utils` | YAML composition, checkpoint discovery, and loading |
 | `tinyllava.serve` | Interactive Web UI |
 
 See the [extension guide](guides/extending.md) and [API reference](reference/model.md)
