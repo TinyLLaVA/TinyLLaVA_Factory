@@ -22,7 +22,7 @@ from tinyllava.utils.model_loading import load_tinyllava_checkpoint_bundle
 
 def split_list(items: list[Any], n: int) -> list[list[Any]]:
     chunk_size = math.ceil(len(items) / n)
-    return [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
+    return [items[i * chunk_size : (i + 1) * chunk_size] for i in range(n)]
 
 
 def get_chunk(items: list[Any], n: int, k: int) -> list[Any]:

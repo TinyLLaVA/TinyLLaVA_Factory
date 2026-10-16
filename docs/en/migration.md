@@ -260,7 +260,7 @@ resource cost. The current built-in task set is documented in
 
 v2.0 is unreleased. Intermediate configuration and internal API changes do not
 retain compatibility branches. Final breaking changes are recorded in the
-[v2.0 changelog](../../CHANGELOG.md); configuration is validated against the current schema.
+[v2.0 changelog](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/develop/CHANGELOG.md); configuration is validated against the current schema.
 
 v2 changes extension and configuration interfaces. Original experiments remain
 available through `legacy/v1`; use a separate environment when reproducing them.

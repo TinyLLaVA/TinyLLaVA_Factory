@@ -55,7 +55,7 @@ def test_auto_image_processor_preserves_saved_preprocessing(tmp_path, processor_
     )
 
 
-@pytest.mark.parametrize("strategy,count", [("default", 8), ("full", 10)])
+@pytest.mark.parametrize("strategy,count", [(None, 8), ("default", 8), ("full", 10)])
 def test_mof_processor_expansion_and_auto_round_trip(tmp_path, strategy, count):
     config = TinyLlavaConfig(
         vision_config=MofVisionConfig(),

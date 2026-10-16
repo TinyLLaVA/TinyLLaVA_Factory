@@ -1,3 +1,5 @@
+import re
+
 from transformers import Trainer
 
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
@@ -102,13 +104,12 @@ class BaseTrainingStrategy:
             if from_layer > -1:
                 log(f"Tune the vision tower from layer {from_layer}!")
                 for name, parameter in model.model.vision_tower.named_parameters():
-                    if "vision_model.encoder.layers." in name:
-                        layer_id = int(
-                            name.split("vision_model.encoder.layers.")[-1].split(".")[0]
-                        )
-                        parameter.requires_grad = layer_id >= from_layer
-                    else:
-                        parameter.requires_grad = False
+                    layer = re.search(
+                        r"(?:^|\.)encoder\.(?:layers|layer)\.(\d+)\.", name
+                    )
+                    parameter.requires_grad = (
+                        layer is not None and int(layer[1]) >= from_layer
+                    )
         return model
 
     def _set_connector_tuning(

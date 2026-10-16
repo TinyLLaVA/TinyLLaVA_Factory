@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+
+import pytest
 import torch
 from transformers import (
     LlamaConfig,
@@ -11,9 +14,15 @@ from transformers import (
 
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
+from tinyllava.hparams.tuning import TuningArguments
+from tinyllava.train.strategy.peft_strategy import LoraInt8TrainingStrategy
+from tinyllava.utils.precision import cast_model_to_training_dtype
 
 
-def test_from_pretrained_components_loads_causal_head_and_vision_only(tmp_path):
+@pytest.mark.parametrize("quantized", [False, True])
+def test_from_pretrained_components_loads_causal_head_and_vision_only(
+    tmp_path, quantized
+):
     language_path = tmp_path / "language"
     vision_path = tmp_path / "vision"
 
@@ -59,6 +68,13 @@ def test_from_pretrained_components_loads_causal_head_and_vision_only(tmp_path):
         config,
         language_model_name_or_path=str(language_path),
         vision_model_name_or_path=str(vision_path),
+        language_model_loading_kwargs=(
+            LoraInt8TrainingStrategy(
+                SimpleNamespace(bf16=False, fp16=False), TuningArguments()
+            ).language_model_loading_kwargs()
+            if quantized
+            else {}
+        ),
     )
 
     assert isinstance(model.model.vision_tower, SiglipVisionModel)
@@ -72,3 +88,23 @@ def test_from_pretrained_components_loads_causal_head_and_vision_only(tmp_path):
         model.model.vision_tower.embeddings.patch_embedding.weight,
         siglip.vision_model.embeddings.patch_embedding.weight,
     )
+    if quantized:
+        from peft.tuners.lora.bnb import Linear8bitLt
+
+        assert model.is_loaded_in_8bit
+        model = LoraInt8TrainingStrategy(
+            None, TuningArguments(tune_type_llm="lora", peft={"r": 2})
+        )(model)
+        cast_model_to_training_dtype(model, SimpleNamespace(bf16=False, fp16=False))
+        assert isinstance(
+            model.get_base_model().model.language_model.layers[0].self_attn.q_proj,
+            Linear8bitLt,
+        )
+        ids = torch.tensor([[1, 2, 3]])
+        model(input_ids=ids, labels=ids).loss.backward()
+        assert (
+            model.get_base_model()
+            .model.language_model.layers[0]
+            .self_attn.q_proj.lora_B.default.weight.grad
+            is not None
+        )

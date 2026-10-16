@@ -42,8 +42,9 @@ class TinyLlavaConfig(PreTrainedConfig):
         image_token_index: Token ID replaced by projected image features.
         image_seq_length: Image sequence-length metadata stored with the model.
         projector_hidden_act: Activation used when creating the default connector config.
-        vision_feature_select_strategy: `default` removes the first vision token;
-            `full` keeps all tokens, including for patch-only backbones.
+        vision_feature_select_strategy: When omitted, select `full` for patch-only
+            backbones and `default` for backbones with a leading CLS token.
+            Explicit `default` removes the first token; `full` keeps all tokens.
         vision_feature_layer: Hidden-state layer index or indices selected for projection.
         multimodal_projector_bias: Bias setting for the default connector config.
         tie_word_embeddings: Share input and output token embeddings; also enabled
@@ -66,7 +67,7 @@ class TinyLlavaConfig(PreTrainedConfig):
     image_token_index: int = 32000
     image_seq_length: int = 576
     projector_hidden_act: str = "gelu"
-    vision_feature_select_strategy: Literal["default", "full"] = "default"
+    vision_feature_select_strategy: Literal["default", "full"] | None = None
     vision_feature_layer: int | list[int] = -2
     multimodal_projector_bias: bool = True
     tie_word_embeddings: bool = False
@@ -94,6 +95,10 @@ class TinyLlavaConfig(PreTrainedConfig):
         self.vision_config = getattr(
             self.vision_config, "vision_config", self.vision_config
         )
+        if self.vision_feature_select_strategy is None:
+            self.vision_feature_select_strategy = (
+                "full" if self.num_additional_image_tokens == 0 else "default"
+            )
 
         if isinstance(self.text_config, dict):
             text_config = dict(self.text_config)
@@ -124,6 +129,20 @@ class TinyLlavaConfig(PreTrainedConfig):
             )
 
         super().__post_init__(**kwargs)
+
+    @property
+    def num_additional_image_tokens(self) -> int:
+        """Vision tokens outside the patch grid, shared with preprocessing.
+
+        Custom vision configs can declare this count explicitly. Native SigLIP
+        has no CLS; CLIP, DINO and MoF have one, followed by any DINO registers.
+        """
+        value = getattr(self.vision_config, "num_additional_image_tokens", None)
+        if value is not None:
+            return value
+        if "siglip" in self.vision_config.model_type:
+            return 0
+        return 1 + getattr(self.vision_config, "num_register_tokens", 0)
 
 
 CONFIG_MAPPING.register("tinyllava", TinyLlavaConfig)

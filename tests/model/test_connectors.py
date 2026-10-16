@@ -25,7 +25,8 @@ def connector_config(name):
 
 
 @pytest.mark.parametrize("name", ["identity", "qformer", "resampler"])
-def test_connector_multimodal_training_and_round_trip(tmp_path, name):
+@pytest.mark.parametrize("batch_size", [1, 2])
+def test_connector_multimodal_training_and_round_trip(tmp_path, name, batch_size):
     config = TinyLlavaConfig(
         text_config=LlamaConfig(
             vocab_size=32,
@@ -49,16 +50,17 @@ def test_connector_multimodal_training_and_round_trip(tmp_path, name):
     )
     model = TinyLlavaForConditionalGeneration(config).eval()
     count = 4 if name == "identity" else 3
-    ids = torch.tensor([[1] + [31] * count + [2]])
-    pixels = torch.randn(1, 3, 16, 16)
+    ids = torch.tensor([[1] + [31] * count + [2]] * batch_size)
+    pixels = torch.randn(batch_size, 3, 16, 16)
     result = model(input_ids=ids, pixel_values=pixels, labels=ids)
     result.loss.backward()
     assert model.model.vision_tower.embeddings.patch_embedding.weight.grad is not None
     for parameter in model.model.multi_modal_projector.parameters():
         assert parameter.grad is not None
     features = model.model.get_image_features(
-        pixels, image_sizes=torch.tensor([[16, 16]])
+        pixels, image_sizes=torch.tensor([[16, 16]] * batch_size)
     )
+    assert len(features.pooler_output) == batch_size
     assert features.pooler_output[0].shape == (count, 16)
     model.save_pretrained(tmp_path)
     restored = TinyLlavaForConditionalGeneration.from_pretrained(tmp_path).eval()

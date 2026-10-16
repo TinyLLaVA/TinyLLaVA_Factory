@@ -204,7 +204,7 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
                 )
                 for size in split_sizes
             ]
-            image_features = torch.split(image_features.squeeze(0), split_sizes)
+            image_features = torch.split(image_features.flatten(0, 1), split_sizes)
         else:
             image_features = list(image_features)
         image_outputs.pooler_output = image_features
@@ -287,6 +287,7 @@ class TinyLlavaModel(TinyLlavaPreTrainedModel):
             )
 
         outputs = self.language_model(
+            None,  # input_ids; positional input also supports PEFT modules_to_save.
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=past_key_values,
@@ -405,6 +406,14 @@ class TinyLlavaForConditionalGeneration(TinyLlavaPreTrainedModel, GenerationMixi
             lm_head=lm_head,
         )
         model.generation_config = causal_lm.generation_config
+        if getattr(causal_lm, "is_quantized", False):
+            # PEFT and Trainer inspect the composite, not the detached LM backbone.
+            model.is_quantized = True
+            model.hf_quantizer = causal_lm.hf_quantizer
+            model.quantization_method = causal_lm.quantization_method
+            model.is_loaded_in_8bit = getattr(causal_lm, "is_loaded_in_8bit", False)
+            model.is_loaded_in_4bit = getattr(causal_lm, "is_loaded_in_4bit", False)
+            model.config.quantization_config = causal_lm.config.quantization_config
         return model
 
     def get_input_embeddings(self) -> nn.Module:

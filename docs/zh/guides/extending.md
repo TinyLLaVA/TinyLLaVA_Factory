@@ -96,7 +96,7 @@ dinov2_config:
 ```bash
 python -m tinyllava.cli train --config configs/experiments/qwen2_instruct.yaml --steps pretrain \
   model.vision_model_name_or_path=output/mof-vision \
-  model.connector.from=mof model.vision_feature_select_strategy=default \
+  model.connector.from=mof \
   experiment_name=qwen2_mof
 ```
 
@@ -120,6 +120,13 @@ python -m tinyllava.cli train --config configs/experiments/qwen2_instruct.yaml -
 架构的共同要求。
 
 ## 视觉塔与连接器的 token 长度
+
+`vision_feature_select_strategy` 可以省略。`TinyLlavaConfig` 在解析视觉子配置后
+确定默认值：SigLIP/SigLIP2 使用 `full`，保留所有 patch；CLIP、DINO 和 MoF 使用
+`default`，去掉首个 CLS token，保留 DINO 的 register tokens。自定义视觉配置可通过
+`num_additional_image_tokens` 声明额外 token 数，为零时默认使用 `full`。
+模型和 processor 共用这份元数据与解析结果。显式设置优先，checkpoint 保存确定后的
+策略；后续加载未提供覆写时保留 checkpoint 设置。
 
 `ComponentProcessorMixin` 保存 `vision_config` 和 `connector_config`，
 `TinyLlavaProcessor` 将该 Mixin 与 HF `LlavaProcessor` 组合。处理每张图像时，

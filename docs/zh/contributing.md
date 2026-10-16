@@ -16,7 +16,7 @@ python -m http.server 8000 --bind 127.0.0.1 --directory site
 
 英文入口为 `http://localhost:8000/`，中文入口为 `http://localhost:8000/zh/`。SSH 环境需转发 8000 端口。修改页面后重新构建；单语言热重载可用 `zensical serve` 或 `zensical serve -f zensical.zh.toml`。
 
-构建脚本生成两种语言，并检查页面、API 锚点、语言链接和本地资源。生成产物保存在 `site/`。
+构建脚本通过 Zensical 的 `--strict` 检查生成两种语言，产物保存在 `site/`。
 
 ## 编辑页面与 API 参考
 
@@ -36,18 +36,34 @@ API 参考使用 mkdocstrings 内置的类型标识、参数标题、独立签�
 
 中文正文每段写在一个源文件行内，避免 Markdown 软换行引入空格。保留 `checkpoint`、`tokenizer`、`processor`、`collator` 和 `chat template` 等技术术语。代码块、表格和不同列表项各自保留换行。
 
-## 使用 GitHub Actions 发布
+## 测试与 CI
 
-`Documentation` 工作流检查面向 `develop` 的相关 PR 与推送，保留 `tinyllava-docs` 预览产物 14 天。
+安装测试依赖后运行快速测试；`slow` 单独执行：
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest
+python -m pytest -m slow
+```
+
+默认测试排除 `slow`。慢测试创建随机初始化的微型 Llama/CLIP，以及红、蓝两张纯色图片，用同一个问题提问颜色。测试经训练 CLI 启动真实 worker，保存后重新加载 checkpoint，要求生成的两个单词答案均正确。测试离线使用 CPU，覆盖 `configs/training/` 下的所有预设及种子 0、42；保留各预设的调优策略，包括 `qlora_finetune` 当前使用的 int8 策略，仅为小任务覆盖 batch、学习率、步数和运行设置。
+
+图片放在提示末尾，使仅训练 connector 的 pretrain 也能在冻结随机语言模型时学习。这个过拟合测试验证上述预设和种子的训练、adapter 保存与推理链路。
+
+颜色测试保留预设默认开启的梯度检查点。快速测试还覆盖七种模型预设的缩小版反向传播、保存重载与生成，以及 PEFT 组件训练策略、int8 组件组装、多图 connector 和评测分片。另一个慢测试从本地组件组装 Qwen2/SigLIP，检查相同种子的训练可重复性、LoRA 断点恢复、连续两个 LoRA 阶段及后续全量微调。
+
+`CI` 工作流执行快速测试，并严格构建一次双语文档。手动运行时勾选 `slow` 可追加这些训练测试；构建站点保存在 `github-pages` 产物中，保留 14 天。
+
+## 使用 GitHub Actions 发布
 
 发布步骤：
 
 1. 将工作流集成到仓库默认分支，以启用手动运行。
 2. 在 **Settings → Pages → Source** 选择 **GitHub Actions**。
 3. 在 `github-pages` 环境的部署规则中允许 `develop`。
-4. 打开 **Actions → Documentation → Run workflow**，选择 `develop` 并勾选 `deploy`。
+4. 打开 **Actions → CI → Run workflow**，选择 `develop` 并勾选 `deploy`。
 
-发布时根据 GitHub Pages 返回的地址配置两种语言。本地测试部署路径可运行：
+发布使用同一份已验证的构建产物，两种语言的地址由 GitHub Pages 提供。本地测试部署路径可运行：
 
 ```bash
 python docs/build.py --base-url https://example.org/project

@@ -133,7 +133,7 @@ Auto 分派解决类如何被选中；新 backbone 仍须满足组合模型对�
 ## 兼容性与迁移
 
 v2.0 尚未发布，开发过程中的配置与内部 API 调整不保留兼容分支。
-最终破坏性变更统一记录在 [v2.0 发布日志](../../CHANGELOG.md)，配置按当前 schema 校验。
+最终破坏性变更统一记录在 [v2.0 发布日志](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/develop/CHANGELOG.md)，配置按当前 schema 校验。
 
 v2 改变了扩展和配置接口。原始实验可通过 `legacy/v1` 使用，复现时应采用独立环境；历史 `doc` 分支保留 v1 Sphinx 文档。
 

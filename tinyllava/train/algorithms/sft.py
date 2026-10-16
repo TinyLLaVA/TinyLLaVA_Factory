@@ -11,6 +11,8 @@ __all__ = ["SECTIONS", "validate_config", "prepare_config", "run"]
 
 
 def run(resolved_config: dict) -> None:
+    from transformers import enable_full_determinism, set_seed
+
     from tinyllava.data.chat_template.loading import resolve_chat_template
     from tinyllava.data.dataset import make_supervised_data_module
     from tinyllava.data.image_processor import AutoImageProcessor
@@ -41,6 +43,10 @@ def run(resolved_config: dict) -> None:
         arguments.training,
     )
     logger_setting(getattr(training_args, "output_dir", None))
+    if training_args.full_determinism:
+        enable_full_determinism(training_args.seed)
+    else:
+        set_seed(training_args.seed)
     configure_zero3_gradient_checkpointing(training_args)
 
     paths = resolve_component_paths(model_args)

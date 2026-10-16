@@ -119,7 +119,7 @@ Then select both the vision tower and its connector explicitly:
 ```bash
 python -m tinyllava.cli train --config configs/experiments/qwen2_instruct.yaml --steps pretrain \
   model.vision_model_name_or_path=output/mof-vision \
-  model.connector.from=mof model.vision_feature_select_strategy=default \
+  model.connector.from=mof \
   experiment_name=qwen2_mof
 ```
 
@@ -149,6 +149,15 @@ are a constraint of this packing, not a universal multi-VT requirement.
 
 
 ## Vision and connector token lengths
+
+`vision_feature_select_strategy` can be omitted. After resolving the vision
+sub-config, `TinyLlavaConfig` selects `full` for SigLIP/SigLIP2 to keep every
+patch, and `default` for CLIP, DINO and MoF to remove the leading CLS token
+while retaining DINO register tokens. Custom vision configs can declare
+`num_additional_image_tokens`; zero selects `full` by default. The model and
+processor share this metadata and resolved selection. Explicit settings take
+precedence, and checkpoints store the resolved strategy and retain it on reload
+unless an override is supplied.
 
 `ComponentProcessorMixin` persists `vision_config` and `connector_config`.
 `TinyLlavaProcessor` combines this mixin with HF `LlavaProcessor`.

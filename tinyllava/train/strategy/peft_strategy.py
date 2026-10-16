@@ -3,7 +3,8 @@
 from typing import cast
 
 import torch
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, PeftModel, get_peft_model
+from peft.utils.other import ModulesToSaveWrapper
 from transformers import BitsAndBytesConfig
 
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
@@ -30,6 +31,21 @@ class LoraTrainingStrategy(BaseTrainingStrategy):
                 model,
                 self.lora_skip_modules(),
             )
+        # PEFT checkpoints must also retain components trained without adapters.
+        full_modules = {
+            "language_model": self.tuning.tune_type_llm,
+            "lm_head": self.tuning.tune_type_llm,
+            "vision_tower": self.tuning.tune_type_vision_tower,
+            "multi_modal_projector": self.tuning.tune_type_connector,
+        }
+        lora_kwargs["modules_to_save"] = sorted(
+            set(lora_kwargs.get("modules_to_save") or [])
+            | {
+                name
+                for name, policy in full_modules.items()
+                if policy in {"full", "partially-tune"}
+            }
+        )
         lora_kwargs.setdefault("task_type", "CAUSAL_LM")
         lora_config = LoraConfig(
             **lora_kwargs,
@@ -39,6 +55,14 @@ class LoraTrainingStrategy(BaseTrainingStrategy):
             model = cast(
                 TinyLlavaForConditionalGeneration, get_peft_model(model, lora_config)
             )
+        return model
+
+    def apply_tuning_policy(self, model: PeftModel) -> PeftModel:
+        super().apply_tuning_policy(model.get_base_model())
+        # Only the active saved copy participates in forward; keep its base frozen.
+        for module in model.modules():
+            if isinstance(module, ModulesToSaveWrapper):
+                module.original_module.requires_grad_(False)
         return model
 
     def lora_skip_modules(self) -> list[str]:
@@ -63,7 +87,14 @@ class LoraInt8TrainingStrategy(LoraTrainingStrategy):
         return {
             "torch_dtype": torch_dtype,
             "low_cpu_mem_usage": True,
-            "quantization_config": BitsAndBytesConfig(load_in_8bit=True),
+            "quantization_config": BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_skip_modules=[
+                    "lm_head",
+                    "model.vision_tower",
+                    "model.multi_modal_projector",
+                ],
+            ),
         }
 
 

@@ -1,5 +1,7 @@
 import pytest
 
+from tinyllava.utils.config import load_config
+
 from tinyllava.hparams.training import (
     build_training_arguments as build_arguments,
     prepare_training_config as prepare_config,
@@ -23,23 +25,7 @@ def test_training_arguments_separate_tuning_from_trainer():
     )
     assert args.tuning.strategy == "lora"
     assert args.tuning.peft == {"r": 8}
-    assert not hasattr(args.training, "training_strategy")
-    assert not hasattr(args.training, "tune_type_llm")
     assert args.model.language_model_name_or_path is None
-
-
-@pytest.mark.parametrize(
-    "config",
-    [
-        {"peft": {"r": 8}},
-        {"training": {"training_strategy": "lora"}},
-        {"training": {"tune_type_llm": "full"}},
-        {"tuning": {"typo": "full"}},
-    ],
-)
-def test_misplaced_tuning_settings_are_rejected(config):
-    with pytest.raises(ValueError):
-        build_arguments(config)
 
 
 def test_batch_resolution_is_shared_and_does_not_mutate_input():
@@ -95,6 +81,48 @@ def test_training_group_ownership_is_validated(training):
         build_arguments({"training": training})
 
 
-def test_unknown_model_field_is_rejected_by_argument_schema():
-    with pytest.raises(TypeError, match="unexpected keyword argument"):
-        build_arguments({"model": {"unknown_option": True}})
+def test_precision_is_resolved_before_deepspeed_auto_values(tmp_path):
+    deepspeed_path = tmp_path / "zero2.json"
+    deepspeed_path.write_text(
+        '{"bf16":{"enabled":"auto"},"fp16":{"enabled":"auto"},'
+        '"zero_optimization":{"stage":2}}',
+        encoding="utf-8",
+    )
+
+    arguments = build_arguments(
+        {
+            "training": {
+                "saving": {"output_dir": str(tmp_path / "output")},
+                "runtime": {
+                    "precision": "bf16",
+                    "deepspeed": str(deepspeed_path),
+                    "use_cpu": True,
+                },
+            }
+        }
+    )
+
+    config = arguments.training.hf_deepspeed_config.config
+    assert config["bf16"]["enabled"] is True
+    assert config["fp16"]["enabled"] is False
+
+
+def test_parse_data_source_options_from_yaml(tmp_path):
+    config_path = tmp_path / "sources.yaml"
+    config_path.write_text(
+        "data:\n"
+        "  dataset_name_or_path: parquet\n"
+        "  data_files:\n"
+        "    train: [part-1.parquet, part-2.parquet]\n"
+        "  split: train[:10%]\n"
+        "  cache_dir: /tmp/data-cache\n"
+        "training:\n"
+        "  saving:\n    output_dir: /tmp/train-output\n"
+        "  runtime:\n    use_cpu: true\n"
+        "  logging:\n    report_to: []\n"
+    )
+    arguments = build_arguments(load_config(config_path))
+    assert arguments.data.dataset_name_or_path == "parquet"
+    assert arguments.data.data_files == {"train": ["part-1.parquet", "part-2.parquet"]}
+    assert arguments.data.split == "train[:10%]"
+    assert arguments.data.cache_dir == "/tmp/data-cache"

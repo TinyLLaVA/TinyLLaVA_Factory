@@ -1,9 +1,18 @@
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from tinyllava.eval import batch_generation
 from tinyllava.hparams.parser import build_eval_arguments
 from tinyllava.eval.tasks.loader_base import GenerationExample
+
+
+@pytest.mark.parametrize("size,shards", [(0, 4), (2, 4), (5, 4), (8, 4)])
+def test_generation_shards_cover_samples_in_order(size, shards):
+    samples = list(range(size))
+    chunks = [batch_generation.get_chunk(samples, shards, i) for i in range(shards)]
+    assert [sample for chunk in chunks for sample in chunk] == samples
 
 
 class FakeAdapter:

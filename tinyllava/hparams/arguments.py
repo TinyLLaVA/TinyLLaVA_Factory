@@ -11,7 +11,7 @@ class ModelArguments:
     """Select component sources and multimodal preprocessing for training.
 
     Attributes:
-        pretrained_model_name_or_path: Complete TinyLLaVA checkpoint. When set,
+        pretrained_model_name_or_path: Complete TinyLLaVA or PEFT checkpoint. When set,
             weights and component configs are loaded from this source.
         language_model_name_or_path: Language-model source for component assembly.
         tokenizer_name_or_path: Tokenizer override; otherwise use the composite
@@ -26,15 +26,17 @@ class ModelArguments:
         chat_template: Inline Jinja template override, exclusive with `chat_template_path`.
         chat_template_path: UTF-8 Jinja template file overriding the tokenizer template.
         vision_feature_layer: Vision hidden-state layer indices used by the connector.
+            `None` preserves the checkpoint setting, or the model default for assembly.
         vision_feature_select_strategy: `default` drops the first vision token;
-            `full` retains all tokens. Patch-only backbones require `full`.
+            `full` retains all tokens. When omitted, inherit the checkpoint setting
+            or infer it from the vision backbone when assembling a new model.
     """
 
     pretrained_model_name_or_path: str | None = field(
         default=None,
         metadata={
             "help": (
-                "Complete TinyLLaVA checkpoint path. When set, load the composite "
+                "TinyLLaVA or PEFT checkpoint path. When set, load the composite "
                 "model instead of assembling language and vision components."
             )
         },
@@ -85,13 +87,15 @@ class ModelArguments:
         default=None,
         metadata={"help": "Path to a Hugging Face/Jinja chat template override."},
     )
-    vision_feature_layer: int | list[int] = field(
-        default=-2,
+    vision_feature_layer: int | list[int] | None = field(
+        default=None,
         metadata={"help": "Vision layer(s) used by the connector."},
     )
-    vision_feature_select_strategy: Literal["default", "full"] = field(
-        default="default",
-        metadata={"help": "LLaVA feature selection strategy."},
+    vision_feature_select_strategy: Literal["default", "full"] | None = field(
+        default=None,
+        metadata={
+            "help": "Vision feature selection override; otherwise inherit or infer."
+        },
     )
 
 

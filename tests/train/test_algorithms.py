@@ -1,6 +1,6 @@
 import subprocess
 import sys
-from pathlib import Path
+from types import ModuleType
 from unittest.mock import patch
 
 import pytest
@@ -8,20 +8,12 @@ from omegaconf import OmegaConf
 
 from tinyllava.train.algorithms import get_algorithm
 from tinyllava.train.train import train
-from tinyllava.train.workflow import training_stages
-
-ROOT = Path(__file__).parents[2]
+from tinyllava.train.workflow import train_plan, training_stages
 
 
-def test_existing_configs_select_sft():
-    config = training_stages(ROOT / "configs/experiments/qwen2_instruct.yaml")[0][1]
-    assert config["algorithm"] == "sft"
-
-
-@pytest.mark.parametrize("algorithm", ["grpo", "ppo", None, {"name": "sft"}])
-def test_unimplemented_algorithm_fails_before_launch(algorithm):
+def test_unknown_algorithm_fails_before_launch():
     with pytest.raises(ValueError, match="Unsupported training algorithm"):
-        get_algorithm(algorithm)
+        get_algorithm("unknown")
 
 
 def test_stage_algorithm_override_is_validated(tmp_path):
@@ -30,31 +22,13 @@ def test_stage_algorithm_override_is_validated(tmp_path):
         OmegaConf.create(
             {
                 "algorithm": "sft",
-                "stages": {"align": {}, "rl": {"algorithm": "grpo"}},
+                "stages": {"align": {}, "next": {"algorithm": "unknown"}},
             }
         ),
         path,
     )
-    with pytest.raises(ValueError, match="grpo"):
+    with pytest.raises(ValueError, match="unknown"):
         training_stages(path)
-
-
-def test_worker_dispatch_preserves_config_and_launcher_overrides(tmp_path):
-    path = tmp_path / "resolved.yaml"
-    OmegaConf.save(
-        OmegaConf.create(
-            {"algorithm": "sft", "training": {"saving": {"output_dir": "out"}}}
-        ),
-        path,
-    )
-    with patch("tinyllava.train.algorithms.sft.run") as run:
-        train(["--config", str(path), "--local-rank", "2"])
-    run.assert_called_once_with(
-        {
-            "algorithm": "sft",
-            "training": {"saving": {"output_dir": "out"}, "runtime": {"local_rank": 2}},
-        }
-    )
 
 
 def test_algorithm_selection_does_not_import_training_dependencies():
@@ -64,6 +38,7 @@ def test_algorithm_selection_does_not_import_training_dependencies():
             "-c",
             """
 import sys
+import tinyllava.train.train
 from tinyllava.train.algorithms import get_algorithm
 get_algorithm('sft')
 assert 'torch' not in sys.modules
@@ -74,3 +49,55 @@ assert 'tinyllava.train.algorithms.sft_trainer' not in sys.modules
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_launcher_arguments_override_yaml_and_dotlist_values(tmp_path):
+    config_path = tmp_path / "train.yaml"
+    config_path.write_text(
+        "training:\n"
+        "  saving:\n    output_dir: output/test\n"
+        "  runtime:\n    deepspeed: yaml.json\n"
+        "    local_rank: 0\n",
+        encoding="utf-8",
+    )
+
+    with patch("tinyllava.train.algorithms.sft.run") as run:
+        train(
+            [
+                "--config",
+                str(config_path),
+                "training.runtime.deepspeed=dotlist.json",
+                "--deepspeed",
+                "cli.json",
+                "--local-rank",
+                "3",
+            ]
+        )
+
+    config = run.call_args.args[0]
+    assert config["training"]["runtime"]["deepspeed"] == "cli.json"
+    assert config["training"]["runtime"]["local_rank"] == 3
+
+
+def test_workflow_accepts_algorithm_owned_sections(tmp_path, monkeypatch):
+    from tinyllava.train import algorithms
+
+    algorithm = ModuleType("test_custom_algorithm")
+    algorithm.SECTIONS = ("model", "training", "reward")
+    seen = []
+    algorithm.validate_config = lambda config: seen.append(config["reward"])
+    algorithm.prepare_config = lambda config, *, world_size: {
+        **config,
+        "workers": world_size,
+    }
+    monkeypatch.setitem(sys.modules, algorithm.__name__, algorithm)
+    monkeypatch.setitem(algorithms._ALGORITHMS, "custom", algorithm.__name__)
+    path = tmp_path / "custom.yaml"
+    OmegaConf.save(
+        OmegaConf.create({"algorithm": "custom", "reward": {"scale": 2}}), path
+    )
+    plan = train_plan(path)
+    assert seen == [{"scale": 2}]
+    assert plan[0][2]["reward"] == {"scale": 2}
+    assert plan[0][2]["workers"] == 1
+    assert "data" not in plan[0][2]

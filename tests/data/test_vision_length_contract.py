@@ -37,8 +37,8 @@ class GridVisionConfig(PreTrainedConfig):
         *,
         vision_feature_select_strategy: str,
     ) -> int:
-        if vision_feature_select_strategy != "default":
-            raise ValueError("GridVisionConfig expects its default selection")
+        if vision_feature_select_strategy != "full":
+            raise ValueError("GridVisionConfig expects full patch selection")
         return int(image_inputs["image_grid_thw"][image_idx].prod())
 
 
@@ -93,8 +93,8 @@ def test_vision_hook_bypasses_llava_and_composes_with_connector(
     assert restored._get_num_multimodal_tokens().num_image_tokens is None
 
     # A hook error is an extension error, not permission to fall back to HF.
-    restored.vision_feature_select_strategy = "full"
-    with pytest.raises(ValueError, match="expects its default selection"):
+    restored.vision_feature_select_strategy = "default"
+    with pytest.raises(ValueError, match="expects full patch selection"):
         restored.replace_image_token(image_inputs, 0)
 
 
@@ -105,7 +105,7 @@ def test_vision_hook_bypasses_llava_and_composes_with_connector(
         (DINOv3ViTConfig, DINOv3ViTModel),
     ],
 )
-@pytest.mark.parametrize("strategy", ["default", "full"])
+@pytest.mark.parametrize("strategy", [None, "default", "full"])
 def test_native_register_tokens_match_actual_vision_features(
     tmp_path, config_cls, model_cls, strategy
 ):
@@ -129,10 +129,10 @@ def test_native_register_tokens_match_actual_vision_features(
     )
     with torch.no_grad():
         features = model_cls(vision_config).eval()(inputs.pixel_values).last_hidden_state
-    if strategy == "default":
+    if config.vision_feature_select_strategy == "default":
         features = features[:, 1:]
     expected = features.shape[1]
-    assert expected == (6 if strategy == "default" else 7)
+    assert expected == (7 if strategy == "full" else 6)
     assert inputs.input_ids.eq(processor.image_token_id).sum().item() == expected
     assert processor._get_num_multimodal_tokens(
         image_sizes=[(16, 16)]

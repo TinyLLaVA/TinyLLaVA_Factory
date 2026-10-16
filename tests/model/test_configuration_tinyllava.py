@@ -1,6 +1,18 @@
-from transformers import AutoConfig, CLIPVisionConfig, LlamaConfig
+import json
+
+import pytest
+from transformers import (
+    AutoConfig,
+    CLIPVisionConfig,
+    Dinov2WithRegistersConfig,
+    LlamaConfig,
+    SiglipConfig,
+    SiglipVisionConfig,
+    Siglip2VisionConfig,
+)
 
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
+from tinyllava.model.vision_tower.mof import MofVisionConfig
 
 
 def test_default_config_uses_hf_nested_subconfigs():
@@ -54,7 +66,30 @@ def test_config_builds_typed_subconfigs_from_dicts():
     assert config.vision_feature_select_strategy == "full"
 
 
-def test_auto_config_round_trip_uses_tinyllava_registration(tmp_path):
+@pytest.mark.parametrize(
+    "vision_config,strategy,extra_tokens",
+    [
+        (CLIPVisionConfig(), "default", 1),
+        (SiglipVisionConfig().to_dict(), "full", 0),
+        (SiglipConfig(), "full", 0),
+        (SiglipConfig().to_dict(), "full", 0),
+        (Siglip2VisionConfig(), "full", 0),
+        (Dinov2WithRegistersConfig(num_register_tokens=2), "default", 3),
+        (MofVisionConfig(), "default", 1),
+    ],
+    ids=[
+        "clip",
+        "siglip-dict",
+        "siglip-composite",
+        "siglip-composite-dict",
+        "siglip2",
+        "dino-registers",
+        "mof",
+    ],
+)
+def test_inferred_selection_survives_auto_config_round_trip(
+    tmp_path, vision_config, strategy, extra_tokens
+):
     config = TinyLlavaConfig(
         text_config=LlamaConfig(
             vocab_size=64,
@@ -64,19 +99,18 @@ def test_auto_config_round_trip_uses_tinyllava_registration(tmp_path):
             num_attention_heads=2,
             num_key_value_heads=2,
         ),
-        vision_config=CLIPVisionConfig(
-            hidden_size=16,
-            intermediate_size=32,
-            num_hidden_layers=1,
-            num_attention_heads=2,
-            image_size=16,
-            patch_size=8,
-        ),
+        vision_config=vision_config,
     )
+    assert config.vision_feature_select_strategy == strategy
+    assert config.num_additional_image_tokens == extra_tokens
     config.save_pretrained(tmp_path)
+    saved = json.loads((tmp_path / "config.json").read_text())
+    assert saved["vision_feature_select_strategy"] == strategy
 
     restored = AutoConfig.from_pretrained(tmp_path)
 
     assert isinstance(restored, TinyLlavaConfig)
     assert restored.text_config.hidden_size == 16
-    assert restored.vision_config.image_size == 16
+    assert type(restored.vision_config) is type(config.vision_config)
+    assert restored.vision_feature_select_strategy == strategy
+    assert restored.num_additional_image_tokens == extra_tokens

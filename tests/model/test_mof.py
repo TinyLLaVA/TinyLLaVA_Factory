@@ -125,7 +125,7 @@ def test_mof_connector_projects_branches_then_interleaves_multiple_layers():
     assert connector.dinov2.layers[0].weight.grad is not None
 
 
-@pytest.mark.parametrize("strategy,tokens", [("default", 8), ("full", 10)])
+@pytest.mark.parametrize("strategy,tokens", [(None, 8), ("default", 8), ("full", 10)])
 def test_mof_composite_forward_backward_and_checkpoint_round_trip(
     tmp_path, strategy, tokens
 ):

@@ -1,7 +1,5 @@
 algorithm: sft
-model:
-  from: qwen2_base
-  vision_feature_select_strategy: full
+model: qwen2_base
 training:
   runtime:
     deepspeed: configs/deepspeed/zero3.json

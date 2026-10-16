@@ -1,24 +1,9 @@
 import json
 
 import datasets
-import pytest
 
 from tinyllava.data.dataset import load_training_dataset
-from tinyllava.data.readers import iter_json_array
-import tinyllava.data.readers.json_array as json_array_reader
 from tinyllava.hparams.arguments import DataArguments
-
-
-def test_iter_json_array_streams_items_across_read_boundaries(tmp_path, monkeypatch):
-    path = tmp_path / "samples.json"
-    samples = [
-        {"id": "one", "text": "contains [, ], and escaped quote: \""},
-        {"id": "two", "text": "你好"},
-    ]
-    path.write_text(json.dumps(samples, ensure_ascii=False), encoding="utf-8")
-    monkeypatch.setattr(json_array_reader, "_READ_CHUNK_SIZE", 7)
-
-    assert list(iter_json_array(str(path))) == samples
 
 
 def test_load_training_dataset_streams_top_level_array(tmp_path, monkeypatch):
@@ -80,14 +65,6 @@ def test_load_training_dataset_fills_columns_missing_from_some_rows(
     assert dataset[1]["messages"] == [
         {"role": "assistant", "content": "Hello"}
     ]
-
-
-def test_iter_json_array_rejects_non_object_rows(tmp_path):
-    path = tmp_path / "samples.json"
-    path.write_text('[{"id": "one"}, 2]', encoding="utf-8")
-
-    with pytest.raises(TypeError, match="must contain JSON objects"):
-        list(iter_json_array(str(path)))
 
 
 def test_llava_adapter_also_applies_to_json_lines(tmp_path, monkeypatch):

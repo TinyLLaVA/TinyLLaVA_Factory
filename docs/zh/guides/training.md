@@ -26,6 +26,10 @@ stages:
 `model: {from: phi, model_max_length: 4096}`。显式相对路径以声明它的 YAML 为基准；
 命令行可写 `model=phi model.model_max_length=4096`。详见[配置参考](../reference/configuration.md)。
 
+`model.vision_feature_select_strategy` 默认按视觉塔识别：SigLIP 保留全部 patch，
+CLIP、DINO 和 MoF 去掉首个 CLS token。需要覆写时可显式指定 `full` 或 `default`；
+从 checkpoint 加载且未覆写时，保留其中保存的策略。
+
 `pretrain`、`finetune` 是自由的阶段名，可以改成 `align`、`sft`。训练行为由训练配置、数据和实际参数决定，不根据阶段名字判断。默认输出为 `output/<实验名>/<阶段名>/`，实验名默认取配置文件名。后续阶段自动加载上一阶段完整 checkpoint，保留已训练的连接器。
 
 ```bash

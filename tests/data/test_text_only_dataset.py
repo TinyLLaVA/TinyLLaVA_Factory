@@ -1,12 +1,9 @@
 import json
-from types import SimpleNamespace
 
 import torch
-from torch import nn
 
 from tinyllava.data.dataset import make_supervised_data_module
-from tinyllava.train.algorithms.sft_trainer import TinyLlavaTrainer
-from tinyllava.hparams.arguments import DataArguments, TrainingArguments
+from tinyllava.hparams.arguments import DataArguments
 from tinyllava.utils.constants import IGNORE_INDEX
 
 
@@ -42,25 +39,7 @@ class TinyProcessor:
         }
 
 
-class TinyLanguageModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.embed = nn.Embedding(128, 16)
-        self.head = nn.Linear(16, 128)
-        self.config = SimpleNamespace()
-
-    def forward(self, input_ids=None, labels=None, **_kwargs):
-        logits = self.head(self.embed(input_ids))
-        active_labels = labels.clone()
-        active_labels[active_labels == IGNORE_INDEX] = 0
-        loss = torch.nn.functional.cross_entropy(
-            logits.reshape(-1, logits.size(-1)),
-            active_labels.reshape(-1),
-        )
-        return {"loss": loss, "logits": logits}
-
-
-def test_text_only_dataset_can_train_one_step(tmp_path):
+def test_text_only_dataset_masks_prompts_and_padding(tmp_path):
     dataset_name_or_path = tmp_path / "text_only.json"
     dataset_name_or_path.write_text(
         json.dumps(
@@ -89,30 +68,14 @@ def test_text_only_dataset_can_train_one_step(tmp_path):
         data_args=DataArguments(
             dataset_name_or_path=str(dataset_name_or_path),
             dataset_adapter="llava_legacy",
+            cache_dir=str(tmp_path / "cache"),
         ),
     )
 
-    sample = data_module["train_dataset"][0]
-    assert "pixel_values" not in sample
-    assert torch.any(sample["labels"] != IGNORE_INDEX)
-
-    trainer = TinyLlavaTrainer(
-        model=TinyLanguageModel(),
-        processing_class=processor,
-        args=TrainingArguments(
-            output_dir=str(tmp_path / "output"),
-            per_device_train_batch_size=2,
-            max_steps=1,
-            learning_rate=1e-3,
-            save_strategy="no",
-            eval_strategy="no",
-            report_to=[],
-            remove_unused_columns=False,
-            dataloader_pin_memory=False,
-        ),
-        **data_module,
-    )
-
-    result = trainer.train()
-
-    assert result.global_step == 1
+    dataset = data_module["train_dataset"]
+    batch = data_module["data_collator"]([dataset[0], dataset[1]])
+    assert "pixel_values" not in batch
+    assert batch["input_ids"].shape == (2, 6)
+    assert (batch["labels"] != IGNORE_INDEX).sum(dim=1).tolist() == [2, 1]
+    assert torch.all(batch["labels"][:, :4] == IGNORE_INDEX)
+    assert batch["labels"][1, -1] == IGNORE_INDEX

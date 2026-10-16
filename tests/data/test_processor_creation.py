@@ -1,19 +1,20 @@
 from types import SimpleNamespace
 
 import pytest
+from transformers import SiglipImageProcessor, SiglipVisionConfig
 
+from tests.data.test_auto_vision_processing import tokenizer
 from tinyllava.data.processor import TinyLlavaProcessor
+from tinyllava.model import TinyLlavaConfig
 
 
-def test_siglip_uses_patch_only_image_token_count():
-    vision_config = SimpleNamespace(model_type="siglip_vision_model")
-
-    assert TinyLlavaProcessor._get_num_additional_image_tokens(vision_config) == 0
-
-
-def test_patch_only_backbone_requires_full_feature_selection():
+def test_explicit_incompatible_selection_is_not_silently_replaced():
+    config = TinyLlavaConfig(
+        vision_config=SiglipVisionConfig(), vision_feature_select_strategy="default"
+    )
     with pytest.raises(ValueError, match="vision_feature_select_strategy='full'"):
-        TinyLlavaProcessor._validate_image_feature_configuration(
-            num_additional_image_tokens=0,
-            vision_feature_select_strategy="default",
+        TinyLlavaProcessor.from_model(
+            model=SimpleNamespace(config=config),
+            tokenizer=tokenizer(),
+            image_processor=SiglipImageProcessor(),
         )

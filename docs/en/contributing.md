@@ -23,8 +23,8 @@ for Chinese. Forward port 8000 when working over SSH. Rebuild after editing.
 For single-language live reload, use `zensical serve` or
 `zensical serve -f zensical.zh.toml`.
 
-The build script generates both languages and checks pages, API anchors, language
-links, and local assets. Generated output is stored in `site/`.
+The build script builds both languages with Zensical's `--strict` checks.
+Generated output is stored in `site/`.
 
 ## Edit pages and API references
 
@@ -50,10 +50,41 @@ The reference uses mkdocstrings' built-in symbol badges, parameter headings, sep
 
 Write each Chinese prose paragraph on one source line to avoid spaces introduced by Markdown soft line breaks. Preserve established API terms such as `checkpoint`, `tokenizer`, `processor`, `collator`, and `chat template`. Keep code blocks, tables, and separate list items on their own lines.
 
-## Publish with GitHub Actions
+## Tests and CI
 
-The `Documentation` workflow checks relevant PRs and pushes to `develop` and
-retains the `tinyllava-docs` preview artifact for 14 days.
+Install the test extra and run the fast suite:
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest
+python -m pytest -m slow
+```
+
+The default suite excludes `slow`. The slow test creates a tiny random Llama/CLIP
+model and exactly two images, red and blue, with the same color question. It runs
+the training CLI, reloads the saved checkpoint, and requires both generated
+one-word answers to match. It runs offline on CPU for every preset in
+`configs/training/`, with seeds 0 and 42. The presets retain their tuning policies,
+including the current int8 strategy in `qlora_finetune`; the test overrides batch
+size, learning rate, steps, and runtime settings for this small task. Gradient
+checkpointing stays enabled as specified by the presets.
+
+The image ends the prompt so connector-only pretraining can learn with a frozen
+random language model. This is a bounded overfit test, covering training, adapter
+saving, and inference for these presets and seeds.
+
+The fast suite also runs tiny versions of all seven model presets through
+backward, checkpoint reload, and generation, and checks PEFT component policies,
+int8 component loading, multi-image connectors, and evaluation sharding. A second
+slow test assembles Qwen2/SigLIP from local components, checks seeded training
+reproducibility, resumes a LoRA checkpoint, chains two LoRA stages, and continues
+with full fine-tuning.
+
+The `CI` workflow runs fast tests and one strict bilingual documentation build.
+Enable `slow` in a manual run to include these training tests. Its `github-pages`
+artifact contains the built site and is retained for 14 days.
+
+## Publish with GitHub Actions
 
 To publish:
 
@@ -61,11 +92,11 @@ To publish:
    manual runs.
 2. Set **Settings → Pages → Source** to **GitHub Actions**.
 3. Allow `develop` in the `github-pages` environment's deployment rules.
-4. Open **Actions → Documentation → Run workflow**, select `develop`, and
+4. Open **Actions → CI → Run workflow**, select `develop`, and
    enable `deploy`.
 
-Publishing uses the base URL returned by GitHub Pages to configure both
-languages. To test a deployment URL locally:
+Publishing uses the same validated artifact, built with the base URL returned
+by GitHub Pages. To test a deployment URL locally:
 
 ```bash
 python docs/build.py --base-url https://example.org/project

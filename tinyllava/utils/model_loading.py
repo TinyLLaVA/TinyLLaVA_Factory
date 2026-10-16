@@ -7,6 +7,7 @@ from typing import Any
 
 from transformers import AutoConfig, AutoTokenizer
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers.utils import find_adapter_config_file
 
 from tinyllava.data.chat_template.loading import resolve_chat_template
 from tinyllava.data.image_processor import AutoImageProcessor
@@ -168,10 +169,21 @@ def load_model_config(
     paths: ComponentPaths,
 ) -> TinyLlavaConfig:
     """Load TinyLLaVA composite config from resolved component paths."""
+    feature_options = {
+        name: value
+        for name in ("vision_feature_layer", "vision_feature_select_strategy")
+        if (value := getattr(model_args, name)) is not None
+    }
     if paths.pretrained_model is not None:
+        checkpoint = paths.pretrained_model
+        while find_adapter_config_file(checkpoint) is not None:
+            from peft import PeftConfig
+
+            checkpoint = PeftConfig.from_pretrained(checkpoint).base_model_name_or_path
         return TinyLlavaConfig.from_pretrained(
-            paths.pretrained_model,
+            checkpoint,
             cache_dir=model_args.cache_dir,
+            **feature_options,
         )
 
     text_config = AutoConfig.from_pretrained(
@@ -187,8 +199,7 @@ def load_model_config(
         text_config=text_config,
         vision_config=vision_config,
         connector_config=model_args.connector,
-        vision_feature_layer=model_args.vision_feature_layer,
-        vision_feature_select_strategy=model_args.vision_feature_select_strategy,
+        **feature_options,
     )
 
 
@@ -240,7 +251,7 @@ def load_training_model(
             "Loading complete TinyLLaVA checkpoint from %s.",
             paths.pretrained_model,
         )
-        return TinyLlavaForConditionalGeneration.from_pretrained(
+        return _load_checkpoint_model(
             paths.pretrained_model,
             config=model_config,
             **loading_kwargs,
@@ -306,17 +317,35 @@ def load_tinyllava_model_bundle(
     )
 
 
+def _load_checkpoint_model(
+    model_path: str, **kwargs
+) -> TinyLlavaForConditionalGeneration:
+    if find_adapter_config_file(model_path) is None:
+        return TinyLlavaForConditionalGeneration.from_pretrained(model_path, **kwargs)
+
+    from peft import PeftConfig, PeftModel
+
+    adapter = PeftConfig.from_pretrained(model_path)
+    base = _load_checkpoint_model(adapter.base_model_name_or_path, **kwargs)
+    model = PeftModel.from_pretrained(base, model_path).merge_and_unload()
+    # A later LoRA stage must refer to this stage, including its merged updates.
+    model.name_or_path = model_path
+    model.config._name_or_path = model_path
+    return model
+
+
 def load_tinyllava_checkpoint_bundle(
     model_path: str,
     *,
     device: str | None = None,
-    **from_pretrained_kwargs,
+    **from_pretrained_kwargs: Any,
 ) -> TinyLlavaModelBundle:
-    """Load a composite checkpoint together with its saved preprocessing assets.
+    """Load a complete or PEFT checkpoint with its saved preprocessing assets.
 
     Args:
-        model_path: Local directory or Hugging Face repository containing model,
-            tokenizer, and image-processor files.
+        model_path: Local directory or Hugging Face repository containing model
+            or adapter weights, tokenizer, and image-processor files. Adapters
+            retain a reference to their base model.
         device: Optional target device; `None` keeps the loader's placement.
         **from_pretrained_kwargs: Options forwarded to the model's `from_pretrained`
             call, such as dtype. Tokenizer and image-processor loading use `model_path`.
@@ -325,10 +354,7 @@ def load_tinyllava_checkpoint_bundle(
         Matching model, tokenizer, image processor, combined processor, and source paths.
     """
     logger.debug_rank0("Loading TinyLLaVA checkpoint from %s", model_path)
-    model = TinyLlavaForConditionalGeneration.from_pretrained(
-        model_path,
-        **from_pretrained_kwargs,
-    )
+    model = _load_checkpoint_model(model_path, **from_pretrained_kwargs)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     image_processor = AutoImageProcessor.from_pretrained(
         model_path,

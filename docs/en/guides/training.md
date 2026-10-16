@@ -23,6 +23,11 @@ reference can use `model: phi`; use `model: {from: phi, model_max_length: 4096}`
 when overriding fields. Explicit relative paths are anchored to the declaring YAML.
 CLI overrides support `model=phi model.model_max_length=4096`. See the [configuration reference](../reference/configuration.md).
 
+`model.vision_feature_select_strategy` is inferred from the vision backbone by
+default: SigLIP retains every patch, while CLIP, DINO and MoF drop the leading CLS
+token. Set `full` or `default` explicitly to override this behavior. Loading a
+checkpoint without an override preserves its saved strategy.
+
 Run from the repository root:
 
 ```bash

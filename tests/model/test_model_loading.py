@@ -1,5 +1,8 @@
 from unittest.mock import patch
 
+from peft import LoraConfig
+from transformers import LlamaConfig
+
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
 from tinyllava.hparams.arguments import ModelArguments
@@ -125,3 +128,35 @@ def test_resolved_connector_overrides_reach_hf_model_config():
         config = load_model_config(model_args, resolve_component_paths(model_args))
     assert config.connector_config.depth == 3
     assert config.connector_config.bias is False
+
+
+def test_checkpoint_feature_defaults_and_explicit_overrides(tmp_path):
+    TinyLlavaConfig(
+        vision_feature_layer=-1, vision_feature_select_strategy="full"
+    ).save_pretrained(tmp_path)
+    args = ModelArguments(pretrained_model_name_or_path=str(tmp_path))
+    saved = load_model_config(args, resolve_component_paths(args))
+    assert saved.vision_feature_layer == -1
+    assert saved.vision_feature_select_strategy == "full"
+    args.vision_feature_layer = -2
+    args.vision_feature_select_strategy = "default"
+    overridden = load_model_config(args, resolve_component_paths(args))
+    assert overridden.vision_feature_layer == -2
+    assert overridden.vision_feature_select_strategy == "default"
+
+
+def test_adapter_stage_resolves_composite_config_from_its_base(tmp_path):
+    base = tmp_path / "base"
+    TinyLlavaConfig(
+        text_config=LlamaConfig(
+            hidden_size=16, vocab_size=32, num_attention_heads=2, num_key_value_heads=2
+        )
+    ).save_pretrained(base)
+    for name in ("adapter1", "adapter2"):
+        adapter = tmp_path / name
+        LoraConfig(base_model_name_or_path=str(base)).save_pretrained(adapter)
+        base = adapter
+    args = ModelArguments(pretrained_model_name_or_path=str(base))
+    config = load_model_config(args, resolve_component_paths(args))
+    assert config.text_config.hidden_size == 16
+    assert config.text_config.vocab_size == 32

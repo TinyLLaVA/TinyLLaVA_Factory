@@ -121,21 +121,16 @@ class TinyLlavaProcessor(ComponentProcessorMixin, LlavaProcessor):
             template = inject_tinyllava_anchors(template).chat_template
             tokenizer.chat_template = template
 
-        config = getattr(model, "config", None)
-        vision_config = getattr(config, "vision_config", None)
-        vision_feature_select_strategy = getattr(
-            config, "vision_feature_select_strategy", "default"
-        )
-        num_additional_image_tokens = cls._get_num_additional_image_tokens(
-            vision_config
-        )
+        config = getattr(model, "config", None) or TinyLlavaConfig()
+        vision_config = config.vision_config
+        vision_feature_select_strategy = config.vision_feature_select_strategy
+        num_additional_image_tokens = config.num_additional_image_tokens
         if getattr(vision_config, "get_output_sequence_length", None) is None:
             cls._validate_image_feature_configuration(
                 num_additional_image_tokens=num_additional_image_tokens,
                 vision_feature_select_strategy=vision_feature_select_strategy,
             )
 
-        config = config if config is not None else TinyLlavaConfig()
         return AutoProcessor.from_config(
             config,
             connector_config=config.connector_config,
@@ -192,18 +187,6 @@ class TinyLlavaProcessor(ComponentProcessorMixin, LlavaProcessor):
         if len(token_ids) == 1:
             return int(token_ids[0])
         return None
-
-    @staticmethod
-    def _get_num_additional_image_tokens(vision_config: Any) -> int:
-        value = getattr(vision_config, "num_additional_image_tokens", None)
-        if value is not None:
-            return value
-
-        model_type = getattr(vision_config, "model_type", "")
-        if "siglip" in model_type:
-            return 0
-        # DINO register tokens follow CLS; LLaVA's "default" drops only CLS.
-        return 1 + getattr(vision_config, "num_register_tokens", 0)
 
     @staticmethod
     def _validate_image_feature_configuration(
