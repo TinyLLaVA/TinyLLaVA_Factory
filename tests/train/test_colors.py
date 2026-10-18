@@ -168,7 +168,7 @@ def make_experiment(
                 "disable_tqdm": True,
                 "logging_strategy": "no",
             },
-            "scheduler": {"lr_scheduler_type": "constant", "warmup_ratio": 0.0},
+            "scheduler": {"lr_scheduler_type": "constant", "warmup_steps": 0},
         },
     }
     if components:

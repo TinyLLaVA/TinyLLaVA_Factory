@@ -1,8 +1,13 @@
+from dataclasses import fields
+from pathlib import Path
+
 import pytest
 
 from tinyllava.utils.config import load_config
 
 from tinyllava.hparams.training import (
+    CORE_FIELDS,
+    GROUP_FIELDS,
     build_training_arguments as build_arguments,
     prepare_training_config as prepare_config,
 )
@@ -43,7 +48,8 @@ def test_batch_resolution_is_shared_and_does_not_mutate_input():
     assert config["training"]["global_batch_size"] == 32
 
 
-def test_nested_training_groups_reach_hf_arguments():
+@pytest.mark.parametrize("warmup_steps,expected_steps", [(0.1, 20), (7, 7)])
+def test_nested_training_groups_reach_hf_arguments(warmup_steps, expected_steps):
     args = build_arguments(
         {
             "training": {
@@ -52,8 +58,11 @@ def test_nested_training_groups_reach_hf_arguments():
                 "logging": {"logging_steps": 7, "report_to": [], "run_name": "nested"},
                 "runtime": {"use_cpu": True},
                 "optimizer": {"weight_decay": 0.02},
-                "scheduler": {"warmup_ratio": 0.1},
-                "dataloader": {"dataloader_num_workers": 2},
+                "scheduler": {"warmup_steps": warmup_steps},
+                "dataloader": {
+                    "dataloader_num_workers": 2,
+                    "train_sampling_strategy": "group_by_length",
+                },
                 "tuning": {"tune_type_llm": "full"},
             }
         }
@@ -61,10 +70,35 @@ def test_nested_training_groups_reach_hf_arguments():
     assert args.training.save_steps == 123
     assert args.training.logging_steps == 7
     assert args.training.weight_decay == 0.02
-    assert args.training.warmup_ratio == 0.1
+    assert args.training.warmup_steps == warmup_steps
+    assert args.training.get_warmup_steps(200) == expected_steps
     assert args.training.dataloader_num_workers == 2
+    assert args.training.train_sampling_strategy == "group_by_length"
     assert args.training.learning_rate == 0.003
     assert args.tuning.tune_type_llm == "full"
+
+
+def test_training_fields_match_trainer_arguments():
+    from tinyllava.hparams.arguments import TrainingArguments
+
+    trainer_fields = {field.name for field in fields(TrainingArguments)}
+    config_fields = (CORE_FIELDS - {"global_batch_size"}).union(*GROUP_FIELDS.values())
+    assert config_fields <= trainer_fields
+
+
+@pytest.mark.parametrize(
+    "preset",
+    sorted((Path(__file__).parents[2] / "configs/training").glob("*.yaml")),
+    ids=lambda path: path.stem,
+)
+def test_training_presets_build_with_fractional_warmup(preset, tmp_path):
+    training = load_config(preset)
+    training["runtime"].update(use_cpu=True, precision="fp32")
+    training["logging"]["report_to"] = []
+    training["saving"]["output_dir"] = str(tmp_path)
+    args = build_arguments({"training": training})
+    assert args.training.warmup_steps == 0.03
+    assert args.training.get_warmup_steps(1000) == 30
 
 
 @pytest.mark.parametrize(

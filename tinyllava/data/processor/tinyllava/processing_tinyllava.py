@@ -55,14 +55,16 @@ class TinyLlavaProcessor(ComponentProcessorMixin, LlavaProcessor):
             **kwargs,
         )
 
-    def replace_image_token(self, image_inputs: dict[str, Any], image_idx: int) -> str:
+    def replace_image_token(
+        self, image_inputs: dict[str, Any], image_idx: int, **kwargs: Any
+    ) -> str:
         input_length = self.get_vision_output_sequence_length(
             image_inputs,
             image_idx,
             vision_feature_select_strategy=self.vision_feature_select_strategy,
         )
         if input_length is None:
-            input_tokens = super().replace_image_token(image_inputs, image_idx)
+            input_tokens = super().replace_image_token(image_inputs, image_idx, **kwargs)
             input_length = input_tokens.count(self.image_token)
         output_length = self.get_output_sequence_length(input_length)
         return self.image_token * output_length

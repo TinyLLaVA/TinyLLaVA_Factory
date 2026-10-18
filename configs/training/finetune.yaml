@@ -18,7 +18,7 @@ dataloader:
   dataloader_num_workers: 8
 scheduler:
   lr_scheduler_type: cosine
-  warmup_ratio: 0.03
+  warmup_steps: 0.03
 logging:
   logging_steps: 1
   report_to: tensorboard

@@ -41,6 +41,10 @@ Configuration responsibilities:
 | `training.dataloader` / `training.evaluation` | Loading, sampling, and training-time evaluation |
 | `launcher` | Processes, devices, and port; excluded from algorithm arguments |
 
+`training.scheduler.warmup_steps` accepts a fraction below 1 (e.g. `0.03` for
+3% of training steps) or a step count (e.g. `100`). Select length-based sampling
+with `training.dataloader.train_sampling_strategy: group_by_length`.
+
 TinyLLaVA's `from` feature composes YAML files at any mapping node. A single path
 or a list of paths is accepted. Sources merge in order, followed by local fields,
 then CLI overrides. Mappings merge recursively; lists and scalars are replaced.

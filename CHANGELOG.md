@@ -4,6 +4,16 @@
 
 ### Breaking changes
 
+- Transformers now requires version 5.20.1 or newer, with the development and
+  CI dependency versions recorded in `uv.lock`.
+- Scheduler warmup uses `training.scheduler.warmup_steps`: values below 1
+  specify a fraction of training steps, and values of 1 or more specify a step
+  count. Replace `warmup_ratio: 0.03` with `warmup_steps: 0.03`.
+- Length-based sampling uses `training.dataloader.train_sampling_strategy:
+  group_by_length` instead of the `group_by_length` boolean. Removed Trainer
+  fields are no longer accepted: `overwrite_output_dir`, `save_safetensors`,
+  `logging_dir`, `include_tokens_per_second`, `half_precision_backend`,
+  `use_mps_device`, and `fsdp_transformer_layer_cls_to_wrap`.
 - The command entry point is `tinyllava` / `python -m tinyllava.cli`, with explicit
   `train`, `eval`, `single-turn`, and `chat` commands. `tinyllava.run` is removed.
 - Configuration files use a unified `from` feature at any mapping node for model,

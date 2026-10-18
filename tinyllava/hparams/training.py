@@ -32,11 +32,9 @@ CORE_FIELDS = {
 GROUP_FIELDS = {
     "saving": {
         "output_dir",
-        "overwrite_output_dir",
         "save_strategy",
         "save_steps",
         "save_total_limit",
-        "save_safetensors",
         "save_on_each_node",
         "save_only_model",
         "resume_from_checkpoint",
@@ -51,7 +49,6 @@ GROUP_FIELDS = {
     "logging": {
         "run_name",
         "report_to",
-        "logging_dir",
         "logging_strategy",
         "logging_steps",
         "logging_first_step",
@@ -60,7 +57,6 @@ GROUP_FIELDS = {
         "log_level_replica",
         "log_on_each_node",
         "disable_tqdm",
-        "include_tokens_per_second",
         "include_num_input_tokens_seen",
     },
     "optimizer": {
@@ -76,7 +72,6 @@ GROUP_FIELDS = {
     "scheduler": {
         "lr_scheduler_type",
         "lr_scheduler_kwargs",
-        "warmup_ratio",
         "warmup_steps",
     },
     "runtime": {
@@ -86,9 +81,7 @@ GROUP_FIELDS = {
         "bf16_full_eval",
         "fp16_full_eval",
         "tf32",
-        "half_precision_backend",
         "use_cpu",
-        "use_mps_device",
         "seed",
         "data_seed",
         "full_determinism",
@@ -101,7 +94,6 @@ GROUP_FIELDS = {
         "ddp_broadcast_buffers",
         "fsdp",
         "fsdp_config",
-        "fsdp_transformer_layer_cls_to_wrap",
         "gradient_checkpointing",
         "gradient_checkpointing_kwargs",
         "torch_compile",
@@ -117,7 +109,7 @@ GROUP_FIELDS = {
         "dataloader_prefetch_factor",
         "dataloader_drop_last",
         "remove_unused_columns",
-        "group_by_length",
+        "train_sampling_strategy",
         "length_column_name",
         "group_by_modality_length",
         "ignore_data_skip",

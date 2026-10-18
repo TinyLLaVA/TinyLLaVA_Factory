@@ -52,12 +52,12 @@ Write each Chinese prose paragraph on one source line to avoid spaces introduced
 
 ## Tests and CI
 
-Install the test extra and run the fast suite:
+Install the locked test and documentation dependencies, then run the suites:
 
 ```bash
-python -m pip install -e ".[test]"
-python -m pytest
-python -m pytest -m slow
+uv sync --locked --extra test --extra docs --inexact
+uv run --no-sync python -m pytest
+uv run --no-sync python -m pytest -m slow
 ```
 
 The default suite excludes `slow`. The slow test creates a tiny random Llama/CLIP
@@ -80,7 +80,8 @@ slow test assembles Qwen2/SigLIP from local components, checks seeded training
 reproducibility, resumes a LoRA checkpoint, chains two LoRA stages, and continues
 with full fine-tuning.
 
-The `CI` workflow runs fast tests and one strict bilingual documentation build.
+The `CI` workflow installs dependencies constrained by `uv.lock`, using CPU
+PyTorch wheels, and runs fast tests and one strict bilingual documentation build.
 Enable `slow` in a manual run to include these training tests. Its `github-pages`
 artifact contains the built site and is retained for 14 days.
 

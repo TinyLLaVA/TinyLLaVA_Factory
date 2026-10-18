@@ -40,6 +40,8 @@
 | `training.dataloader` / `training.evaluation` | 采样加载与训练期评估 |
 | `launcher` | 分布式进程、设备与端口；不传入算法参数对象 |
 
+`training.scheduler.warmup_steps` 接受小于 1 的比例（例如 `0.03` 表示训练步数的 3%）或具体步数（例如 `100`）。按长度分组采样使用 `training.dataloader.train_sampling_strategy: group_by_length`。
+
 `from` 是 TinyLLaVA 统一的 YAML 组合特性，可用于任意字典节点：单个路径引用一个文件，
 路径列表按顺序合并多个文件。优先级依次为：前面的文件、后面的文件、本地字段、命令行覆写。
 字典递归合并，列表和标量整体替换；列表内的字典同样支持引用。
