@@ -38,12 +38,12 @@ API 参考使用 mkdocstrings 内置的类型标识、参数标题、独立签�
 
 ## 测试与 CI
 
-安装锁定版本的测试与文档依赖后运行测试；`slow` 单独执行：
+安装测试依赖后运行测试；`slow` 单独执行：
 
 ```bash
-uv sync --locked --extra test --extra docs --inexact
-uv run --no-sync python -m pytest
-uv run --no-sync python -m pytest -m slow
+python -m pip install -e ".[test]"
+python -m pytest
+python -m pytest -m slow
 ```
 
 默认测试排除 `slow`。慢测试创建随机初始化的微型 Llama/CLIP，以及红、蓝两张纯色图片，用同一个问题提问颜色。测试经训练 CLI 启动真实 worker，保存后重新加载 checkpoint，要求生成的两个单词答案均正确。测试离线使用 CPU，覆盖 `configs/training/` 下的所有预设及种子 0、42；保留各预设的调优策略，包括 `qlora_finetune` 当前使用的 int8 策略，仅为小任务覆盖 batch、学习率、步数和运行设置。
@@ -52,13 +52,13 @@ uv run --no-sync python -m pytest -m slow
 
 颜色测试保留预设默认开启的梯度检查点。快速测试还覆盖七种模型预设的缩小版反向传播、保存重载与生成，以及 PEFT 组件训练策略、int8 组件组装、多图 connector 和评测分片。另一个慢测试从本地组件组装 Qwen2/SigLIP，检查相同种子的训练可重复性、LoRA 断点恢复、连续两个 LoRA 阶段及后续全量微调。
 
-`CI` 工作流按 `uv.lock` 约束安装依赖，使用 CPU 版 PyTorch，执行快速测试并严格构建一次双语文档。手动运行时勾选 `slow` 可追加这些训练测试；构建站点保存在 `github-pages` 产物中，保留 14 天。
+`CI` 工作流使用 CPU 版 PyTorch，分别在最低支持的 Transformers 版本和 `pyproject.toml` 允许的最新版本上执行快速测试，并只在最新版本的任务中严格构建一次双语文档。`uv.lock` 用于复现开发环境，不约束 CI 的依赖解析。手动运行时勾选 `slow` 可在两个版本上追加这些训练测试；构建站点保存在 `github-pages` 产物中，保留 14 天。
 
 ## 使用 GitHub Actions 发布
 
 发布步骤：
 
-1. 将工作流集成到仓库默认分支，以启用手动运行。
+1. 在 `main` 和 `develop` 两个分支同步维护 `.github/workflows/ci.yml`，以启用手动运行。
 2. 在 **Settings → Pages → Source** 选择 **GitHub Actions**。
 3. 在 `github-pages` 环境的部署规则中允许 `develop`。
 4. 打开 **Actions → CI → Run workflow**，选择 `develop` 并勾选 `deploy`。

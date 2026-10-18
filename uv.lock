@@ -3349,7 +3349,7 @@ requires-dist = [
     { name = "datasets", specifier = ">=5.0.0" },
     { name = "deepspeed", specifier = ">=0.19.2" },
     { name = "gradio", specifier = ">=6.26.0" },
-    { name = "huggingface-hub", specifier = ">=1.31.0" },
+    { name = "huggingface-hub", specifier = ">=1.23.0" },
     { name = "ijson", specifier = ">=3.4.0" },
     { name = "mkdocstrings-python", marker = "extra == 'docs'", specifier = ">=2.0.8" },
     { name = "ninja" },
@@ -3367,7 +3367,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.13.0" },
     { name = "torchvision", specifier = ">=0.28.0" },
     { name = "tqdm" },
-    { name = "transformers", specifier = ">=5.20.1" },
+    { name = "transformers", specifier = ">=5.10.0,<6" },
     { name = "zensical", marker = "extra == 'docs'", specifier = ">=0.0.59" },
 ]
 provides-extras = ["test", "docs"]

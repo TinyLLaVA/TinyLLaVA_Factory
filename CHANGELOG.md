@@ -4,8 +4,9 @@
 
 ### Breaking changes
 
-- Transformers now requires version 5.20.1 or newer, with the development and
-  CI dependency versions recorded in `uv.lock`.
+- Transformers supports `>=5.10.0,<6`. CI tests the minimum supported version
+  and the latest release allowed by `pyproject.toml`; `uv.lock` records a
+  reproducible development environment.
 - Scheduler warmup uses `training.scheduler.warmup_steps`: values below 1
   specify a fraction of training steps, and values of 1 or more specify a step
   count. Replace `warmup_ratio: 0.03` with `warmup_steps: 0.03`.

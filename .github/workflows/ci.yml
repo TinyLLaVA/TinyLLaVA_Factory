@@ -27,6 +27,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      matrix:
+        transformers: ["transformers==5.10.0", "transformers"]
     permissions:
       contents: read
       pages: read
@@ -35,6 +38,11 @@ jobs:
       MKL_NUM_THREADS: "2"
       HF_HUB_OFFLINE: "1"
     steps:
+      - name: Require develop for manual runs
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/develop' }}
+        run: |
+          echo '::error::Select develop when running CI manually.'
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -42,25 +50,25 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: uv.lock
-      - name: Install locked CPU dependencies
+          cache-dependency-path: pyproject.toml
+      - name: Install CPU dependencies
         run: |
-          python -m pip install uv==0.13.1
-          uv export --locked --all-extras --no-hashes --no-emit-project --output-file "$RUNNER_TEMP/constraints.txt" > /dev/null
-          python -m pip install -c "$RUNNER_TEMP/constraints.txt" --no-deps torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install -c "$RUNNER_TEMP/constraints.txt" -e ".[test,docs]"
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[test,docs]" "${{ matrix.transformers }}"
       - run: python -m pytest
       - name: Train and generate
         if: ${{ inputs.slow }}
         run: python -m pytest -m slow
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        if: ${{ inputs.deploy && github.ref == 'refs/heads/develop' }}
+        if: ${{ matrix.transformers == 'transformers' && inputs.deploy && github.ref == 'refs/heads/develop' }}
         id: pages
       - name: Build bilingual documentation
+        if: ${{ matrix.transformers == 'transformers' }}
         env:
           DOCS_BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: python docs/build.py --base-url "$DOCS_BASE_URL"
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: ${{ matrix.transformers == 'transformers' }}
         with:
           path: site/
           retention-days: 14

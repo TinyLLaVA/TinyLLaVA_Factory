@@ -153,7 +153,7 @@ def make_experiment(
         "training": {
             "from": str(preset),
             "max_steps": 300,
-            "learning_rate": 0.01,
+            "learning_rate": 0.001,
             "per_device_train_batch_size": 2,
             "gradient_accumulation_steps": 1,
             "runtime": {

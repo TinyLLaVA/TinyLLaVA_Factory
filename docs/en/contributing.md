@@ -52,12 +52,12 @@ Write each Chinese prose paragraph on one source line to avoid spaces introduced
 
 ## Tests and CI
 
-Install the locked test and documentation dependencies, then run the suites:
+Install the test extra and run the suites:
 
 ```bash
-uv sync --locked --extra test --extra docs --inexact
-uv run --no-sync python -m pytest
-uv run --no-sync python -m pytest -m slow
+python -m pip install -e ".[test]"
+python -m pytest
+python -m pytest -m slow
 ```
 
 The default suite excludes `slow`. The slow test creates a tiny random Llama/CLIP
@@ -80,8 +80,11 @@ slow test assembles Qwen2/SigLIP from local components, checks seeded training
 reproducibility, resumes a LoRA checkpoint, chains two LoRA stages, and continues
 with full fine-tuning.
 
-The `CI` workflow installs dependencies constrained by `uv.lock`, using CPU
-PyTorch wheels, and runs fast tests and one strict bilingual documentation build.
+The `CI` workflow uses CPU PyTorch wheels and runs fast tests with the minimum
+supported Transformers version and the latest release allowed by
+`pyproject.toml`. It builds the bilingual documentation once, in the latest
+version job. `uv.lock` remains available for reproducing a development
+environment; it does not constrain CI dependency resolution.
 Enable `slow` in a manual run to include these training tests. Its `github-pages`
 artifact contains the built site and is retained for 14 days.
 
@@ -89,8 +92,8 @@ artifact contains the built site and is retained for 14 days.
 
 To publish:
 
-1. Make the workflow available on the repository's default branch to enable
-   manual runs.
+1. Keep `.github/workflows/ci.yml` synchronized on `main` and `develop` to
+   enable manual runs.
 2. Set **Settings → Pages → Source** to **GitHub Actions**.
 3. Allow `develop` in the `github-pages` environment's deployment rules.
 4. Open **Actions → CI → Run workflow**, select `develop`, and
