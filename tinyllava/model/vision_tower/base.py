@@ -49,7 +49,10 @@ class VisionTower(nn.Module):
         image_features = image_features.hidden_states[kwargs.get('vision_feature_layer', -2)]
 
         if kwargs.get('vision_feature_select_strategy', 'patch') == 'patch':
-            image_features = image_features[:, 1:]
+            # Drop CLS prefix token(s) if present (CLIP-style).
+            # SigLIP has no CLS token, so all tokens are patches — nothing to drop.
+            n_patches = (self._vision_tower.config.image_size // self._vision_tower.config.patch_size) ** 2
+            image_features = image_features[:, image_features.shape[1] - n_patches:]
         elif kwargs.get('vision_feature_select_strategy', 'patch') == 'cls_patch':
             image_features = image_features
         else:
