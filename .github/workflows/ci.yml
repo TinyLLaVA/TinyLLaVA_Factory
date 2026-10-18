@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      slow:
+        description: Run training and inference tests
+        type: boolean
+        default: false
+      deploy:
+        description: Publish documentation from develop
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ inputs.deploy || false }}
+  cancel-in-progress: ${{ !inputs.deploy }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        transformers: ["transformers==5.10.0", "transformers"]
+    permissions:
+      contents: read
+      pages: read
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      HF_HUB_OFFLINE: "1"
+    steps:
+      - name: Require develop for manual runs
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/develop' }}
+        run: |
+          echo '::error::Select develop when running CI manually.'
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[test,docs]" "${{ matrix.transformers }}"
+      - run: python -m pytest
+      - name: Train and generate
+        if: ${{ inputs.slow }}
+        run: python -m pytest -m slow
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        if: ${{ matrix.transformers == 'transformers' && inputs.deploy && github.ref == 'refs/heads/develop' }}
+        id: pages
+      - name: Build bilingual documentation
+        if: ${{ matrix.transformers == 'transformers' }}
+        env:
+          DOCS_BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: python docs/build.py --base-url "$DOCS_BASE_URL"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: ${{ matrix.transformers == 'transformers' }}
+        with:
+          path: site/
+          retention-days: 14
+
+  deploy:
+    needs: check
+    if: ${{ inputs.deploy && github.ref == 'refs/heads/develop' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        id: deployment
