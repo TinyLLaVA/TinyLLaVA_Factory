@@ -60,8 +60,23 @@ class LazySupervisedDataset(Dataset):
         if 'image' in sources:
             image_file = self.list_data_dict[i]['image']
             image_folder = self.data_args.image_folder
-            image = Image.open(os.path.join(image_folder, image_file)).convert('RGB')
-            image = self.image_preprocess(image)
+            image_path = os.path.join(image_folder, image_file)
+
+            if not os.path.exists(image_path):
+                base_name, _ = os.path.splitext(image_path)  
+                for ext in ['.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif']:  
+                    alt_path = base_name + ext
+                    if os.path.exists(alt_path):
+                        image_path = alt_path
+                        break
+
+            with Image.open(image_path) as img:
+                if img.format == 'GIF':
+                    img = img.convert('RGB')  
+                else:
+                    img = img.convert('RGB')
+
+            image = self.image_preprocess(img)
             data_dict['image'] = image
         elif self.data_args.is_multimodal:
             # image does not exist in the data, but the model is multimodal
