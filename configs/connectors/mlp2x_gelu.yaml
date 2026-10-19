@@ -1,4 +1,7 @@
+# Connector architecture
 model_type: mlp__tlf_connector
+
+# Component settings
 depth: 2
 act: gelu
 bias: true

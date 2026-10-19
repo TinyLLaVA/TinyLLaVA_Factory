@@ -1,9 +1,17 @@
-algorithm: sft
+# Shared model configuration
 model: phi
+
 stages:
+  # Align visual features with the language model.
   pretrain:
+    algorithm: sft
     data: llava_558k
+
     training: pretrain
+
+  # Train on instruction-following conversations.
   finetune:
+    algorithm: sft
     data: llava_665k
+
     training: lora_finetune

@@ -1,5 +1,10 @@
+# Connector architecture
 model_type: mof__tlf_connector
-vision_hidden_sizes: [1024, 1024]
+
+# Component settings
+vision_hidden_sizes:
+- 1024
+- 1024
 clip_config:
   model_type: mlp__tlf_connector
   depth: 2

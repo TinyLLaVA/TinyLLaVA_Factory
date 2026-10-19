@@ -8,12 +8,16 @@ from collections.abc import Mapping
 from typing import Any
 
 from tinyllava.data.image_payload import resolve_image_payload
-from tinyllava.eval.tasks.loader_base import GenerationExample
 from tinyllava.eval.generation import strip_legacy_image_markers
+from tinyllava.eval.tasks.loader_base import GenerationExample
 
 
 class ScienceQaLoader:
-    """Loader for ScienceQA's LLaVA conversion JSON files."""
+    """Load ScienceQA's LLaVA conversion and request a single option letter.
+
+    The answer-format instruction is part of this benchmark's prompt and is
+    applied to both image and text-only questions.
+    """
 
     def load_samples(self, question_file: str) -> list[Mapping[str, Any]]:
         with open(os.path.expanduser(question_file), encoding="utf-8") as f:
@@ -24,15 +28,15 @@ class ScienceQaLoader:
         sample: Mapping[str, Any],
         *,
         image_folder: str,
-        args: Any,
     ) -> GenerationExample:
         prompt = strip_legacy_image_markers(sample["conversations"][0]["value"])
-        if getattr(args, "single_pred_prompt", False):
-            prompt += "\nAnswer with the option's letter from the given choices directly."
+        prompt += "\nAnswer with the option's letter from the given choices directly."
 
         image_files = []
         if "image" in sample:
-            image_files.append(resolve_image_payload(sample["image"], image_folder=image_folder))
+            image_files.append(
+                resolve_image_payload(sample["image"], image_folder=image_folder)
+            )
 
         return GenerationExample(
             question_id=str(sample["id"]),

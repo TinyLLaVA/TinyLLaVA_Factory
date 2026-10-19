@@ -1,5 +1,7 @@
 # Evaluation
 
+Checkpoint, generation, batching, and sharding options are listed in the [parameter reference](parameters.md#evaluation).
+
 Generation and scoring are separate steps. `tinyllava.eval.batch_generation`
 writes predictions; the workflows in `configs/eval/` also perform benchmark-specific
 conversion or local scoring. VQAv2 and MM-Vet exports require a separate evaluator.
@@ -34,11 +36,11 @@ To run only generation, or change the batch size:
 ```bash
 python -m tinyllava.cli eval --steps generate \
   --config configs/eval/textvqa.yaml \
-  shard=false runtime.batch_size=4 runtime.device=cuda:0
+  shard=false batch_size=4 device=cuda:0
 ```
 
-Evaluation YAML has `model`, `data`, `generation`, `runtime`, and `output`
-sections. For multi-GPU evaluation, use `shard=true devices=[0,1]`. The workflow
+Evaluation YAML contains flat fields such as `model_name_or_path`, `question_file`,
+`temperature`, `batch_size`, and `answers_file`. For multi-GPU evaluation, use `shard=true devices=[0,1]`. The workflow
 assigns shard indices and devices, writes resolved worker configs, and merges
 answers after every worker succeeds.
 
@@ -59,14 +61,17 @@ perception score, and POPE using the same metric/category aggregation. Retain
 predictions, sample counts, scoring commands, and checkpoint IDs. Submit exported
 answers to the benchmark evaluator to obtain the final score.
 
-GQA and VQAv2 workflows shard across `CUDA_VISIBLE_DEVICES` (or the `devices` override), then merge only after all workers succeed. Use `--steps generate` for generation only, or `--steps convert,score` to rerun downstream steps where available. `--dry-run` previews the workflow without loading models. Workflow overrides use `runtime.batch_size=4`; direct generation keeps `runtime.batch_size=4`.
+GQA and VQAv2 workflows shard across `CUDA_VISIBLE_DEVICES` (or the `devices` override), then merge only after all workers succeed. Use `--steps generate` for generation only, or `--steps convert,score` to rerun downstream steps where available. `--dry-run` previews the workflow without loading models. Both workflow and direct generation overrides use `batch_size=4`.
 
 The default input root is `datasets/eval/`. Predictions and conversions are stored under `output/<experiment>/<stage>/eval/<benchmark>/` when evaluating a checkpoint under `output/`. Override `output_dir` for another result directory. MME runs its converter in an isolated output workspace; the dataset tree is used only as input. Benchmark input definitions live in `configs/data/eval/` and expose data fields directly.
-Evaluation entries use `data: gqa`, or `data.from` with overrides as below.
-Bare filenames select `configs/data/eval/`; custom relative files use `./name.yaml`:
+Evaluation entries merge these inputs at the root and override individual fields:
 
 ```yaml
-data:
-  from: gqa
-  image_folder: /path/to/gqa/images
+# configs/eval/custom.yaml
+from: ../data/eval/gqa.yaml
+benchmark: gqa
+
+# Local image root and generation batch
+image_folder: /path/to/gqa/images
+batch_size: 4
 ```

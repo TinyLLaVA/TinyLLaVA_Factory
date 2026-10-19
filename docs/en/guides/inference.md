@@ -11,8 +11,22 @@ python -m tinyllava.cli single-turn \
 ```
 
 The CLI currently spells its checkpoint option `--model-path`; evaluation YAML
-uses `model.model_name_or_path`. Repeat `--image-file` for multiple images when
+uses `model_name_or_path`. Repeat `--image-file` for multiple images when
 the selected model/processor supports that input.
+
+## CLI options { #options }
+
+| Option | Use |
+| --- | --- |
+| `--model-path` | Trained checkpoint directory or Hub ID. |
+| `--query` | User prompt; required for `single-turn`, optional for `chat`. |
+| `--image-file` | Image path; repeat for multiple images with a compatible model. |
+| `--device` | Execution device; defaults to CUDA when available, otherwise CPU. |
+| `--chat-template-path` | Jinja conversation template file. |
+| `--temperature` | Sampling temperature; `0` disables sampling. |
+| `--top-p` | Nucleus sampling cutoff. |
+| `--num-beams` | Decoding beam count; default `1`. |
+| `--max-new-tokens` | Response token limit; default `512` for these CLI commands. |
 
 ## Multi-turn terminal chat
 

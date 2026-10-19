@@ -1,9 +1,11 @@
+from pathlib import Path
+
 import pytest
 from omegaconf import OmegaConf
 
-from tinyllava.utils.config import compose_config
-from tinyllava.train.workflow import load_train_config
 from tinyllava.eval.workflow import load_eval_config
+from tinyllava.train.workflow import load_train_config
+from tinyllava.utils.config import compose_config
 
 
 def write_config(path, config):
@@ -84,12 +86,13 @@ def test_missing_preset_does_not_silently_fall_back_to_local_file(tmp_path, pres
         compose_config(path)
 
 
-@pytest.mark.parametrize("data_kind,expected", [("train", "train"), ("eval", "test")])
-def test_data_namespace_is_selected_by_workflow_context(
-    tmp_path, presets, data_kind, expected
-):
-    path = write_config(tmp_path / "entry.yaml", {"data": "shared.yaml"})
-    assert compose_config(path, data_kind=data_kind) == {"data": {"split": expected}}
+def test_training_data_shorthand_and_flat_eval_reference(tmp_path, presets):
+    train = write_config(tmp_path / "train.yaml", {"data": "shared"})
+    assert compose_config(train) == {"data": {"split": "train"}}
+    evaluation = write_config(
+        tmp_path / "eval.yaml", {"from": str(presets / "data/eval/shared")}
+    )
+    assert compose_config(evaluation) == {"split": "test"}
 
 
 @pytest.mark.parametrize("reverse", [False, True])
@@ -161,25 +164,25 @@ def test_scalar_paths_and_stage_names_are_not_reinterpreted(tmp_path, presets):
     path = write_config(
         tmp_path / "entry.yaml",
         {
-            "output": {"answers_file": "results.yaml"},
+            "answers_file": "results.yaml",
             "data": {
                 "dataset_name_or_path": "dataset.yaml",
                 "data_files": ["samples.yaml"],
             },
             "model": {"chat_template_path": "template.yaml"},
-            "training": {"saving": {"output_dir": "run.yaml"}},
+            "training": {"output_dir": "run.yaml"},
             "stages": {"model": {"from": "./stage.yaml"}},
         },
     )
     write_config(tmp_path / "stage.yaml", {"training": "base.yaml"})
     config = compose_config(path)
-    assert config["output"]["answers_file"] == "results.yaml"
+    assert config["answers_file"] == "results.yaml"
     assert config["data"] == {
         "dataset_name_or_path": "dataset.yaml",
         "data_files": ["samples.yaml"],
     }
     assert config["model"]["chat_template_path"] == "template.yaml"
-    assert config["training"]["saving"]["output_dir"] == "run.yaml"
+    assert config["training"]["output_dir"] == "run.yaml"
     assert config["stages"]["model"] == {"training": {"lr": 0.1}}
 
 
@@ -226,13 +229,19 @@ def test_train_and_eval_workflows_select_their_data_presets(tmp_path):
     )
     evaluation = write_config(
         tmp_path / "custom_eval.yaml",
-        {"benchmark": "gqa", "data": "gqa", "model": "./eval-model"},
+        {
+            "benchmark": "gqa",
+            "from": [
+                str(Path(__file__).parents[2] / "configs/data/eval/gqa.yaml"),
+                "./eval-model",
+            ],
+        },
     )
-    config = load_eval_config(evaluation, ["data.image_folder=/custom/images"])
-    assert config["model"]["model_name_or_path"] == "output/custom/finetune"
-    assert config["data"]["adapter"] == "vqa"
-    assert config["data"]["image_folder"] == "/custom/images"
-    assert config["data"]["question_file"].startswith("datasets/eval/gqa/")
+    config = load_eval_config(evaluation, ["image_folder=/custom/images"])
+    assert config["model_name_or_path"] == "output/custom/finetune"
+    assert config["adapter"] == "vqa"
+    assert config["image_folder"] == "/custom/images"
+    assert config["question_file"].startswith("datasets/eval/gqa/")
 
 
 @pytest.mark.parametrize("compact", [False, True])

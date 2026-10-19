@@ -1,7 +1,7 @@
 # Evaluation API
 
-Generation helpers return decoded text. Loaders prepare generation examples;
-evaluators score or export predictions. See [Evaluation](../guides/evaluation.md).
+Prepare assets and run benchmarks with the [evaluation guide](../guides/evaluation.md).
+See [evaluation parameters](../guides/parameters.md#evaluation) or [interactive inference](../guides/inference.md).
 
 ::: tinyllava.eval.generation
     options:

@@ -1,5 +1,7 @@
 # Training data
 
+For dataset selection, files, and adapter options, see [training-data parameters](parameters.md#training-data).
+
 The base recipe uses LLaVA's 558K image-caption pretraining set followed by
 the 665K instruction mixture.
 
@@ -31,8 +33,10 @@ For example, `coco/train2017/example.jpg` resolves relative to `data.image_folde
 
 ## Named datasets and storage
 
-Select a dataset with `data.from=llava_558k` or
-`data.from=llava_665k`, or use `data=llava_558k` when only selecting a file.
+In a multi-stage experiment, select data with `stages.pretrain.data=llava_558k`
+or `stages.finetune.data.from=llava_665k`. Single-stage entries use
+`data=llava_558k` or `data.from=llava_558k`. The `data.*` examples below are
+relative to the stage that consumes the dataset.
 YAML supports `data: llava_558k` too. Bare filenames use the training-data
 preset directory; explicit relative paths use their declaring file's directory. Annotation and image paths are
 defined once in `configs/data/train/`; ShareGPT4V presets are `sharegpt4v_pretrain.yaml`
@@ -45,18 +49,10 @@ Hard-linking files from a shared collection on the same filesystem avoids copyin
 image payloads; recreate directories and preserve relative paths. Linked files
 share contents with their sources, so copy a file before editing it.
 
-The local collection linked from `/data/vlm/llava_data` contains complete image
-references for LLaVA 558K, LLaVA 665K and the cleaned ShareGPT4V fine-tuning set.
-The ShareGPT4V pretraining annotation references 543,842 unavailable images;
-complete those downloads before running its stage. See `datasets/README.md` in
-the repository for the local validation inventory.
-
 ## Data sources
 
 Set `data.dataset_name_or_path` to a Hub dataset ID, a local dataset directory,
 a local JSON/JSONL/Parquet file, or a Hugging Face builder such as `parquet`.
-This replaces the former `data.data_path` setting; update existing YAML files
-and command-line overrides to the new name.
 
 ```yaml
 data:
@@ -81,7 +77,7 @@ data:
   dataset_adapter: auto
 ```
 
-`dataset_config_name` maps to HF's `experiment_name` (subset); `data_dir`, `revision`, and
+`dataset_config_name` maps to HF's `name` (subset); `data_dir`, `revision`, and
 `cache_dir` are forwarded to the loader. A direct file defines a `train` split
 and accepts slices such as `train[:10%]`. For a direct file, omit `data_files`,
 `data_dir`, `dataset_config_name`, and `revision`; use a builder or directory
@@ -90,8 +86,7 @@ incrementally; arrays selected through a Hub repository, directory, or builder
 use the upstream loader and its memory behavior.
 
 Training uses an indexed Arrow Dataset for random access and modality grouping.
-It does not expose HF iterable streaming. Opening a file format does not infer
-a dataset's conversation schema: native rows need `messages` or `conversations`,
+Dataset adapters normalize the conversation schema. Native rows need `messages` or `conversations`,
 with image placeholders matching their `image`/`images` payloads. Decoded PIL
 images, image lists, and Arrow `{bytes, path}` image values are supported.
 Schemas such as FineVision's `texts` need a dataset adapter.
@@ -100,11 +95,8 @@ Schemas such as FineVision's `texts` need a dataset adapter.
 native messages and embedded media. Existing legacy training recipes explicitly
 set `llava_legacy`; change that setting to `auto` when switching to native data.
 
-The JSON-array cache fingerprint includes the resolved path, file size, mtime,
-reader implementation, parser version, and adapter implementation/state. These
-are internal cache identities, not release versions. No manual `json-array-vN`
-sequence is used. If external tooling replaces a file while preserving both size
-and mtime, touch the file or remove its cache before loading it again.
+If a replaced annotation file retains both its size and modification time,
+update its modification time or clear the corresponding cache before loading it again.
 
 ## Legacy annotations
 
@@ -130,8 +122,7 @@ which tokens contribute to the training loss.
 
 JSON arrays are read incrementally with the `ijson` YAJL C backend, supplied
 by its wheels on common platforms. An optional UTF-8 BOM is accepted. Arrays
-must contain objects and use standard JSON syntax: missing or trailing commas,
-truncated input, `NaN`, and `Infinity` are rejected. JSONL annotations are also
+must contain objects and use standard JSON syntax. JSONL annotations are also
 supported through the Hugging Face JSON loader.
 
 ## Custom data

@@ -1,6 +1,6 @@
 # 模型与 checkpoint 加载
 
-`TinyLlavaConfig` 包含文本、视觉和连接器子配置。使用 `from_pretrained` 加载已保存模型，使用 `from_pretrained_components` 组装初始组件。参见[训练](../guides/training.md)。
+组件与 checkpoint 的选择见[模型指南](../guides/models.md)，加载与生成示例见[推理指南](../guides/inference.md)。
 
 ::: tinyllava.model.configuration_tinyllava.TinyLlavaConfig
 

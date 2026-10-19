@@ -13,10 +13,14 @@ evaluate checkpoints, and run image-based conversations.
 
 ## Explore the project
 
+- [Configuration](guides/configuration.md): compose YAML and override settings.
+- [Parameter reference](guides/parameters.md): model, data, training, and evaluation options.
+- [Models and checkpoints](guides/models.md): choose components and load trained weights.
 - [Architecture](architecture.md): model components and the data flow.
 - [Extension guide](guides/extending.md): add models, datasets, and evaluation tasks.
 - [API reference](reference/model.md): configuration, loading, training, and generation.
 - [Migration](migration.md): update existing configurations and checkpoints.
+- [v2 roadmap](roadmap.md): release validation, DeepStack hooks, and native Qwen3-VL integration.
 - [Documentation development](contributing.md): preview, edit, and publish the site.
 
 Choose English or 简体中文 from the language menu.

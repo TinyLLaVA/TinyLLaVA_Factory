@@ -12,6 +12,7 @@ responsibilities.
 | Dataset schema | `tinyllava.data.adapters` |
 | Chat format | `model.chat_template_path` and Jinja generation blocks |
 | Tuning policy | `tinyllava.train.strategy` |
+| Training algorithm | `tinyllava.train.algorithms` |
 | Evaluation task | `tinyllava.eval.tasks.auto` loader/evaluator mappings |
 
 A connector must implement the current config/model contract and produce
@@ -37,7 +38,7 @@ configs. Project vision types use the `__tlf_vision_tower` suffix. Register runt
 extensions explicitly in `VISION_TOWER_CONFIG_MAPPING` and `AutoVisionTowerModel`;
 HF Auto registration is separate. Custom models must return spatial token hidden states and expose compatible
 `hidden_size`, `patch_size` and image-token metadata. The saved preprocessing
-configuration selects `AutoImageProcessor`; there is no second vision registry.
+configuration selects `AutoImageProcessor`.
 
 MoF comes from Tong et al., [Eyes Wide Shut? Exploring the Visual Shortcomings
 of Multimodal LLMs](https://arxiv.org/abs/2401.06209) (CVPR 2024).
@@ -47,8 +48,7 @@ MLPs followed by spatial token interleaving. The migrated implementation retains
 that behavior, including the shared CLIP-preprocessed image for both branches.
 A-MoF is also supported: set the vision config's `fusion_strategy="additive"`
 and `alpha` to mix `alpha * CLIP + (1 - alpha) * DINOv2` before a shared connector.
-This requires equal branch feature widths and token layouts; addition itself
-does not align unequal token counts. Select an ordinary connector, such as MLP,
+This requires equal branch feature widths and token layouts. Select an ordinary connector, such as MLP,
 for A-MoF. `MofConnector` implements the separate-branch I-MoF path.
 
 - `MofVisionConfig` stores both branch configs; `MofVisionModel` has HF
@@ -60,12 +60,10 @@ for A-MoF. `MofConnector` implements the separate-branch I-MoF path.
   remain separate per branch before projection.
 - `TinyLlavaProcessor` obtains placeholder counts from the connector config's
   `get_output_sequence_length` method. I-MoF maps N selected tokens to 2M,
-  where M is the common output length of the two branch connectors;
-  its name does not appear in processor selection or token expansion.
+  where M is the common output length of the two branch connectors.
 - All connectors receive `vision_hidden_size`, `text_hidden_size` and
   `vision_feature_layer`. Each connector validates its own input contract and
-  delegates `get_output_sequence_length` to its config; the composite model has no MoF
-  branch and does not choose a connector based on the vision model.
+  delegates `get_output_sequence_length` to its config.
 
 Prepare a reusable MoF vision checkpoint once:
 
@@ -84,12 +82,11 @@ AutoImageProcessor.from_pretrained(clip_path).save_pretrained("output/mof-vision
 
 MoF stores the two packed feature widths in its own connector config as
 `vision_hidden_sizes` (CLIP first, DINOv2 second). Their sum must match
-`vision_hidden_size`. Ordinary connectors receive only the input width,
-not the vision model config. Change the two widths when using other branches.
+`vision_hidden_size`. Change the two widths when using other branches.
 
 `clip_config` and `dinov2_config` inside `MofConnectorConfig` independently select
 registered connector types through `AutoConnectorModel`. Configure MLP settings
-inside each branch rather than on the outer MoF config. For example:
+inside each branch. For example:
 
 ```yaml
 model_type: mof__tlf_connector
@@ -131,8 +128,7 @@ directly for MoF, explicitly import `MofVisionModel` to register its class.
 Use `tinyllava.data.processor.AutoProcessor.from_pretrained` to load a saved
 processor lazily. Direct HF `AutoProcessor` loading of a custom processor requires
 an explicit `TinyLlavaProcessor` import to register its class.
-The local tests cover small-model numerical behavior and save/load round trips;
-they do not establish reproduction of the paper's benchmark scores.
+The local tests cover small-model numerical behavior and save/load round trips.
 
 ### Other multi-encoder designs
 
@@ -144,8 +140,7 @@ they do not establish reproduction of the paper's benchmark scores.
 
 The present MoF packing remains an aligned two-branch implementation. A future
 multi-VT interface should preserve each branch's preprocessing, token layout,
-and feature selection until its chosen fusion operation. Equal input lengths
-are a constraint of this packing, not a universal multi-VT requirement.
+and feature selection until its chosen fusion operation.
 
 
 ## Vision and connector token lengths
@@ -201,22 +196,19 @@ packed by channel, so its vision count is N; its connector produces 2N.
 
 Register custom config types in `VISION_TOWER_CONFIG_MAPPING`, with unique model
 types, so the method is restored with a saved processor. Runtime registrations
-must be repeated in a new process. Native HF config classes are not patched or
-replaced, and there is no dispatch by custom vision-model name in this path.
+must be repeated in a new process.
 
 The private `_get_num_multimodal_tokens` query is not used by the current training
 or generation flow. It continues to estimate ordinary LLaVA-compatible inputs.
 For a custom vision length rule it raises `NotImplementedError` on size-only
 queries: original image dimensions alone cannot reconstruct arbitrary processed
 metadata. Use actual processed inputs, or implement an estimator in a specialized
-processor when a consumer needs one. Hook exceptions propagate rather than
-silently falling back to the LLaVA formula.
+processor when a consumer needs one. Errors in custom length methods propagate to the caller.
 
 ### Survey of common vision architectures
 
 The following engineering survey was checked against Transformers in October
-2026. It distinguishes vision features from the surrounding VLM's merger and
-prompt layout; it is not a claim that all these architectures run in TinyLLaVA.
+2026. It describes the length contract and model integration needed for each family.
 
 | Family | Relevant token behavior | Consequence for the length contract |
 | --- | --- | --- |
@@ -231,7 +223,8 @@ prompt layout; it is not a claim that all these architectures run in TinyLLaVA.
 The native register-token case is covered with tiny randomly initialized DINOv2
 and DINOv3 models: placeholder counts are compared with actual feature lengths.
 The custom hook is tested with grid metadata, multiple connector rules and
-processor save/load. Dynamic-resolution VLM integrations remain separate work.
+processor save/load. The [v2 roadmap](../roadmap.md#native-qwen3-vl) covers
+end-to-end dynamic-resolution VLM integration.
 
 ## Custom image processors
 
@@ -243,12 +236,11 @@ add `("custom__tlf_image_processor", "CustomImageProcessor")` to
 `CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES` in `image_processor/auto/auto_mappings.py`.
 Use a unique class name and save it as `image_processor_type` with
 `save_pretrained`. Only the processor selected by this metadata is imported.
-The local Auto class does not modify HF's global mappings or loaders.
 
 ## Connector implementations
 
 Connector packages contain `configuration_<name>.py`, `modeling_<name>.py`,
-and a lazy `__init__.py`. The old decorator registry and flat modules are removed.
+and a lazy `__init__.py`.
 Use `MLPConnectorConfig(depth=1)` for a linear projection. Identity validates
 that the concatenated vision width equals the language-model width.
 
@@ -256,23 +248,20 @@ Resampler uses learned Perceiver queries. Q-Former uses the maintained HF
 `Blip2QFormerModel`, initialized from config without downloading BERT. Both
 produce `num_queries` tokens per image. All TinyLLaVA connectors use the
 same `TinyLlavaProcessor`, which persists the connector config and calls its
-sequence-length method. Only config classes are loaded during processor-only
-loading; connector model weights and implementations are not needed.
-These migrated architectures require newly trained connectors; old connector
-weight layouts are not supported. Freezing is controlled by the tuning strategy.
+sequence-length method. Processor loading imports connector config classes.
+Train Resampler and Q-Former weights for their current architectures.
+Freezing is controlled by the tuning strategy.
 
 The processor Auto mapping is keyed by the composite `TinyLlavaConfig`, as in
 HF's model/processor relationship. Adding a connector length rule requires
-implementing `get_output_sequence_length(input_length)` in its config, with no
-new processor subclass or processor mapping entry. MLP/Identity preserve N,
+implementing `get_output_sequence_length(input_length)` in its config. MLP/Identity preserve N,
 MoF returns 2N, and query connectors return their configured fixed count.
 Model-side splitting delegates to the same method, avoiding duplicate rules.
 
 ## Custom multimodal processors
 
-A new input pipeline, such as video, can implement an independent HF
-`ProcessorMixin`; it need not inherit `TinyLlavaProcessor` or define a
-`from_config` method. Register its model config and processor class with the
+A new input pipeline, such as video, can implement HF `ProcessorMixin`.
+Register its model config and processor class with the
 project `AutoProcessor.register(MyConfig, MyProcessor)`.
 `AutoProcessor.from_config(config, **kwargs)` selects the class and passes only
 `kwargs` to its constructor. Pass processor-specific settings explicitly.
@@ -281,7 +270,7 @@ helpers: `get_vision_output_sequence_length(image_inputs, image_idx, **kwargs)`
 returns the custom VT count, or `None` when the concrete processor should use its
 native calculation; `get_output_sequence_length(input_length)` applies the
 connector rule, preserving the input length when no connector is configured.
-The mixin does not expand placeholders or impose LLaVA feature selection.
+The concrete processor owns placeholder expansion and feature selection.
 
 Compose it before the native HF class, as in
 `TinyLlavaProcessor(ComponentProcessorMixin, LlavaProcessor)`. A concrete class
@@ -296,8 +285,8 @@ remain the native processor's responsibility.
 and `from_model`. The latter synchronizes image tokens and model embeddings,
 then constructs the registered processor through Auto with LLaVA-specific
 arguments. Other architectures should construct their registered processor with
-their own arguments. The old `processing_base.py` and `creation.py` entry points
-are removed.
+their own arguments. Native Qwen3-VL integration is planned in the
+[v2 roadmap](../roadmap.md#native-qwen3-vl).
 
 ```mermaid
 classDiagram
@@ -317,10 +306,9 @@ classDiagram
 For lazy package extensions, add config and processor class names to
 `PROCESSOR_CONFIG_MAPPING_NAMES` and `PROCESSOR_MAPPING_NAMES`, and their full
 module paths to `PROCESSOR_CONFIG_MODULE_NAMES` and `PROCESSOR_MODULE_NAMES`.
-The paths need not match the model type or each other. Saved processors are
-selected by `processor_class`; runtime registrations must be repeated in a new
-process. Use unique processor class names. Video processing itself belongs to
-the selected implementation, not the Auto factory.
+Saved processors are selected by `processor_class`; runtime registrations must
+be repeated in a new process. Use unique processor class names. The selected
+implementation handles video processing.
 
 ## Language models
 
@@ -347,21 +335,24 @@ the tied input-embedding path through `get_input_embeddings()` rather than
 assuming a particular language model's internal attribute name.
 
 Validation uses tiny offline checkpoints, cached versus uncached decoding,
-left padding, multimodal training, and checkpoint round trips. It does not
-constitute a full pretrained OpenELM quality evaluation.
+left padding, multimodal training, and checkpoint round trips.
+
+The planned [DeepStack Hook plugin](../roadmap.md#deepstack-hooks) adds visual
+residuals at selected native decoder layers. The roadmap describes the prototype,
+adapter responsibilities, and training/generation acceptance criteria.
 
 ## Training algorithms
 
 Add an algorithm module under `tinyllava/train/algorithms/` and register its path
-in that package's `__init__.py`. SFT is `sft.py`; algorithms do not need their own
-configuration infrastructure.
+in that package's `__init__.py`. SFT is implemented in `sft.py`.
 
 Modules expose `SECTIONS`, `validate_config`, `prepare_config(config, world_size=...)`,
 and `run(config)`. Conventional Trainer algorithms reuse `hparams/training.py`.
 Reward or rollout sections belong to their algorithm. An RL algorithm with
-different batch semantics can replace preparation without changing shared field
-grouping or the launcher.
+different batch semantics can replace preparation without changing other algorithms'
+parameters or the launcher.
 
 Keep validation and preparation lightweight; import trainers and load models only
 inside `run`. The workflow owns stage dependencies and launch, while
-`train/strategy/` owns parameter update policies. All file composition uses the shared `from` feature; algorithms do not load model, data, or recipe YAML files themselves.
+`train/strategy/` owns parameter update policies. Algorithms receive the configuration
+assembled by the shared `from` feature.

@@ -156,19 +156,18 @@ def make_experiment(
             "learning_rate": 0.001,
             "per_device_train_batch_size": 2,
             "gradient_accumulation_steps": 1,
-            "runtime": {
-                "use_cpu": True,
-                "precision": "fp32",
-                "seed": seed,
-            },
-            "dataloader": {"dataloader_num_workers": 0, "dataloader_pin_memory": False},
-            "saving": {"output_dir": str(output), "save_strategy": "no"},
-            "logging": {
-                "report_to": [],
-                "disable_tqdm": True,
-                "logging_strategy": "no",
-            },
-            "scheduler": {"lr_scheduler_type": "constant", "warmup_steps": 0},
+            "use_cpu": True,
+            "precision": "fp32",
+            "seed": seed,
+            "dataloader_num_workers": 0,
+            "dataloader_pin_memory": False,
+            "output_dir": str(output),
+            "save_strategy": "no",
+            "report_to": [],
+            "disable_tqdm": True,
+            "logging_strategy": "no",
+            "lr_scheduler_type": "constant",
+            "warmup_steps": 0,
         },
     }
     if components:
@@ -216,7 +215,8 @@ def test_qwen_siglip_stages_and_adapter_resume(tmp_path, monkeypatch):
         components=True,
     )
     config["training"]["max_steps"] = 2
-    config["training"]["saving"] = {"save_strategy": "steps", "save_steps": 1}
+    config["training"].pop("output_dir")
+    config["training"].update(save_strategy="steps", save_steps=1)
     config["output_root"] = str(tmp_path / "runs")
     stage_options = deepcopy(config["training"])
     stage_options.pop("max_steps")
@@ -231,6 +231,9 @@ def test_qwen_siglip_stages_and_adapter_resume(tmp_path, monkeypatch):
         },
         "full": {"training": {**stage_options, "from": str(presets / "finetune.yaml")}},
     }
+    algorithm, data = config.pop("algorithm"), config.pop("data")
+    for stage in config["stages"].values():
+        stage.update(algorithm=algorithm, data=deepcopy(data))
     path = tmp_path / "stages.yaml"
     OmegaConf.save(OmegaConf.create(config), path)
     main(["train", "--config", str(path), "--steps", "pretrain,repeat,lora"])

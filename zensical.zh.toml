@@ -10,6 +10,9 @@ nav = [
   { "首页" = "index.md" },
   { "使用指南" = [
     { "安装" = "guides/installation.md" },
+    { "配置方式" = "guides/configuration.md" },
+    { "参数速查" = "guides/parameters.md" },
+    { "模型与 checkpoint" = "guides/models.md" },
     { "训练数据" = "guides/data.md" },
     { "训练" = "guides/training.md" },
     { "评测" = "guides/evaluation.md" },
@@ -25,7 +28,8 @@ nav = [
     { "评测" = "reference/evaluation.md" },
   ] },
   { "迁移" = "migration.md" },
-  { "维护文档" = "contributing.md" },
+  { "v2 路线图" = "roadmap.md" },
+  { "参与贡献" = "contributing.md" },
 ]
 
 [project.theme]

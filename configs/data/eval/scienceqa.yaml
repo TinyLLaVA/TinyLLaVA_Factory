@@ -1,4 +1,6 @@
+# Benchmark sample format
 adapter: scienceqa
+
+# Question annotations and images
 question_file: ${eval_dir}/scienceqa/llava_test_CQM-A.json
 image_folder: ${eval_dir}/scienceqa/images/test
-single_pred_prompt: true

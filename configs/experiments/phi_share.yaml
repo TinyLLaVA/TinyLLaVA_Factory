@@ -1,16 +1,28 @@
-algorithm: sft
+# Shared model configuration
 model:
   from: phi
   model_max_length: 3072
+
 stages:
+  # Align visual features with the language model.
   base_pretrain:
+    algorithm: sft
     data: llava_558k
+
     training: pretrain
+
+  # Continue pretraining on ShareGPT4V captions.
   pretrain:
+    algorithm: sft
     data: sharegpt4v_pretrain
+
     training:
       from: finetune
       gradient_accumulation_steps: 8
+
+  # Train on instruction-following conversations.
   finetune:
+    algorithm: sft
     data: sharegpt4v_finetune
+
     training: finetune

@@ -5,7 +5,7 @@ import torch
 from torch import nn
 from transformers import CLIPVisionConfig, LlamaConfig, SiglipVisionConfig
 
-from tinyllava.hparams.tuning import TuningArguments
+from tinyllava.hparams.arguments import TuningArguments
 from tinyllava.model import TinyLlavaConfig, TinyLlavaForConditionalGeneration
 from tinyllava.train.strategy.base import BaseTrainingStrategy
 from tinyllava.train.strategy.peft_strategy import LoraTrainingStrategy

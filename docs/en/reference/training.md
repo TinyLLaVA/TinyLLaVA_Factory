@@ -1,7 +1,7 @@
 # Training API
 
-Strategies apply tuning policies and save the model. The optional sampler
-groups samples by modality and length.
+Choose recipes and launch runs with the [training guide](../guides/training.md).
+Training and tuning options are listed in the [parameter reference](../guides/parameters.md#training).
 
 ::: tinyllava.train.strategy.base.BaseTrainingStrategy
 

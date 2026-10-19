@@ -40,16 +40,16 @@ def test_failed_shard_raises():
 
 def test_sharded_generation_assigns_devices_and_merges(tmp_path, monkeypatch):
     _, step, stage = eval_plan(ROOT / "configs/eval/gqa.yaml", ["devices=[2,5]"])[0]
-    stage["output"]["answers_file"] = str(tmp_path / "answers.jsonl")
+    stage["answers_file"] = str(tmp_path / "answers.jsonl")
 
     def fake_workers(commands, envs):
         for i, (command, env) in enumerate(zip(commands, envs, strict=True)):
             shard = OmegaConf.load(command[-1])
             assert env["CUDA_VISIBLE_DEVICES"] == ["2", "5"][i]
-            assert shard.runtime.device == "cuda:0"
-            assert shard.runtime.chunk_idx == i
-            assert shard.runtime.num_chunks == 2
-            Path(shard.output.answers_file).write_text(f"{i}\n")
+            assert shard.device == "cuda:0"
+            assert shard.chunk_idx == i
+            assert shard.num_chunks == 2
+            Path(shard.answers_file).write_text(f"{i}\n")
 
     monkeypatch.setattr(runner, "run_shards", fake_workers)
     run_generation_step(step, stage, tmp_path)
@@ -78,7 +78,7 @@ def test_failed_shards_leave_existing_output(tmp_path, monkeypatch):
     _, step, stage = eval_plan(ROOT / "configs/eval/gqa.yaml")[0]
     output = tmp_path / "answers.jsonl"
     output.write_text("previous\n")
-    stage["output"]["answers_file"] = str(output)
+    stage["answers_file"] = str(output)
 
     def fail(*args):
         raise subprocess.CalledProcessError(1, "worker")

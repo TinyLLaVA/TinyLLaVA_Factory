@@ -2,9 +2,9 @@ import re
 
 from transformers import Trainer
 
+from tinyllava.hparams.arguments import TuningArguments
+from tinyllava.hparams.hf import TrainingArguments
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
-from tinyllava.hparams.arguments import TrainingArguments
-from tinyllava.hparams.tuning import TuningArguments
 from tinyllava.utils.logging import log
 from tinyllava.utils.precision import training_torch_dtype
 

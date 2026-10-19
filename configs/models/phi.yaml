@@ -1,9 +1,16 @@
-connector: mlp2x_gelu
+# Model components and loading
 language_model_name_or_path: microsoft/phi-2
-tokenizer_name_or_path: null
-chat_template_path: configs/chat_templates/llava.jinja
 vision_model_name_or_path: google/siglip-so400m-patch14-384
-vision_feature_layer: -2
+connector: mlp2x_gelu
+attn_implementation: null
+
+# Tokenization
+tokenizer_name_or_path: null
 model_max_length: 2048
 tokenizer_use_fast: false
-attn_implementation: null
+
+# Conversation formatting
+chat_template_path: configs/chat_templates/llava.jinja
+
+# Vision features
+vision_feature_layer: -2

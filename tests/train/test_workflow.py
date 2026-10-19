@@ -8,8 +8,10 @@ from omegaconf import OmegaConf
 from tinyllava.eval.workflow import eval_plan
 from tinyllava.train.workflow import (
     load_train_config,
-    training_stages,
     train_plan,
+    training_stages,
+)
+from tinyllava.train.workflow import (
     run as run_train,
 )
 
@@ -43,8 +45,7 @@ stages:
       from: {ROOT}/configs/data/train/llava_558k.yaml
     training:
       from: {ROOT}/configs/training/pretrain.yaml
-      saving:
-        output_dir: output/custom-align
+      output_dir: output/custom-align
   instruction:
     training:
       from: {ROOT}/configs/training/finetune.yaml
@@ -57,10 +58,7 @@ stages:
     assert (
         stages[1][1]["model"]["pretrained_model_name_or_path"] == "output/custom-align"
     )
-    assert (
-        stages[1][1]["training"]["saving"]["output_dir"]
-        == "output/experiment/instruction"
-    )
+    assert stages[1][1]["training"]["output_dir"] == "output/experiment/instruction"
 
 
 def test_selectors_and_nested_overrides_resolve_before_interpolation(
@@ -84,7 +82,7 @@ def test_selectors_and_nested_overrides_resolve_before_interpolation(
         config["data"]["dataset_name_or_path"]
         == "/local/data/text_files/llava_v1_5_mix665k.json"
     )
-    assert config["training"]["saving"]["output_dir"] == "output/custom/align"
+    assert config["training"]["output_dir"] == "output/custom/align"
     assert config["training"]["learning_rate"] == 0.01
     config = load_train_config(single_stage_config, ["model.model_max_length=4096"])
     assert config["model"]["model_max_length"] == 4096
@@ -137,7 +135,7 @@ def test_invalid_stage_dependency_and_output_collision(tmp_path):
         OmegaConf.create(
             {
                 "model": {"from": str(ROOT / "configs/models/phi.yaml")},
-                "training": {"saving": {"output_dir": "same"}},
+                "training": {"output_dir": "same"},
                 "stages": {"one": {}, "two": {}},
             }
         ),
@@ -252,5 +250,5 @@ def test_experiment_name_does_not_select_model(tmp_path):
     )
     resolved = load_train_config(path)
     assert resolved["model"]["language_model_name_or_path"] == "microsoft/phi-2"
-    assert resolved["training"]["saving"]["output_dir"] == "output/trial/experiment"
-    assert resolved["training"]["logging"]["run_name"] == "trial/experiment"
+    assert resolved["training"]["output_dir"] == "output/trial/experiment"
+    assert resolved["training"]["run_name"] == "trial/experiment"

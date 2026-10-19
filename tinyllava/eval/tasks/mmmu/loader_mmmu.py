@@ -11,8 +11,8 @@ from typing import Any
 import numpy as np
 
 from tinyllava.data.image_payload import resolve_image_payload
-from tinyllava.eval.tasks.loader_base import GenerationExample
 from tinyllava.eval.generation import strip_legacy_image_markers
+from tinyllava.eval.tasks.loader_base import GenerationExample
 
 
 class MmmuLoader:
@@ -27,11 +27,12 @@ class MmmuLoader:
         sample: Mapping[str, Any],
         *,
         image_folder: str,
-        args: Any,
     ) -> GenerationExample:
         image_files = []
         if "image" in sample:
-            image_files.append(resolve_image_payload(sample["image"], image_folder=image_folder))
+            image_files.append(
+                resolve_image_payload(sample["image"], image_folder=image_folder)
+            )
 
         return GenerationExample(
             question_id=str(sample["id"]),

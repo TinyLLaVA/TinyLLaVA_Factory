@@ -1,3 +1,7 @@
-"""Parameter schemas shared by workflows and worker entry points."""
+"""Project parameters, training configuration, and HF integration.
 
-EVAL_SECTIONS = ("model", "data", "generation", "runtime", "output")
+Modules:
+    arguments: Project-owned parameter objects for training and evaluation.
+    training: Training validation, batch sizing, and construction.
+    hf: HF TrainingArguments subclass, imported when constructing worker inputs.
+"""

@@ -10,16 +10,14 @@ from typing import Any
 
 from omegaconf import OmegaConf
 
+from tinyllava import runner
+from tinyllava.eval.tasks.auto.workflow_auto import build_evaluation_workflow
+from tinyllava.hparams.arguments import EvalArguments
 from tinyllava.utils.config import (
     compose_config,
-    validate_name,
-    validate_fields,
     resolve_interpolations,
+    validate_name,
 )
-from tinyllava import runner
-from tinyllava.hparams import EVAL_SECTIONS
-
-from tinyllava.eval.tasks.auto.workflow_auto import build_evaluation_workflow
 
 _EVAL_METADATA = {
     "dataset_dir",
@@ -35,54 +33,35 @@ def load_eval_config(
     path: str | Path, overrides: Sequence[str] = (), *, metadata: bool = False
 ) -> dict[str, Any]:
     """Load evaluation settings; metadata=True also returns workflow paths/options."""
-    config = compose_config(path, overrides, data_kind="eval")
-    validate_fields(config, EVAL_SECTIONS, _EVAL_METADATA, "eval")
-
+    config = compose_config(path, overrides)
     benchmark = validate_name(config.get("benchmark", Path(path).stem), "Benchmark")
-    checkpoint = _set_evaluation_model_defaults(config)
-    _set_evaluation_path_defaults(config, benchmark, checkpoint)
-    config.setdefault("generation", {})
-    config.setdefault("runtime", {})
-    config = resolve_interpolations(config)
     config["benchmark"] = benchmark
-    if metadata:
-        return config
-    return {section: config[section] for section in EVAL_SECTIONS if section in config}
-
-
-def _set_evaluation_model_defaults(config: dict[str, Any]) -> str:
-    model = config.setdefault("model", {})
-    if not isinstance(model, dict):
-        raise ValueError("Eval model must be a mapping with model_name_or_path")
-    model.setdefault(
-        "model_name_or_path",
-        os.environ.get("MODEL_PATH", "output/qwen2_instruct/finetune"),
-    )
-    checkpoint = resolve_interpolations({"model": model})["model"]["model_name_or_path"]
-    model.setdefault("model_id", os.environ.get("MODEL_NAME", Path(checkpoint).name))
-    return checkpoint
-
-
-def _set_evaluation_path_defaults(
-    config: dict[str, Any], benchmark: str, checkpoint_path: str
-) -> None:
     config.setdefault(
         "dataset_dir", os.environ.get("TINYLLAVA_DATASET_DIR", "datasets")
     )
     config.setdefault("eval_dir", os.environ.get("EVAL_DIR", "${dataset_dir}/eval"))
-    model = config["model"]
-    checkpoint = Path(checkpoint_path)
+    config.setdefault(
+        "model_name_or_path",
+        os.environ.get("MODEL_PATH", "output/qwen2_instruct/finetune"),
+    )
+    # Resolve only the checkpoint first; answer paths need output_dir below.
+    checkpoint = Path(OmegaConf.create(config).model_name_or_path).expanduser()
+    config.setdefault("model_id", os.environ.get("MODEL_NAME", checkpoint.name))
     # output/<experiment>/<stage> keeps its hierarchy; external checkpoints use model_id.
     try:
         model_directory = checkpoint.resolve().relative_to(Path("output").resolve())
     except ValueError:
-        model_directory = Path(model.get("model_id") or checkpoint.name)
+        model_directory = Path(config.get("model_id") or checkpoint.name)
     config.setdefault(
         "output_dir", str(Path("output") / model_directory / "eval" / benchmark)
     )
-    config.setdefault("output", {}).setdefault(
-        "answers_file", "${output_dir}/answers.jsonl"
-    )
+    config.setdefault("answers_file", "${output_dir}/answers.jsonl")
+    config = resolve_interpolations(config)
+    worker_config = {
+        key: value for key, value in config.items() if key not in _EVAL_METADATA
+    }
+    EvalArguments(**worker_config)
+    return config if metadata else worker_config
 
 
 def eval_plan(
@@ -94,9 +73,9 @@ def eval_plan(
     benchmark = config["benchmark"]
     data = Path(config["eval_dir"]).expanduser().resolve()
     output = Path(config["output_dir"]).expanduser().resolve()
-    answers = Path(config["output"]["answers_file"]).expanduser().resolve()
-    config["output"]["answers_file"] = str(answers)
-    generation = {k: v for k, v in config.items() if k in EVAL_SECTIONS}
+    answers = Path(config["answers_file"]).expanduser().resolve()
+    config["answers_file"] = str(answers)
+    generation = {k: v for k, v in config.items() if k not in _EVAL_METADATA}
     result = [
         (
             "generate",
@@ -137,10 +116,10 @@ def run_generation_step(step, config, directory, *, dry_run=False):
         for index, gpu in enumerate(gpu_ids):
             shard = OmegaConf.create(config)
             output = str(Path(directory) / f"{index}.jsonl")
-            shard.runtime.num_chunks = len(gpu_ids)
-            shard.runtime.chunk_idx = index
-            shard.runtime.device = "cuda:0"
-            shard.output.answers_file = output
+            shard.num_chunks = len(gpu_ids)
+            shard.chunk_idx = index
+            shard.device = "cuda:0"
+            shard.answers_file = output
             path = Path(directory) / f"{index}.yaml"
             OmegaConf.save(shard, path)
             commands.append(
@@ -157,10 +136,10 @@ def run_generation_step(step, config, directory, *, dry_run=False):
         if dry_run:
             for command in commands:
                 runner.run_command(command, dry_run=True)
-            print(f"Merge {len(outputs)} shards -> {config['output']['answers_file']}")
+            print(f"Merge {len(outputs)} shards -> {config['answers_file']}")
         else:
             runner.run_shards(commands, envs)
-            runner.merge_shards(outputs, config["output"]["answers_file"])
+            runner.merge_shards(outputs, config["answers_file"])
 
 
 def run(

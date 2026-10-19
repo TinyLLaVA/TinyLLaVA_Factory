@@ -51,14 +51,22 @@ Use `tinyllava.eval.batch_generation` for datasets,
 ## CLI and execution responsibilities
 
 `tinyllava.cli` dispatches training, evaluation, and conversation entry points.
-`utils/config.py` implements recursive `from` references with OmegaConf merging; workflows only
-resolve runtime stage inheritance, checkpoints, and execution steps.
-`hparams/training.py` owns common training groups, validation, HF argument adaptation,
-and conventional batch derivation; `hparams/tuning.py` defines update policies.
+`utils/config.py` expands recursive `from` references with OmegaConf merging.
+Training and evaluation workflows resolve stage inheritance, checkpoints, paths,
+and execution steps. Multi-stage experiments select algorithm and data within
+each stage, with shared model, training, and launcher defaults at the root.
+
+`hparams/arguments.py` defines project parameter objects for training and evaluation.
+`hparams/training.py` owns training structure validation, batch derivation, and argument construction;
+`hparams/hf.py` contains the HF `TrainingArguments` subclass, imported when
+constructing training worker inputs so workflow validation stays lightweight.
+`EvalArguments(**config)` validates flat evaluation parameters after the workflow
+resolves paths and removes its metadata.
+
 `train/algorithms/sft.py` runs supervised training and `sft_trainer.py` contains
 its Trainer and sampler extensions. `train/strategy/` implements freezing and LoRA.
 Other algorithms belong beside SFT inside `algorithms/`, reusing shared parameters
-while replacing their data, batch semantics, or loop. `runner.py` only executes
+while defining their data, batch semantics, and loop. `runner.py` executes
 commands, manages processes, and merges outputs. Evaluation tasks own their
 adapters, conversion, and scoring steps.
 
@@ -70,9 +78,14 @@ adapters, conversion, and scoring steps.
 | `tinyllava.data` | Dataset adapters, processor creation, templates, and collator |
 | `tinyllava.train` | Training entry point, tuning strategies, and sampling |
 | `tinyllava.eval` | Generation, task loaders, and evaluators |
-| `tinyllava.hparams` | Shared argument types, grouped training settings, and validation |
+| `tinyllava.hparams` | Parameter types, configuration validation, and HF argument adaptation |
 | `tinyllava.utils` | YAML composition, checkpoint discovery, and loading |
 | `tinyllava.serve` | Interactive Web UI |
 
 See the [extension guide](guides/extending.md) and [API reference](reference/model.md)
 for implementation details.
+
+The [v2 roadmap](roadmap.md#deepstack-hooks) describes the proposed Qwen3-VL-style
+DeepStack Hook plugin: vision components produce auxiliary features, the composite
+model maps them to visual positions, and layer adapters inject them into native HF
+decoders. Its standalone prototype guides the next integration milestones.

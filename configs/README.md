@@ -53,7 +53,7 @@ Inline settings work without a file reference too.
   `${oc.env:NAME,default}` remains available through OmegaConf, and is resolved
   after the workflow has assigned runtime paths.
 - Changing a `from` selects a new source before nested references are expanded.
-  Explicit sibling fields remain; defaults from the replaced file do not leak in.
+  The new preset replaces the previous defaults and preserves explicit sibling overrides.
 - `from` is reserved for composition and is removed from the result. Missing files,
   non-mapping files, malformed references, and cycles report configuration errors.
   Reusing a file in different places is supported.
@@ -64,11 +64,10 @@ Inline settings work without a file reference too.
 | `connector`, including `model.connector` | `configs/connectors/` |
 | `training`, including stage training | `configs/training/` |
 | `data` in a training entry | `configs/data/train/` |
-| `data` in an evaluation entry | `configs/data/eval/` |
 
-Training/evaluation workflows supply the data context, including for entries
-outside the repository. `compose_config` defaults to training data; direct callers
-can pass `data_kind="eval"` for evaluation presets.
+These directories also apply to entries outside the repository. Evaluation
+parameters are flat; merge benchmark inputs from `configs/data/eval/` at the root
+with an explicit relative or absolute `from` reference.
 
 Preset files contain the fields of their destination node. `training/pretrain.yaml`
 starts with `learning_rate`, `tuning`, etc.; it has no outer `training` mapping.
@@ -107,19 +106,21 @@ checked by the workflow and algorithm after composition.
 
 ```yaml
 # configs/experiments/custom.yaml
-algorithm: sft
 model: phi
 stages:
   align:
+    algorithm: sft
     data: llava_558k
     training: pretrain
   instruction:
+    algorithm: sft
     data: llava_665k
     training: finetune
 ```
 
 The configuration layer composes files first. The workflow then merges shared
-fields with each stage; stage fields win, including values from training presets.
+model, training, and launcher defaults with each stage; stage fields win, including
+values from training presets. Each stage selects its own `algorithm` and `data`.
 Override a stage with `stages.align.training.learning_rate=...`, select its training preset
 with `stages.align.training.from=pretrain`, or select its data with
 `stages.align.data.from=llava_558k`. Stage names are independent
@@ -128,7 +129,7 @@ of the training algorithm.
 Outputs default to `output/<experiment_name or entry filename>/<stage>/`.
 Each stage initializes from the previous output. `stages.NAME.from_stage` selects
 an earlier stage; `checkpoint` selects an external checkpoint, and `checkpoint: null`
-starts from components. `training.saving.resume_from_checkpoint` instead resumes
+starts from components. `training.resume_from_checkpoint` instead resumes
 an interrupted run in its output directory. `--steps NAME` selects execution,
 while dependencies are still resolved using the whole experiment.
 
@@ -139,17 +140,18 @@ while dependencies are still resolved using the whole experiment.
 | `models/` | Model components, tokenizer and preprocessing |
 | `connectors/` | Connector architecture settings |
 | `data/train/` | Training data fields, referenced under `data.from` |
-| `data/eval/` | Benchmark input fields, referenced under `data.from` |
+| `data/eval/` | Benchmark input fields, merged at the evaluation root with `from` |
 | `training/` | Training fields, referenced under `training.from` |
 | `experiments/` | Training entries, with one or multiple stages |
 | `eval/` | Benchmark entries |
 | `deepspeed/` | Runtime JSON files consumed by DeepSpeed |
 
-`training` keeps core learning-rate, epoch/step and batch settings. Its nested
-`tuning`, `saving`, `logging`, `optimizer`, `scheduler`, `runtime`, `dataloader`,
-and `evaluation` groups are adapted to Trainer parameters by `hparams/training.py`.
-`training.global_batch_size` is resolved from worker count and micro batch;
-`launcher` only controls devices, distributed launch, and port.
+`training` contains Trainer fields directly. `training.tuning` is an independent
+update-policy object; `training.tuning.peft` contains LoRA settings. Native mappings such as
+`lr_scheduler_kwargs` retain their structure. `training.global_batch_size` derives
+accumulation from worker count and micro batch; `launcher` controls devices,
+distributed launch, and port. HF validates its options when worker arguments are
+constructed; workflow checks cover project structure and parameters.
 
 Algorithms live under `train/algorithms/`, and component update strategies under
 `train/strategy/`. SFT reuses shared argument validation and batch preparation.
@@ -166,17 +168,25 @@ requiring length 3072 or Flash Attention 2.
 
 ```bash
 python -m tinyllava.cli eval --config configs/eval/gqa.yaml \
-  model.model_name_or_path=output/phi/finetune devices=[0,1] --dry-run
+  model_name_or_path=output/phi/finetune devices=[0,1] --dry-run
 ```
 
-Evaluation references its data at the corresponding node:
+Evaluation parameters are flat. Reuse benchmark inputs with a root reference:
 
 ```yaml
 # configs/eval/custom.yaml
+# Benchmark inputs
+from: ../data/eval/gqa.yaml
 benchmark: gqa
-data:
-  from: gqa
-  image_folder: /path/to/gqa/images
+image_folder: /path/to/gqa/images
+
+# Model and generation
+model_name_or_path: output/phi/finetune
+temperature: 0.0
+max_new_tokens: 128
+
+# Worker execution
+batch_size: 4
 ```
 
 Paths and benchmark scoring belong to the evaluation workflow. `--steps generate` selects prediction

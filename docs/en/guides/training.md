@@ -7,13 +7,14 @@ is separate in `configs/data/eval/`. An experiment combines them:
 
 ```yaml
 # configs/experiments/phi.yaml
-algorithm: sft
 model: phi
 stages:
   pretrain:
+    algorithm: sft
     data: llava_558k
     training: pretrain
   finetune:
+    algorithm: sft
     data: llava_665k
     training: finetune
 ```
@@ -21,7 +22,7 @@ stages:
 Bare filenames select the matching preset directory. A node with only a file
 reference can use `model: phi`; use `model: {from: phi, model_max_length: 4096}`
 when overriding fields. Explicit relative paths are anchored to the declaring YAML.
-CLI overrides support `model=phi model.model_max_length=4096`. See the [configuration reference](../reference/configuration.md).
+CLI overrides support `model=phi model.model_max_length=4096`. See the [configuration guide](configuration.md).
 
 `model.vision_feature_select_strategy` is inferred from the vision backbone by
 default: SigLIP retains every patch, while CLIP, DINO and MoF drop the leading CLS
@@ -36,6 +37,10 @@ python -m tinyllava.cli train --config configs/experiments/phi.yaml
 python -m tinyllava.cli train --config configs/experiments/phi.yaml --steps finetune
 ```
 
+Each stage selects its own `algorithm` and `data`. Shared `model`, `training`,
+and `launcher` defaults can remain at the experiment root. Trainer options are
+direct children of `training`.
+
 Stage names are arbitrary: `align` and `sft` work equally well. The selected training settings and
 actual model/data options determine behavior. Outputs default to
 `output/<experiment>/<stage>/`; the experiment name defaults to the file stem.
@@ -49,8 +54,21 @@ python -m tinyllava.cli train --config configs/experiments/phi.yaml \
 
 Use `stages.sft.from_stage=align` to load an earlier stage, or
 `stages.sft.checkpoint=/path/to/model` for an external checkpoint. A null checkpoint
-starts from base components. An explicit stage `training.saving.output_dir` is respected
+starts from base components. An explicit stage `training.output_dir` is respected
 and downstream inputs follow it. `output_root` relocates all default output paths.
+
+## Recipes { #recipes }
+
+| Training preset | Language model | Vision encoder | Connector |
+| --- | --- | --- | --- |
+| `pretrain` | Frozen | Frozen | Full update |
+| `finetune` | Full update | Frozen | Full update |
+| `lora_finetune` | LoRA | Frozen | Full update |
+| `qlora_finetune` | LoRA on an 8-bit base | Frozen | Full update |
+
+Select a preset with `stages.finetune.training=lora_finetune`, then override its
+fields as needed. Batch size, learning rate, saving, and tuning options are listed
+in the [parameter reference](parameters.md#training).
 
 ## Single-stage training and custom data
 
@@ -64,11 +82,11 @@ python -m tinyllava.cli train --config configs/experiments/phi_lora.yaml --steps
 
 `configs/experiments/` is the training entry directory. `--steps` chooses execution
 while preserving checkpoint dependencies. LoRA/QLoRA examples are `phi_lora.yaml`
-and `phi_qlora.yaml`. Their training presets do not impose a sequence length or
-attention backend: these remain model settings. For a specific run, set
+and `phi_qlora.yaml`. Sequence length and attention backend are model settings.
+For a specific run, set
 `stages.finetune.model.model_max_length=3072` or
 `stages.finetune.model.attn_implementation=flash_attention_2` when appropriate for
-the model and environment. Neither setting is a LoRA requirement.
+the model and environment.
 
 A custom single-stage entry can omit `stages`:
 
@@ -107,7 +125,7 @@ can set `launcher.distributed=true` for torchrun; devices default to
 accumulation from GPU count and per-device batch. Otherwise the preset accumulation values
 are retained. DeepSpeed configuration lives in `configs/deepspeed/`.
 
-`training.saving.resume_from_checkpoint=auto` resumes complete checkpoints in the current
+`training.resume_from_checkpoint=auto` resumes complete checkpoints in the current
 output directory. Loading a previous stage's model initializes a new stage.
 Choose a new `experiment_name` for an independent run. `--dry-run` prints resolved parameters
 and commands without loading models or checking dataset/checkpoint completeness.

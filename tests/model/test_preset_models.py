@@ -19,7 +19,7 @@ from transformers import (
 
 from tests.data.test_auto_vision_processing import tokenizer
 from tinyllava.data.processor import TinyLlavaProcessor
-from tinyllava.hparams.tuning import TuningArguments
+from tinyllava.hparams.arguments import TuningArguments
 from tinyllava.model import TinyLlavaConfig, TinyLlavaForConditionalGeneration
 from tinyllava.model.llm.openelm import OpenELMConfig
 from tinyllava.train.strategy.base import BaseTrainingStrategy

@@ -12,9 +12,9 @@ from transformers import (
     SiglipVisionModel,
 )
 
+from tinyllava.hparams.arguments import TuningArguments
 from tinyllava.model.configuration_tinyllava import TinyLlavaConfig
 from tinyllava.model.modeling_tinyllava import TinyLlavaForConditionalGeneration
-from tinyllava.hparams.tuning import TuningArguments
 from tinyllava.train.strategy.peft_strategy import LoraInt8TrainingStrategy
 from tinyllava.utils.precision import cast_model_to_training_dtype
 

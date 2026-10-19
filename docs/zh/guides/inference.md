@@ -10,7 +10,21 @@ python -m tinyllava.cli single-turn \
   --temperature 0 --max-new-tokens 128
 ```
 
-CLI checkpoint 选项目前为 `--model-path`，评测 YAML 则为 `model.model_name_or_path`。模型与 processor 支持多图时可重复传入 `--image-file`。
+CLI checkpoint 选项目前为 `--model-path`，评测 YAML 则为 `model_name_or_path`。模型与 processor 支持多图时可重复传入 `--image-file`。
+
+## CLI 选项 { #options }
+
+| 选项 | 用途 |
+| --- | --- |
+| `--model-path` | 已训练 checkpoint 的目录或 Hub ID。 |
+| `--query` | 用户提问，`single-turn` 必填，`chat` 可选。 |
+| `--image-file` | 图片路径；模型支持多图时可重复传入。 |
+| `--device` | 运行设备，默认优先 CUDA，否则 CPU。 |
+| `--chat-template-path` | Jinja 对话模板文件。 |
+| `--temperature` | 采样温度，`0` 关闭采样。 |
+| `--top-p` | 核采样的概率阈值。 |
+| `--num-beams` | 解码束数，默认 `1`。 |
+| `--max-new-tokens` | 回答 token 上限，这两个 CLI 命令默认 `512`。 |
 
 ## 终端多轮对话
 

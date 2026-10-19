@@ -1,3 +1,6 @@
+# Training annotations
 dataset_name_or_path: ${dataset_dir}/text_files/blip_laion_cc_sbu_558k.json
+
+# Image paths and sample format
 image_folder: ${dataset_dir}/llava/llava_pretrain/images
 dataset_adapter: llava_legacy

@@ -10,7 +10,7 @@ from tinyllava.utils.config import load_config, merge_mappings
 def train(args: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True, help="Resolved training YAML.")
-    parser.add_argument("--deepspeed", help="Override training.runtime.deepspeed.")
+    parser.add_argument("--deepspeed", help="Override training.deepspeed.")
     parser.add_argument("--local_rank", "--local-rank", type=int, default=None)
     parser.add_argument("overrides", nargs="*", help="OmegaConf dotlist overrides.")
     options = parser.parse_args(args)
@@ -25,7 +25,7 @@ def train(args: Sequence[str] | None = None) -> None:
         if value is not None
     }
     if runtime:
-        config = merge_mappings(config, {"training": {"runtime": runtime}})
+        config = merge_mappings(config, {"training": runtime})
     get_algorithm(config.get("algorithm", "sft")).run(config)
 
 

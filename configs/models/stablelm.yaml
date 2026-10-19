@@ -1,8 +1,13 @@
-connector: mlp2x_gelu
+# Model components and loading
 language_model_name_or_path: stabilityai/stablelm-2-zephyr-1_6b
-tokenizer_name_or_path: null
 vision_model_name_or_path: openai/clip-vit-large-patch14-336
-vision_feature_layer: -2
+connector: mlp2x_gelu
+attn_implementation: null
+
+# Tokenization
+tokenizer_name_or_path: null
 model_max_length: 2048
 tokenizer_use_fast: false
-attn_implementation: null
+
+# Vision features
+vision_feature_layer: -2

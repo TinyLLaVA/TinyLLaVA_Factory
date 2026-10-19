@@ -1,6 +1,6 @@
 # 训练 API
 
-strategy 应用调优策略并保存模型，可选采样器按模态与长度分组。
+配方选择与运行步骤见[训练指南](../guides/training.md)，训练和调优选项见[参数速查](../guides/parameters.md#training)。
 
 ::: tinyllava.train.strategy.base.BaseTrainingStrategy
 

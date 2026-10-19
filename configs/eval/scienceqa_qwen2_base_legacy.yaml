@@ -1,11 +1,15 @@
+# Benchmark and annotation preset
+from: ../data/eval/scienceqa.yaml
 benchmark: scienceqa
-data: scienceqa
-model:
-  model_name_or_path: ${oc.env:MODEL_PATH,output/qwen2_base_legacy/finetune}
-generation:
-  temperature: 0.0
-  num_beams: 1
-  max_new_tokens: 1024
-  chat_template_path: configs/chat_templates/qwen2_base_legacy.jinja
-runtime:
-  batch_size: 1
+
+# Model checkpoint
+model_name_or_path: ${oc.env:MODEL_PATH,output/qwen2_base_legacy/finetune}
+
+# Answer generation
+temperature: 0.0
+num_beams: 1
+max_new_tokens: 1024
+chat_template_path: configs/chat_templates/qwen2_base_legacy.jinja
+
+# Worker execution
+batch_size: 1

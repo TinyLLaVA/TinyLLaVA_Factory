@@ -28,7 +28,7 @@ mkdocstrings 通过 Griffe 读取源码，并在无法静态解析时允许动�
 
 ### Docstring 风格
 
-使用 [Google 风格 docstring](https://mkdocstrings.github.io/griffe/reference/docstrings/#google-style)：先用一句话说明用途，再按需补充 `Args`、`Returns`、`Raises` 和 `Examples`。说明单位、张量形状、mask 规则、副作用和影响使用的默认行为。类型和默认值以 Python 签名为准，缺少类型注解时才在 docstring 中补充类型。dataclass 字段放在 `Attributes` 中，名称与源码一致。
+使用 [Google 风格 docstring](https://mkdocstrings.github.io/griffe/reference/docstrings/#google-style)：先用一句话说明用途，再按需补充 `Args`、`Returns`、`Raises` 和 `Examples`。说明单位、张量形状、mask 规则、副作用和影响使用的默认行为。类型和默认值以 Python 签名为准，缺少类型注解时才在 docstring 中补充类型。dataclass 字段的属性 docstring 紧跟字段声明。
 
 各节之间留一个空行，条目缩进四个空格。使用 Markdown 链接和 Python 代码块，示例采用 TinyLLaVA 的公开接口，并说明需要准备的模型或数据。
 

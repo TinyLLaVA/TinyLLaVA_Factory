@@ -1,8 +1,7 @@
 # Model and checkpoint loading
 
-`TinyLlavaConfig` contains text, vision, and connector sub-configs. Load saved
-models with `from_pretrained`; assemble new components with
-`from_pretrained_components`. See [Training](../guides/training.md).
+Choose components and checkpoints in the [model guide](../guides/models.md);
+see [Inference](../guides/inference.md) for loading and generation examples.
 
 ::: tinyllava.model.configuration_tinyllava.TinyLlavaConfig
 

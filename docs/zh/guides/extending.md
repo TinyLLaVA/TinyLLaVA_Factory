@@ -10,6 +10,7 @@
 | 数据格式 | `tinyllava.data.adapters` |
 | 对话模板 | `model.chat_template_path`、Jinja generation block |
 | 调优策略 | `tinyllava.train.strategy` |
+| 训练算法 | `tinyllava.train.algorithms` |
 | 评测任务 | `tinyllava.eval.tasks.auto` |
 
 连接器输出维度必须匹配语言模型，并验证 config/model 保存加载往返。对话模板应正确放置图像占位符，用 `{% generation %}` 标记 assistant 输出；在训练前检查实际渲染结果和监督 mask。
@@ -21,7 +22,6 @@
 原生 CLIP、SigLIP、DINOv2 及接口兼容的 HF 视觉模型通过 `AutoVisionTowerModel` 合并后的项目与 HF 原生命名映射加载。
 CLIP/SigLIP 的完整配置会先提取视觉子配置。项目视觉类型使用 `__tlf_vision_tower` 后缀。运行时扩展显式注册到
 `VISION_TOWER_CONFIG_MAPPING` 和 `AutoVisionTowerModel`，HF 注册独立维护。模型应
-
 返回空间 token 的 hidden states，并提供匹配的 `hidden_size`、`patch_size` 和图像
 token 元数据。预处理类由 checkpoint 保存的配置交给 `AutoImageProcessor` 解析。
 
@@ -32,7 +32,7 @@ Multimodal LLMs](https://arxiv.org/abs/2401.06209)（CVPR 2024）；
 位置交错排列 token。迁移保留这一语义，以及两路共用 CLIP 预处理图像的原有约定。
 也支持 A-MoF：在视觉配置中设置 `fusion_strategy="additive"` 和 `alpha`，在共享
 connector 之前计算 `alpha * CLIP + (1 - alpha) * DINOv2`。直接相加要求两路特征
-维度和 token 布局相同，不会自动对齐不同 token 数。A-MoF 应选择 MLP 等普通
+维度和 token 布局相同。A-MoF 应选择 MLP 等普通
 connector；`MofConnector` 专用于分别投影的 I-MoF 路径。
 
 - `MofVisionConfig` 保存两个分支配置，`MofVisionModel` 支持标准构造与保存加载，
@@ -42,10 +42,9 @@ connector；`MofConnector` 专用于分别投影的 I-MoF 路径。
 - `MofConnector` 独立投影后输出 `clip_0, dino_0, clip_1, dino_1, ...`。
   同时选择多个隐藏层时，各层特征仍按分支分别送入投影。
 - `TinyLlavaProcessor` 通过 connector 配置的 `get_output_sequence_length`
-  获取占位符数量。I-MoF 将 N 个选中特征映射为 2M 个输出 token，M 为两路 connector 相同的输出长度，处理器不按 MoF 名称分派。
+  获取占位符数量。I-MoF 将 N 个选中特征映射为 2M 个输出 token，M 为两路 connector 相同的输出长度。
 - 所有 connector 都接收 `vision_hidden_size`、`text_hidden_size` 和 `vision_feature_layer`。
-  各实现负责输入校验，输出长度计算委托给 connector 配置。通用模型没有 MoF 分支，
-  也不根据视觉模型自动指定 connector。
+  各实现负责输入校验，输出长度计算委托给 connector 配置。
 
 先将两个预训练分支组装为可复用的视觉 checkpoint：
 
@@ -64,11 +63,10 @@ AutoImageProcessor.from_pretrained(clip_path).save_pretrained("output/mof-vision
 
 MoF 在自己的 connector 配置中用 `vision_hidden_sizes` 声明拼接特征的两个宽度
 （依次为 CLIP、DINOv2），并校验总和等于 `vision_hidden_size`。
-普通 connector 只接收输入宽度，不依赖视觉模型配置。更换分支时应同步配置两个宽度。
+更换分支时应同步配置两个宽度。
 
 `MofConnectorConfig` 内的 `clip_config`、`dinov2_config` 分别通过
-`AutoConnectorModel` 选择已注册的 connector。MLP 参数应写在各分支内部，
-不再写在外层 MoF 配置。例如：
+`AutoConnectorModel` 选择已注册的 connector。MLP 参数写在各分支内部。例如：
 
 ```yaml
 model_type: mof__tlf_connector
@@ -116,8 +114,7 @@ python -m tinyllava.cli train --config configs/experiments/qwen2_instruct.yaml -
 | [Cambrian-1](https://cambrian-mllm.github.io/cambrian-1/) | Spatial Vision Aggregator 查询多编码器局部区域，并可在 LLM 内再次聚合 | 需要显式空间布局，也可能需要扩展语言模型路径 |
 
 当前 MoF 仍是对齐双分支实现。后续多 VT 接口应保留各分支的预处理、token 布局和
-特征选择，直到执行指定融合操作。输入等长属于当前打包方式的限制，不是所有多 VT
-架构的共同要求。
+特征选择，直到执行指定融合操作。
 
 ## 视觉塔与连接器的 token 长度
 
@@ -165,19 +162,16 @@ def get_output_sequence_length(
 长度为 N，connector 才将其变为 2N。
 
 自定义配置使用唯一模型类型注册到 `VISION_TOWER_CONFIG_MAPPING`，以便保存的 processor
-恢复相同的方法。运行时注册需要在新进程重新执行。此路径不修改或替换 HF 原生配置类，
-也不按自定义视觉模型名称分派。
+恢复相同的方法。运行时注册需要在新进程重新执行。
 
 私有 `_get_num_multimodal_tokens` 查询未被当前训练和生成流程调用。普通 LLaVA 兼容
 输入继续使用原有预估；带自定义 VT 长度规则时，仅提供尺寸的查询会抛出
 `NotImplementedError`，因为原始图像尺寸不能还原任意预处理元数据。可使用实际预处理
-结果；若后续调用者需要尺寸预估，再由专用 processor 实现。自定义方法抛出的异常直接
-传递，不会静默回退到 LLaVA 公式。
+结果；若调用者需要尺寸预估，由专用 processor 实现。自定义长度方法的错误直接传递给调用方。
 
 ### 常见视觉架构调研
 
-以下工程调研于 2026 年 10 月对照 Transformers 核查，区分视觉特征与所在 VLM 的
-merger、提示词布局；不代表本库已支持表中所有架构。
+以下工程调研于 2026 年 10 月对照 Transformers 核查，列出各系列所需的长度契约与模型集成工作。
 
 | 系列 | 相关 token 行为 | 对长度契约的影响 |
 | --- | --- | --- |
@@ -191,7 +185,7 @@ merger、提示词布局；不代表本库已支持表中所有架构。
 
 原生 register-token 情况使用随机初始化的微型 DINOv2、DINOv3 模型，比较实际特征长度
 与占位符数量。自定义钩子测试覆盖网格元数据、多种 connector 规则以及 processor 保存
-加载。动态分辨率 VLM 的完整接入是后续独立工作。
+加载。动态分辨率 VLM 的完整接入见 [v2 路线图](../roadmap.md#native-qwen3-vl)。
 
 ## 自定义 image processor
 
@@ -200,31 +194,29 @@ merger、提示词布局；不代表本库已支持表中所有架构。
 导出 `CustomImageProcessor`，并在 `image_processor/auto/auto_mappings.py` 的
 `CUSTOM_IMAGE_PROCESSOR_MAPPING_NAMES` 中加入 `("custom__tlf_image_processor", "CustomImageProcessor")`。
 使用唯一类名，通过 `save_pretrained` 将其保存为 `image_processor_type`。
-只有 checkpoint 选中的实现才会被导入，本地 Auto 类不修改 HF 全局映射或加载方法。
+按 checkpoint 中的元数据导入选中的实现。
 
 ## Connector 实现
 
 每个 connector 包包含 `configuration_<name>.py`、`modeling_<name>.py`
-和懒加载 `__init__.py`，旧装饰器注册和单文件实现已移除。线性投影使用
+和懒加载 `__init__.py`。线性投影使用
 `MLPConnectorConfig(depth=1)`；Identity 校验拼接后的视觉宽度与语言模型宽度一致。
 
 Resampler 使用 Perceiver 可学习查询；Q-Former 使用 HF 维护的
 `Blip2QFormerModel`，按配置初始化，不下载 BERT。二者每张图输出
 `num_queries` 个 token。所有 TinyLLaVA connector 使用同一个
 `TinyLlavaProcessor`，保存 connector 配置并调用其长度方法。单独加载处理器
-只需配置类，不需要导入 connector 模型实现或构造权重。
-迁移后的架构需要重新训练 connector，不支持旧权重布局；参数冻结由训练策略控制。
+时导入 connector 配置类。Resampler 和 Q-Former 需按当前架构训练权重；参数冻结由训练策略控制。
 
 processor Auto 映射以复合模型配置 `TinyLlavaConfig` 为键，与 HF 的模型/处理器
 关系一致。新增 connector 的长度规则只需在其配置中实现
-`get_output_sequence_length(input_length)`，不增加 processor 子类或映射项。
+`get_output_sequence_length(input_length)`。
 MLP/Identity 保持 N，MoF 返回 2N，查询型 connector 返回配置的固定数量。
 模型侧特征拆分调用同一个方法，避免维护两份长度规则。
 
 ## 自定义多模态 processor
 
-视频等新输入流程可以直接实现 HF `ProcessorMixin`，无需继承
-`TinyLlavaProcessor`，也无需定义 `from_config` 方法。通过项目入口
+视频等新输入流程可以实现 HF `ProcessorMixin`。通过项目入口
 `AutoProcessor.register(MyConfig, MyProcessor)` 注册配置类与处理器类。
 `AutoProcessor.from_config(config, **kwargs)` 选择处理器后，仅把 `kwargs`
 传给构造函数；处理器专用参数由调用方显式提供。
@@ -232,7 +224,7 @@ MLP/Identity 保持 N，MoF 返回 2N，查询型 connector 返回配置的固�
 `get_vision_output_sequence_length(image_inputs, image_idx, **kwargs)` 返回 VT
 自定义长度；没有规则时返回 `None`，由具体处理器采用原生算法。
 `get_output_sequence_length(input_length)` 应用 connector 规则；未配置 connector
-时保持输入长度。Mixin 不展开占位符，也不规定 LLaVA 的特征选择方式。
+时保持输入长度。占位符展开与特征选择由具体 processor 负责。
 
 组合时将 Mixin 放在原生 HF 类之前，例如
 `TinyLlavaProcessor(ComponentProcessorMixin, LlavaProcessor)`。具体类须在
@@ -243,8 +235,8 @@ merger，是否再应用 connector 规则需要由实际架构确定。视频时
 
 `TinyLlavaProcessor` 负责 LLaVA 占位符展开、默认长度估算和 `from_model`。
 后者同步图像 token 与模型 embedding，再通过 Auto 使用 LLaVA 参数构建注册的
-处理器。其他架构应使用自身参数构建注册的处理器。旧 `processing_base.py` 与
-`creation.py` 入口已删除。
+处理器。其他架构使用自身参数构建注册的处理器。原生 Qwen3-VL 接入计划见
+[v2 路线图](../roadmap.md#native-qwen3-vl)。
 
 ```mermaid
 classDiagram
@@ -263,9 +255,9 @@ classDiagram
 
 包内懒加载扩展在 `PROCESSOR_CONFIG_MAPPING_NAMES` 和
 `PROCESSOR_MAPPING_NAMES` 填写类名，在 `PROCESSOR_CONFIG_MODULE_NAMES` 和
-`PROCESSOR_MODULE_NAMES` 填写完整模块路径。路径无需与模型类型或彼此同名。
+`PROCESSOR_MODULE_NAMES` 填写完整模块路径。
 保存后的处理器按 `processor_class` 选择，运行时注册需要在新进程重新执行；
-处理器类名应唯一。视频处理逻辑由具体实现负责，不放入 Auto 工厂。
+处理器类名应唯一。视频处理逻辑由具体实现负责。
 
 ## 语言模型
 
@@ -285,19 +277,21 @@ OpenELM 保留官方 `openelm` 类型以读取官方 checkpoint 配置。
 `AutoModel`/`AutoModelForCausalLM` 时，先显式导入对应 OpenELM 类以激活公共注册。
 复合模型通过 `get_input_embeddings()` 推导共享权重路径，不假设语言模型内部属性名称。
 
-验证覆盖微型离线检查点、有/无缓存解码、左侧 padding、多模态训练及保存恢复；
-尚未进行完整预训练 OpenELM 的效果评估。
+验证覆盖微型离线检查点、有/无缓存解码、左侧 padding、多模态训练及保存恢复。
+
+规划中的 [DeepStack Hook 插件](../roadmap.md#deepstack-hooks)在选定的原生 decoder 层加入
+视觉残差，路线图列出了原型验证、适配器职责与训练/生成验收条件。
 
 ## 训练算法
 
 在 `tinyllava/train/algorithms/` 新建算法模块，并在该包的 `__init__.py` 注册模块路径。
-SFT 是 `sft.py`，不需要为每个算法再建立一套配置基础设施。
+SFT 在 `sft.py` 中实现。
 
 算法模块暴露 `SECTIONS`、`validate_config`、`prepare_config(config, world_size=...)`
 和 `run(config)`。常规 Trainer 算法直接复用 `hparams/training.py` 的通用实现；
 新的奖励或 rollout 配置段由对应算法自行校验。RL 的 batch 语义若不同，可替换
-`prepare_config`，而不修改共享的字段分组或启动器。
+`prepare_config`，而不修改其他算法的参数或启动器。
 
 保持配置准备与校验轻量；仅在 `run` 内导入训练器和加载模型。
 `train/workflow.py` 处理阶段依赖与进程启动，`train/strategy/` 处理参数更新策略。
-配置文件组合统一使用 `from` 特性，不在算法中加载模型、数据或 recipe YAML。
+算法接收由共享 `from` 特性组合完成的配置。

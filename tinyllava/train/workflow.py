@@ -10,15 +10,15 @@ from typing import Any
 
 from omegaconf import OmegaConf
 
+from tinyllava import runner
+from tinyllava.train.algorithms import get_algorithm
 from tinyllava.utils.config import (
     compose_config,
     merge_mappings,
-    validate_name,
-    validate_fields,
     resolve_interpolations,
+    validate_fields,
+    validate_name,
 )
-from tinyllava import runner
-from tinyllava.train.algorithms import get_algorithm
 
 _TRAIN_METADATA = {
     "algorithm",
@@ -36,7 +36,7 @@ def load_train_config(
     path: str | Path, overrides: Sequence[str] = ()
 ) -> dict[str, Any]:
     """Load one training stage, including presets and ordered CLI overrides."""
-    experiment_config = compose_config(path, overrides, data_kind="train")
+    experiment_config = compose_config(path, overrides)
     return _compose_single_training_stage(experiment_config, Path(path).stem)
 
 
@@ -45,11 +45,12 @@ def training_stages(
 ) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
     """Return (stage name, resolved config, launcher options) in YAML order.
 
-    Shared fields are merged before stage fields. Each stage inherits the
+    Algorithm and data are stage-local. Shared model, training, and launcher
+    defaults are merged before stage fields. Each stage inherits the
     preceding output checkpoint unless it selects an earlier stage with 'from_stage'
     or specifies a checkpoint. 'checkpoint: null' starts a fresh model.
     """
-    experiment_config = compose_config(path, overrides, data_kind="train")
+    experiment_config = compose_config(path, overrides)
     if "stages" not in experiment_config:
         stage_name = experiment_config.get("stage", Path(path).stem)
         config = _compose_single_training_stage(experiment_config, Path(path).stem)
@@ -59,6 +60,12 @@ def training_stages(
     if not isinstance(stages, dict) or not stages:
         raise ValueError("stages must be a nonempty mapping")
 
+    validate_fields(
+        experiment_config,
+        ("model", "training", "launcher"),
+        {"dataset_dir", "experiment_name", "output_root"},
+        "shared experiment",
+    )
     experiment_name = experiment_config.get("experiment_name", Path(path).stem)
     completed_outputs: dict[str, str] = {}
     output_directories: set[Path] = set()
@@ -85,7 +92,7 @@ def training_stages(
             stage_name=stage_name,
             source_checkpoint=source_checkpoint,
         )
-        output_dir = config["training"]["saving"]["output_dir"]
+        output_dir = config["training"]["output_dir"]
         canonical_directory = Path(output_dir).expanduser().resolve()
         if canonical_directory in output_directories:
             raise ValueError(
@@ -134,12 +141,8 @@ def _compose_training_stage(
         "dataset_dir", os.environ.get("TINYLLAVA_DATASET_DIR", "datasets")
     )
     training = config.setdefault("training", {})
-    training.setdefault("saving", {}).setdefault(
-        "output_dir", str(experiment_dir / stage_name)
-    )
-    training.setdefault("logging", {}).setdefault(
-        "run_name", f"{experiment_name}/{stage_name}"
-    )
+    training.setdefault("output_dir", str(experiment_dir / stage_name))
+    training.setdefault("run_name", f"{experiment_name}/{stage_name}")
     _set_training_checkpoint(
         config, experiment_config, source_checkpoint, experiment_dir
     )

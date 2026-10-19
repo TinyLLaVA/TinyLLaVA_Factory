@@ -1,6 +1,6 @@
 # 数据与 processor API
 
-adapter 归一化记录，processor 编码，collator 完成 padding 与监督标签。
+标注准备见[数据指南](../guides/data.md)，数据集选项见[参数速查](../guides/parameters.md#training-data)。
 
 ::: tinyllava.data.dataset
     options:

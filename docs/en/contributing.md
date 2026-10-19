@@ -42,7 +42,7 @@ members and signatures. See the
 
 ### Docstring style
 
-Use [Google-style docstrings](https://mkdocstrings.github.io/griffe/reference/docstrings/#google-style): start with a short description of the operation, then document `Args`, `Returns`, `Raises`, and `Examples` as needed. Describe units, tensor shapes, masking rules, side effects, and defaults that affect usage. Keep types and default values in the Python signature; add types in the docstring only when an annotation is unavailable. Document dataclass fields under `Attributes`, with names matching the source exactly.
+Use [Google-style docstrings](https://mkdocstrings.github.io/griffe/reference/docstrings/#google-style): start with a short description of the operation, then document `Args`, `Returns`, `Raises`, and `Examples` as needed. Describe units, tensor shapes, masking rules, side effects, and defaults that affect usage. Keep types and default values in the Python signature; add types in the docstring only when an annotation is unavailable. Document dataclass fields with an attribute docstring immediately after each declaration.
 
 Separate each section with a blank line and indent its entries by four spaces. Use Markdown links and fenced Python examples. Examples should use TinyLLaVA's public interfaces and identify any required model or dataset assets.
 

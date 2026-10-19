@@ -1,6 +1,7 @@
 # 评测 API
 
-生成助手返回文本，loader 准备输入，evaluator 计分或导出。
+数据准备与运行步骤见[评测指南](../guides/evaluation.md)，设置见[评测参数](../guides/parameters.md#evaluation)，
+交互生成见[推理指南](../guides/inference.md)。
 
 ::: tinyllava.eval.generation
     options:

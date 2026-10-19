@@ -127,7 +127,7 @@ See the [configuration guide](configs/README.md) and [training guide](docs/en/gu
 
 ```bash
 python -m tinyllava.cli eval --config configs/eval/textvqa.yaml \
-  model.model_name_or_path=output/phi/finetune runtime.batch_size=4
+  model_name_or_path=output/phi/finetune batch_size=4
 ```
 
 Benchmark inputs live under `datasets/eval/`; results are inferred under

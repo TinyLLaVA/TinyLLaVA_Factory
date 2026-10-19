@@ -1,7 +1,7 @@
 # Data and processor API
 
-Adapters normalize source records. The processor owns multimodal encoding;
-the collator pads tokens and concatenates image tensors.
+Prepare annotations with the [data guide](../guides/data.md).
+Dataset options are listed in the [parameter reference](../guides/parameters.md#training-data).
 
 ::: tinyllava.data.dataset
     options:

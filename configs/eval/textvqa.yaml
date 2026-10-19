@@ -1,13 +1,16 @@
+# Benchmark and annotation preset
+from: ../data/eval/textvqa.yaml
 benchmark: textvqa
-data: textvqa
-generation:
-  temperature: 0.0
-  top_p: null
-  num_beams: 1
-  max_new_tokens: 128
-  chat_template_path: ${oc.env:EVAL_CHAT_TEMPLATE_PATH,null}
-runtime:
-  device: null
-  batch_size: 1
-  num_chunks: 1
-  chunk_idx: 0
+
+# Answer generation
+temperature: 0.0
+top_p: null
+num_beams: 1
+max_new_tokens: 128
+chat_template_path: ${oc.env:EVAL_CHAT_TEMPLATE_PATH,null}
+
+# Worker execution
+device: null
+batch_size: 1
+num_chunks: 1
+chunk_idx: 0

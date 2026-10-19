@@ -10,6 +10,9 @@ nav = [
   { "Home" = "index.md" },
   { "Guides" = [
     { "Installation" = "guides/installation.md" },
+    { "Configuration" = "guides/configuration.md" },
+    { "Parameter reference" = "guides/parameters.md" },
+    { "Models and checkpoints" = "guides/models.md" },
     { "Training data" = "guides/data.md" },
     { "Training" = "guides/training.md" },
     { "Evaluation" = "guides/evaluation.md" },
@@ -25,7 +28,8 @@ nav = [
     { "Evaluation" = "reference/evaluation.md" },
   ] },
   { "Migration" = "migration.md" },
-  { "Contributing to docs" = "contributing.md" },
+  { "v2 roadmap" = "roadmap.md" },
+  { "Contributing" = "contributing.md" },
 ]
 
 [project.theme]

@@ -1,171 +1,172 @@
-# 迁移到 v2：定位、设计与社区路线
+# 迁移到 v2
 
-TinyLLaVA Factory 正在为**面向高校实验室的小型多模态实验观测与复现**建设 v2 基础接口。目标是串联一个样本的数据来源、处理后输入、模型行为、评测结果与对照干预，让训练和组件实验成为可以检查、解释和复现的完整流程。
+v2 保留 TinyLLaVA 的视觉编码器、连接器和语言模型组合方式，为实验提供共享的
+模型/processor 接口、可组合 YAML，以及明确的训练和评测流程。本页说明当前开发接口的
+迁移方法；DeepStack Hook 与原生 Qwen3-VL 接入计划见 [v2 路线图](roadmap.md)。
 
-本文在整合到 `main` 前说明转型原因、技术取舍与迁移成本，区分已经实现的接口和计划建设的研究工具，并明确评估这些变化所需的证据。社区与论文资料核查截至 2026 年 9 月。
+YAML 示例见[配置方式](guides/configuration.md)，字段含义见[参数速查](guides/parameters.md)，
+组件与权重选择见[模型指南](guides/models.md)。
 
-## 延续项目的初衷
+## 命令与配置
 
-[TinyLLaVA Factory 原论文](https://arxiv.org/abs/2405.11788)已经将模块化、低门槛与可复现作为核心目标。视觉编码器、连接器和语言模型的分解方式，仍然适合研究小型 VLM。v2 保留这一结构，更新其周围的软件契约，使实验能够随着社区演进持续被检查和维护。
+通过 `tinyllava` 或 `python -m tinyllava.cli` 执行任务：
 
-接下来的定位是面向受控组件实验、逐样本观测与解释的研究工作台。对于算力有限的实验室，值得帮助研究者回答的问题包括：
-
-- 在受控的训练与评测流程下，不同视觉编码器、连接器和语言模型组合的任务指标有何差异？
-- 分辨率、裁剪、特征选择等预处理配置如何影响这些指标，并如何逐项检查各组合的输入对齐、截断和监督 mask，排除实现问题对比较的干扰？
-- 修改后哪些样本改善了，哪些能力退化了？
-- 对关键证据施加干预后，原先的解释是否仍然成立？
-- 准确率收益是否值得额外的视觉 token、显存和延迟？
-
-本次迁移采用 Hugging Face 生态的先进工程设计，包括配置驱动的 Auto 分派、延迟导入、组合式模型配置，以及标准模型/processor 加载与序列化接口，为这些实验提供与 Transformers 和 Hub 模型资产高度兼容的基础，同时保留项目专用组件扩展点。下文中的集成观测与干预工具属于后续建设阶段。
-
-## 社区进展如何影响方向
-
-近期研究拓展了小模型实验框架需要支持的问题。以下工作用于解释我们的优先级，不代表仓库已经支持这些模型。
-
-| 进展 | 依据 | 对 TinyLLaVA 的启示 |
-| --- | --- | --- |
-| 视觉编码成本与语言模型规模同样重要 | [FastVLM，CVPR 2025](https://github.com/apple-aiml-research/ml-fastvlm)研究高分辨率编码效率；[SigLIP 2，2025](https://arxiv.org/abs/2502.14786)改进定位与稠密特征 | 联合测量编码成本、视觉 token 数和回答质量，开放特征选择与连接器实验 |
-| 小型 VLM 已扩展到视频 | [SmolVLM2，2025 年 2 月](https://huggingface.co/blog/smolvlm2)提供 256M、500M、2.2B 图像/视频模型 | processor 与诊断接口需要为采帧、时间戳和 token 预算预留明确契约 |
-| 紧凑模型开始处理精细视觉信息 | [North Micro Vision，2026 年 8 月](https://huggingface.co/blog/CohereLabs/meet-north-micro-vision-instruct)发布面向文档等视觉任务、支持原生分辨率的 2.4B 模型 | 检查图像几何变换与证据损失，避免将所有输入理解为固定 token 网格 |
-| 评测与干预工具逐渐形成可复用基础设施 | [LMMS-Eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) 和 [NNsight](https://nnsight.net/)提供多模态评测和模型追踪/干预工具 | 将组件实验与逐样本评测、干预分析关联起来 |
-
-[Transformers 多模态对话模板](https://huggingface.co/docs/transformers/en/chat_templating_multimodal)也将对话格式和多模态预处理纳入 processor 接口。对齐这些契约，有助于让输入行为随模型保存，并在训练、评测和交互生成之间复用。
-
-本项目应着力串联这些活动：组合模型与预处理配置，检查输入契约，对比指标与资源成本，再通过样本和表征分析解释差异。评测后端、profiler 和干预库都是可考虑集成的基础设施；具体接入仍需适配与验证。
-
-### 组件组合的具体例子：MoF
-
-[*Eyes Wide Shut?*](https://arxiv.org/html/2401.06209)中的 Interleaved MoF 分别投影 CLIP 与 DINOv2 特征，再按空间顺序交错排列。项目将双分支编码封装在视觉塔内，将投影与交错封装在连接器内，由连接器声明输出长度，供共享 processor 对齐图像占位符。模型组装和输入处理通过统一契约衔接，为比较组件组合提供基础。
-
-当前实现使用共享图像输入，并要求两路特征网格等条件匹配。新的预处理或融合设计仍需验证对应契约；模块化接口用于集中这些适配，而不保证任意组件直接互换。
-
-## 为什么需要更新基础接口
-
-### 通过导入全部实现发现组件
-
-早期组件 factory 扫描包目录，导入 Python 模块，通过装饰器填充本地注册表。语言和视觉组件的选择，再通过模型路径与已注册名称的子串匹配完成。
-
-这种方式带来了具体成本：
-
-- 包发现会执行实验未使用组件的导入，其传递依赖扩大了启动依赖范围，也可能让无关组件的导入失败影响当前实验。
-- 实现越多，需要执行的导入工作越多。新启动的训练或评测进程会重复这些工作，即使它们只选择相同的一小部分组件。
-- 子串选择需要遍历注册表，可能出现歧义并依赖遍历顺序；目录改名也可能影响组件选择。
-
-字典本身的开销很小。性能问题主要在于**提前发现组件时执行的全量导入及其传递依赖**；名称匹配则另有正确性问题。它属于启动过程，并非生成过程中每个 token 都执行的查表操作。目前没有受控的前后对比测量，可以据此宣称具体的延迟、内存降幅或训练吞吐提升。
-
-v2 使用配置/模型映射与实现模块的延迟导入。少量配置和注册模块仍可能提前加载，具体实现则在选中时导入。回归测试检查分派结果与延迟导入行为。性能测量应分别记录冷启动包导入、配置构造和权重加载，并记录依赖版本、常驻内存及进程数。例如，Python 的 `-X importtime` 可以定位导入成本，但不能衡量 GPU 推理速度。
-
-### 明确实验行为由谁负责
-
-v1 的 recipe 和各命令专用代码还承担加载、调优、保存与输入格式决策。扩展一个实验可能需要同时修改多个入口，仅有模型权重也无法确定复现回答所需的全部输入和执行设置。
-
-v2 将这些决策交给职责更集中的模块：
-
-| 职责 | v2 中的归属 | 作用 |
-| --- | --- | --- |
-| 架构与组件选择 | 组合式 `TinyLlavaConfig` 与组件 Auto 映射 | 保存的配置描述实际组装的模型 |
-| 分词、图像预处理、模板与图像占位符 | processor 与 image processor | 训练和推理共享输入定义 |
-| 连接器输出长度 | 连接器配置定义，processor 使用 | 图像占位符与投影后特征对齐 |
-| 冻结与参数高效调优 | 调优策略 | 改变训练策略无需重写模型加载 |
-| 模型、数据、配方、阶段与启动设置 | 可组合 YAML 预设与实验执行器 | 实验选择可以审阅和复用 |
-| 数据来源与样本转换 | Hugging Face Datasets 加载与数据适配器 | 存储格式与对话编码分离 |
-| checkpoint 生成与任务计分 | 共享生成工具与评测适配器 | 复用输入行为，保留任务专属计分规则 |
-
-模块边界见[架构](architecture.md)，实际注册接口见[扩展指南](guides/extending.md)。
-
-## 技术决策与取舍
-
-### 保留 HF 风格 Auto 分派与命名空间隔离
-
-兼容的 Transformers 原生组件使用上游实现；项目自有组件保留本地映射和延迟加载包。这既保留扩展点，也减少对各类 backbone 实现副本的维护。
-
-项目专用模型类型使用 `mlp__tlf_connector`、`mof__tlf_vision_tower` 等命名空间。模块缓存继续使用完整模型类型作为键，只在解析本地 Python 导入路径时去掉后缀，避免项目类型与同名上游类型混淆。
-
-本地映射类仅定制模块解析，继承 HF 的映射协议。这涉及部分 Transformers 私有 Auto 接口，因此升级 Transformers 时需要检查分派、序列化和延迟导入。项目与上游的运行时注册是不同入口，在一侧注册不会自动同步到另一侧。
-
-Auto 分派解决类如何被选中；新 backbone 仍须满足组合模型对特征、隐藏维度、processor 和生成行为的要求。出现在上游 Auto 映射中，不等于与任意多模态架构自动兼容。
-
-### 让 processor 可扩展，让长度契约显式化
-
-`ComponentProcessorMixin` 保存 VT/connector 配置并提供按需调用的长度方法，不继承某个具体 HF processor。`TinyLlavaProcessor(ComponentProcessorMixin, LlavaProcessor)` 负责从模型构建、LLaVA 图像 token 展开和多模态长度估算。其他 processor 可复用 Mixin，同时保留自身的占位符、视频和元数据处理。组件规则的调用位置由具体类决定，避免重复计算原生 merger。自定义 processor 通过项目 Auto 接口选择；独立的 image processor 扩展点也予以保留。
-
-连接器定义自己的输出长度规则：MLP 和 identity 保持序列长度，基于 query 的连接器可以输出固定 query 数，当前 MoF 连接器交错排列两路投影后的特征。共享 processor 使用这一规则，不再假设所有连接器都是 `N → N`，也不需要按连接器名称添加分支。这个契约同样是后续检查视觉 token 的基础。
-
-这些是扩展契约。视频解码、帧与时间对齐、任意多图布局以及原生分辨率架构，都需要补充实现和测试后才能成为支持的工作流。
-
-### 将输入行为随 checkpoint 保存
-
-显式 `model.chat_template_path` 优先于 tokenizer 自带模板。两者都缺失时，没有通用的静默 fallback。因此，Phi-2 与 OpenELM 预设显式选择仓库内的 HF LLaVA 模板，来源是
-[`llava-hf/llava-1.5-7b-hf`](https://huggingface.co/llava-hf/llava-1.5-7b-hf/blob/main/chat_template.jinja)。它确定新实验的提示词格式，并不代表所有采用这两个语言模型的历史 checkpoint 都使用过该格式。
-
-历史模板仍由配方显式选择。尤其是 `pretrain_legacy`，它是省略用户问题的图像到答案预训练格式，不适合作为通用指令模板的 fallback。训练前应检查渲染后的问题、图像占位符、assistant 损失 mask 和终止行为；模型与 processor 一起保存、重新加载，才能让评测使用预期模板。
-
-### 组合实验并通过完整 checkpoint 衔接阶段
-
-预设将模型、数据集与训练策略分开。实验定义有序阶段，后续阶段加载前一阶段的组合模型 checkpoint。阶段名只是标签，训练行为由配方决定；选择较晚阶段不会自动补跑缺失的前置阶段。
-
-数据来源已经支持通过 Hugging Face Datasets 读取 Hub 数据集和本地文件。加载器决定记录如何获取，适配器负责将记录转成预期样本。支持一种文件格式，并不代表该格式下的所有数据 schema 或模态都已有适配器。
-
-## 路线：从基础接口到实验工作台
-
-以下阶段表达优先级与验收标准，不是发布时间表，也不是已完成功能清单。
-
-| 阶段 | 计划能力 | 完成依据 |
-| --- | --- | --- |
-| 基础接口——本次迁移 | 共享模型/processor 契约、可组合实验、数据加载、生成与评测接口 | 接口回归检查，以及代表性 checkpoint 和实验验证 |
-| 样本检查与回放 | 稳定的样本/运行标识、数据来源记录、模板/mask/token/图像几何检查、最小 trace 记录 | 使用相同资产和处理设置回放一个失败预测 |
-| 排障与实验比较 | 各组件耗时/显存、逐样本结果差异、能力切片、数据质量报告 | 报告将能力退化与资源成本关联到可检查的样本 |
-| 解释与干预 | 按语义访问视觉、连接器和语言表征；遮挡、token 消融、激活干预及对照 | 可视化同时提供干预结果与明确的解释范围 |
-| 更多模态与研究配方 | 经验证的多图/视频处理和有针对性的研究配方 | 对应模态的对齐、组 batch、回放与评测检查通过 |
-
-拟议的 trace 记录应关联样本标识、模型和数据版本、解析后的配置、媒体标识、token 区间、生成设置、预测、指标以及捕获/干预配置。默认保存轻量统计；完整 attention 和 activation 需要显式指定捕获范围并测量开销。
-
-注意力视图可以帮助提出假设。因果解释需要干预和对照，例如比较证据区域遮挡与匹配的无关区域遮挡，或者将激活干预与同层对照比较。计划中的工具应报告敏感性和失败情况，不能将一张直观的热力图当作验证结果。
-
-### 用可追溯实验更新数据与评测
-
-现有 LLaVA 风格数据和评测配方仍有历史基线价值。新实验需要覆盖文档、精细视觉证据、定位，以及后续的时序推理；不能仅凭数据集发布年份决定保留或替换。
-
-候选来源包括 [The Cauldron](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron) 中按任务选择的子集，以及 [Molmo 2](https://github.com/allenai/molmo2) 发布的图像/视频与 pointing 资源。这些是待评估的研究输入，并非本次新增的内置训练预设。选择时应记录来源与版本、任务覆盖、媒体可用性、划分、过滤及采样策略，并检查与评测数据的重叠。更大的混合数据需要先与固定基线做消融，再成为推荐配方。
-
-评测保留历史任务以维持可比性，新增有针对性的失败切片，并探索对成熟评测工具的适配。报告应包含逐任务与逐样本变化，以及提示词、生成预算、计分方法和资源成本。当前内置任务见[评测指南](guides/evaluation.md)；更广泛的 benchmark 集成属于后续工作。
-
-## 兼容性与迁移
-
-v2.0 尚未发布，开发过程中的配置与内部 API 调整不保留兼容分支。
-最终破坏性变更统一记录在 [v2.0 发布日志](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/develop/CHANGELOG.md)，配置按当前 schema 校验。
-
-v2 改变了扩展和配置接口。原始实验可通过 `legacy/v1` 使用，复现时应采用独立环境；历史 `doc` 分支保留 v1 Sphinx 文档。
-
-| 已有资产 | 迁移动作 |
+| 任务 | 命令 |
 | --- | --- |
-| v1 shell 命令或 recipe | 将模型、数据、训练和启动设置转为预设，检查解析后的配置 |
-| 自定义组件 factory | 在对应 Auto 接口注册配置/模型对，并满足组件契约 |
-| 自定义对话 formatter | 提供适合的 processor/模板，验证渲染 token 与监督 mask |
-| 历史 checkpoint | 检查架构/配置及 processor 资产，验证已知权重键转换和加载保存往返 |
-| 旧优化器、调度器、分布式状态 | 单独验证；模型权重转换不能证明断点恢复兼容 |
-| 已发表的 benchmark 分数 | 保留原实验语境，重新评测迁移后的 checkpoint 再判断是否等价 |
+| 训练 | `python -m tinyllava.cli train --config configs/experiments/phi.yaml` |
+| 评测 | `python -m tinyllava.cli eval --config configs/eval/gqa.yaml model_name_or_path=output/phi/finetune` |
+| 单轮推理 | `python -m tinyllava.cli single-turn --model-path output/phi/finetune --query "Describe the image." --image-file image.jpg` |
+| 多轮对话 | `python -m tinyllava.cli chat --model-path output/phi/finetune` |
 
-加载器为已知旧语言模型、视觉编码器和 MLP 投影层布局提供权重键重命名。它不重建缺失的配置、tokenizer、image processor 或模板，也不转换任意自定义连接器架构。断点恢复面向当前训练栈保存的完整 checkpoint；从权重开始新阶段，与恢复被中断的优化器运行，是两种不同操作。
+迁移 v1 shell 配方时，将模型、数据、训练与启动设置写入实验 YAML。
+已有的早期 v2 开发配置按下表更新：
 
-### 建议迁移步骤
+| 原设置 | 当前设置 |
+| --- | --- |
+| `python -m tinyllava.run` | `python -m tinyllava.cli` 加任务子命令 |
+| 通过 `model.name` 选择模型 | `model: phi` 或 `model: {from: phi, ...}` |
+| `from_config`、`from_yaml` 或 Hydra `defaults` 文件引用 | 目标节点的 `from`，接受路径或有序路径列表 |
+| 实验 YAML 中的 `model.connector_config` | `model.connector`，同样支持 `from` 与覆写 |
+| `configs/recipes/` | `configs/training/`，引用后字段直接进入 `training` |
+| `configs/train/` 入口 | 实验加 `--steps`，或单阶段 YAML |
+| 根部 `name` | `experiment_name` |
+| 多阶段实验根部的 `algorithm`、`data` | `stages.<name>.algorithm`、`stages.<name>.data` |
+| `data.data_path` | `data.dataset_name_or_path` |
+| 用 `from` 表示阶段依赖 | `from_stage`；`from` 用于 YAML 组合 |
+| `training.saving.*`、`training.logging.*` 等 Trainer 字段分组 | 直接使用 `training.*`，保留 `training.tuning` 及其 `peft` 字典 |
+| 评测的 `model.*`、`data.*`、`generation.*`、`runtime.*`、`output.*` | 同名字段直接放到评测 YAML 根部 |
+| 评测的 `data.from` | 根部 `from`，路径指向 `configs/data/eval/` 中的文件 |
+| `single_pred_prompt` | 删除该选项，ScienceQA loader 提供选项字母回答指令 |
 
-1. **保留基线。** 记录原始环境、模型资产、输入格式、数据划分、训练与生成设置，以及一小组固定样本的输出，保留原 checkpoint。
-2. **选择新实验。** 从 `configs/experiments/` 开始，配合 `configs/models/`、`configs/data/train/`、`configs/training/` 下的预设。加载权重前先检查解析后的配置：
+以上 YAML 调整针对实验配置。保存的 HF 模型配置继续使用 `text_config`、`vision_config`
+和 `connector_config`。
+[v2 发布日志](https://github.com/TinyLLaVA/TinyLLaVA_Factory/blob/develop/CHANGELOG.md)
+记录破坏性变更，加载器按当前 schema 校验配置。
 
-   ```bash
-   python -m tinyllava.cli train --config configs/experiments/phi.yaml --dry-run
-   ```
+### 训练示例
 
-3. **验证输入与特征。** 检查适配和处理后的样本，包括用户问题、assistant mask、图像 token 数、特征选择策略、连接器长度与截断。
-4. **验证 checkpoint 行为。** 加载、保存并重新加载模型与 processor，在相同精度和生成设置下比较固定输入的结果。训练前查明缺失或多余权重的原因。
-5. **运行小规模实验。** 检查可训练参数、loss、有限梯度、有效全局 batch 和阶段输出。dry run 验证配置，不验证模型兼容性或数值行为。
-6. **评测并记录差异。** 使用相同任务定义和计分方法，记录有意改变的模板、预处理、mask、数据或生成设置，避免将所有差异归因于模型架构。
+```yaml
+# configs/experiments/custom.yaml
+model: phi
+experiment_name: phi_trial
 
-可执行流程见[安装](guides/installation.md)、[训练](guides/training.md)、[数据](guides/data.md)和[推理](guides/inference.md)。Qwen2 base legacy 实验保留了显式的历史提示词选择。
+stages:
+  pretrain:
+    algorithm: sft
+    data: llava_558k
+    training: pretrain
 
-## 完成迁移所需的证据
+  finetune:
+    algorithm: sft
+    data: llava_665k
+    training:
+      from: lora_finetune
+      learning_rate: 0.0001
+      save_steps: 500
+      logging_steps: 10
+      tuning:
+        peft:
+          r: 64
+          lora_alpha: 128
+```
 
-接口测试与文档构建是必要检查。还需通过代表性的训练、checkpoint 重载、生成与评测运行确认实际可用性。复现结论需要匹配的数据和实验设置；速度或内存改进需要实测基线。原论文分数仍然属于原始实验。
+模型、训练和启动器默认值可以在根部共享，每个阶段选择自己的算法与数据。
+后续阶段默认加载上一阶段 checkpoint，`from_stage` 选择更早的阶段，`checkpoint`
+选择外部来源。单独运行后续阶段前，先准备其依赖的 checkpoint。
 
-社区问题报告最好包含最小配置、组件与数据集标识、环境版本、可复现样本，以及预期和实际行为。新增组件、processor 或诊断功能时，应提供小规模契约测试，并说明它支持研究什么问题，让每个扩展都进入可检查的研究流程。
+单阶段入口将 `algorithm`、`data`、`model`、`training` 放在根部，用 `stage` 命名输出阶段。
+训练数据预设位于 `configs/data/train/`，模型与连接器预设分别位于 `configs/models/`
+和 `configs/connectors/`。
+
+### 评测示例
+
+```yaml
+# configs/eval/custom.yaml
+from: ../data/eval/gqa.yaml
+benchmark: gqa
+model_name_or_path: output/phi_trial/finetune
+batch_size: 4
+temperature: 0.0
+output_dir: output/phi_trial/finetune/eval/gqa
+```
+
+评测流程解析路径、按需分片，并将预测写入 `answers_file`，通常为
+`${output_dir}/answers.jsonl`。直接启动 `tinyllava.eval.batch_generation` worker 时，
+传入已经解析的根部字段，包括 `model_name_or_path` 和 `question_file`。
+
+## Trainer 与调优设置
+
+支持的 Transformers 范围为 `>=5.10.0,<6`。调整 YAML 层级时，同时更新这些 Trainer 选项：
+
+| 原设置 | 当前设置 |
+| --- | --- |
+| `warmup_ratio: 0.03` | `warmup_steps: 0.03`，小于 `1` 表示比例，大于等于 `1` 表示步数 |
+| 独立的 `group_by_length: true` | `train_sampling_strategy: group_by_length` |
+| 独立的 `bf16` / `fp16` 标志 | `precision: auto`、`bf16`、`fp16` 或 `fp32` |
+| `training.runtime.precision` | `training.precision` |
+| `training.saving.resume_from_checkpoint` | `training.resume_from_checkpoint` |
+
+删除过时的 HF 字段：`overwrite_output_dir`、`save_safetensors`、`logging_dir`、
+`include_tokens_per_second`、`half_precision_backend`、`use_mps_device`、
+`fsdp_transformer_layer_cls_to_wrap`。
+
+`training.global_batch_size` 根据 worker 数和单设备 batch 推导梯度累积，
+`training.tuning` 选择冻结与适配器策略。模型长度与注意力后端放在 `model` 下；
+内置 Phi LoRA/QLoRA 实验沿用模型预设的 2048 长度和默认注意力后端。
+
+## Python 扩展接口
+
+| 职责 | 当前接口 |
+| --- | --- |
+| YAML 组合 | `tinyllava.utils.config.compose_config` |
+| 阶段依赖与评测路径 | `tinyllava.train.workflow`、`tinyllava.eval.workflow` |
+| 项目参数对象 | `tinyllava.hparams.arguments`，包含扁平的 `EvalArguments` |
+| HF Trainer 扩展 | `tinyllava.hparams.hf.TrainingArguments` |
+| Trainer 输入集合 | `TrainingArgBundle`，替代 `TrainingInputs` |
+| 训练参数构造 | `tinyllava.hparams.training.build_training_arguments` |
+| 训练算法 | `tinyllava.train.algorithms` 中的模块 |
+| 组件更新策略 | `tinyllava.train.strategy` |
+| Processor 选择与加载 | `tinyllava.data.processor.AutoProcessor` |
+| 可复用的 processor 配置与长度规则 | `ComponentProcessorMixin` |
+| LLaVA 处理与从模型创建 processor | `TinyLlavaProcessor` |
+
+更新从已移除的 `configuration.py`、`utils.arguments`、`hparams.parser`、
+`hparams.tuning` 模块导入的代码。评测通过 `EvalArguments(**resolved_worker_config)`
+构造参数，原先按组拆分的评测参数类已合并。数据 loader 接收任务输入，ScienceQA 提示词由
+对应 loader 处理。
+
+将 `data.processor.processing_base` 和 `data.processor.creation` 的导入改为上述 processor
+接口。`AutoProcessor.from_config(config, **kwargs)` 根据模型配置选择类，将 `kwargs`
+传入其构造函数。通过模型组件创建 LLaVA processor 时使用 `TinyLlavaProcessor.from_model`。
+Connector 实现已按包组织，使用 config/model Auto 映射；使用旧装饰器注册或扁平模块的扩展需更新。
+
+通过各组件的 Auto 接口注册配置类与模型类。项目模型类型使用 `mlp__tlf_connector`
+等命名空间，选中组件时加载对应实现。新组件需要满足隐藏维度、特征布局、processor 和
+生成契约；注册与长度方法见[扩展指南](guides/extending.md)。
+
+## Checkpoint 与输入行为
+
+将模型与 tokenizer、image processor、对话模板一起保存和重载。显式模板覆写优先于
+已保存模板。Phi、OpenELM 预设选择内置 LLaVA 模板，Qwen2 base legacy 实验选择其历史模板。
+`pretrain_legacy` 是省略用户问题的图像到答案格式，用于对应的预训练配方。
+
+`vision_feature_select_strategy` 可以省略。新组装模型按视觉配置推导，加载 checkpoint
+时沿用保存值。SigLIP 使用 `full`，CLIP、DINO、MoF 使用 `default` 去掉首个 CLS token；
+显式值优先。
+
+加载器重映射已知的旧语言模型、视觉编码器和 MLP 权重键，迁移时需提供匹配的配置和
+预处理资产。重构后的查询型连接器需要匹配当前架构的权重。用 `checkpoint` 初始化新阶段，
+用 `training.resume_from_checkpoint` 恢复完整 checkpoint 的训练状态。
+
+原始 v1 实验可通过独立环境中的 `legacy/v1` 使用，历史 `doc` 分支保留 v1 Sphinx 文档。
+
+## 迁移验证
+
+1. **记录基线。** 保存原始环境、组件与数据版本、模板、训练和生成设置，以及固定样本的输出。
+2. **预览配置。** 用 `--dry-run` 检查解析后的预设、阶段输入、输出路径和有效全局 batch。
+3. **检查处理后样本。** 查看用户问题、图像占位符、assistant mask、截断、视觉特征选择和连接器输出长度。
+4. **重载 checkpoint。** 保存并重载模型与 processor，查明缺失或多余权重的原因，在相同精度下对比固定输入的输出。
+5. **运行短训练。** 检查可训练参数、有限梯度、loss、断点恢复和阶段衔接。
+6. **对照评测。** 对齐任务定义与计分方法，记录数据、模板、预处理、生成预算和资源使用的变化。
+
+复现报告应对应匹配的实验设置；效率报告分别测量启动、训练和生成表现。

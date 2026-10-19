@@ -1,38 +1,47 @@
-algorithm: sft
+# Shared model configuration
 model: qwen2_base
+
+# Shared training defaults
 training:
-  runtime:
-    deepspeed: configs/deepspeed/zero3.json
-    tf32: false
-  optimizer:
-    weight_decay: 0.0
+  deepspeed: configs/deepspeed/zero3.json
+  tf32: false
+  weight_decay: 0.0
+
+# Distributed launch
 launcher:
   distributed: true
   devices: auto
   master_port: 29501
+
 stages:
+  # Align visual features with the language model.
   pretrain:
+    algorithm: sft
     data: llava_558k
+
     training:
       from: pretrain
-      runtime:
-        precision: bf16
+      precision: bf16
       per_device_train_batch_size: 16
       gradient_accumulation_steps: 4
       global_batch_size: 256
+
     model:
       chat_template_path: configs/chat_templates/pretrain_legacy.jinja
+
+  # Train on instruction-following conversations.
   finetune:
+    algorithm: sft
     data: llava_665k
+
     training:
       from: finetune
-      runtime:
-        precision: bf16
+      precision: bf16
       per_device_train_batch_size: 4
       gradient_accumulation_steps: 8
       global_batch_size: 128
-      dataloader:
-        group_by_modality_length: true
+      group_by_modality_length: true
+
     model:
       chat_template_path: configs/chat_templates/qwen2_base_legacy.jinja
       attn_implementation: sdpa

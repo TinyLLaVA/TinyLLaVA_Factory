@@ -25,7 +25,12 @@ class GenerationExample:
 
 
 class DatasetLoader(Protocol):
-    """Convert benchmark samples into processor-ready generation examples."""
+    """Convert benchmark samples and task instructions into generation examples.
+
+    Loaders own the benchmark's prompt format and answer normalization. They
+    receive sample data and the image root; model and decoding settings belong
+    to the generation worker.
+    """
 
     def load_samples(self, question_file: str) -> list[Mapping[str, Any]]:
         """Read questions from a benchmark annotation file.
@@ -42,14 +47,12 @@ class DatasetLoader(Protocol):
         sample: Mapping[str, Any],
         *,
         image_folder: str,
-        args: Any,
     ) -> GenerationExample:
         """Convert one sample into a generation request.
 
         Args:
             sample: A record returned by `load_samples`.
             image_folder: Root directory for relative image paths.
-            args: Runtime settings used by the dataset-specific loader.
 
         Returns:
             The question identifier, prompt, image paths, and export metadata.

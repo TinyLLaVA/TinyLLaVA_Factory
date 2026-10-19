@@ -1,2 +1,5 @@
+# Connector architecture
 model_type: qformer__tlf_connector
+
+# Component settings
 num_queries: 32

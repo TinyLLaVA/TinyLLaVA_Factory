@@ -2,38 +2,37 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import yaml
 from omegaconf import DictConfig, OmegaConf
 
-
 CONFIG_ROOT = Path(__file__).resolve().parents[2] / "configs"
-_PRESET_DIRS = {"model": "models", "connector": "connectors", "training": "training"}
+_PRESET_DIRS = {
+    "model": "models",
+    "connector": "connectors",
+    "training": "training",
+    "data": "data/train",
+}
 
 
 def compose_config(
     path: str | Path,
     overrides: Sequence[str] = (),
-    *,
-    data_kind: Literal["train", "eval"] = "train",
 ) -> dict[str, Any]:
     """Compose YAML references while leaving value interpolation unresolved.
 
     Any mapping can use ``from: path.yaml`` or a list of paths. Sources merge
     left to right, then local fields, then CLI dotlist overrides. Bare filenames
-    at preset nodes use the corresponding directory under configs/. ``data_kind``
-    selects training or evaluation data presets. A preset name is shorthand for
-    its ``from`` mapping; references without a YAML suffix get ``.yaml`` appended.
-    Explicit relative paths are anchored
-    to their declaring YAML, or cwd for CLI overrides. Lists replace rather than
+    at preset nodes use the corresponding directory under configs/. A preset name
+    is shorthand for its ``from`` mapping; references without a YAML suffix get ``.yaml`` appended.
+    Explicit relative paths are anchored to their declaring YAML, or cwd for CLI
+    overrides. Lists replace rather than
     concatenate. Value interpolation is deferred until runtime paths are assigned.
     """
-    if data_kind not in ("train", "eval"):
-        raise ValueError(f"Unknown data preset kind: {data_kind!r}")
-    preset_dirs = {**_PRESET_DIRS, "data": f"data/{data_kind}"}
+    preset_dirs = _PRESET_DIRS
     cache: dict[Path, dict[str, Any]] = {}
 
     def read(source: Path, location: tuple = ()) -> dict[str, Any]:
@@ -185,11 +184,21 @@ def validate_name(value: object, label: str) -> str:
 
 
 def validate_fields(
-    config: dict[str, Any], sections: Sequence[str], metadata: set[str], kind: str
+    config: dict[str, Any], sections: Collection[str], metadata: set[str], kind: str
 ) -> None:
     unknown = set(config) - set(sections) - metadata
     if unknown:
         raise ValueError(f"Unknown {kind} config fields: {sorted(unknown)}")
+    for section in sections:
+        if section in config and not isinstance(config[section], dict):
+            raise ValueError(f"{kind}.{section} must be a mapping")
+
+
+def positive_int(value: Any, name: str) -> int:
+    """Validate an integer configuration value, excluding booleans and zero."""
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
 
 
 def load_config(path: str | Path, overrides: Sequence[str] = ()) -> dict[str, Any]:
